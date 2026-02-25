@@ -199,6 +199,7 @@ public class DTNHost implements Comparable<DTNHost> {
      */
     public void connectionUp(Connection con) {
         this.router.changedConnection(con);
+        this.movement.detectChanged(con);
     }
 
     public void connectionDown(Connection con) {

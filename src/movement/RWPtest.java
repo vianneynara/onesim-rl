@@ -13,7 +13,7 @@ import java.util.List;
  * Random waypoint movement model. Creates zig-zag paths within the
  * simulation area.
  */
-public class RWPtest extends MovementModel implements ConnectionListener, UpdateListener
+public class RWPtest extends MovementModel
 {
 	/** how many waypoints should there be per path */
 	private static final int PATH_LENGTH = 1;
@@ -51,7 +51,9 @@ public class RWPtest extends MovementModel implements ConnectionListener, Update
 		Coord c = lastWaypoint;
 
 		for (int i=0; i<PATH_LENGTH; i++) {
-			c = randomCoord();
+			int r = rng.nextInt(1, 10);
+			c = qResult(r);
+			System.out.println("random: " + r);
 			p.addWaypoint(c);
 		}
 
@@ -70,19 +72,24 @@ public class RWPtest extends MovementModel implements ConnectionListener, Update
 	}
 
 	@Override
-	public void hostsConnected(DTNHost host1, DTNHost host2) {
-		System.out.println("Host connectedyyy");
-		next = test.givenCoord();
+	public void detectChanged(Connection con) {
+		System.out.println("""
+				=======================
+				In Detect Change
+				=======================
+				""");
+		int meet = 0;
+		System.out.println("Meet: " + meet++);
+
 
 	}
 
-	@Override
-	public void hostsDisconnected(DTNHost host1, DTNHost host2) {
-
-	}
-
-	@Override
-	public void updated(List<DTNHost> hosts) {
-		System.out.println("print");
+	private Coord qResult(int meetData) {
+		System.out.println("""
+				========================
+				In Q Result
+				========================
+				""");
+		return randomCoord();
 	}
 }
