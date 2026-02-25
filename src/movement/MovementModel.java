@@ -6,12 +6,7 @@ package movement;
 
 import java.util.Random;
 
-import core.Coord;
-import core.DTNSim;
-import core.ModuleCommunicationBus;
-import core.Settings;
-import core.SimClock;
-import core.SimError;
+import core.*;
 
 /**
  * <P>Superclass for all movement models. All subclasses must contain at least a 
@@ -234,6 +229,18 @@ public abstract class MovementModel {
 	 */
 	public ModuleCommunicationBus getComBus() {
 		return this.comBus;		
+	}
+
+	/**
+     * Informs the movement model about change in connections state.
+	 * This is called in {@link DTNHost#connectionUp(Connection)}.
+	 * It is optional for the child movement to implement this method.
+     *
+     * @param con The connection that changed
+	 * @author narwa
+     */
+    public void changedConnection(Connection con) {
+
 	}
 	
 	/**
