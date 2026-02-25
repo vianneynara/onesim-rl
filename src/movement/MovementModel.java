@@ -234,6 +234,7 @@ public abstract class MovementModel {
 	/**
      * Informs the movement model about change in connections state.
 	 * This is called in {@link DTNHost#connectionUp(Connection)}.
+	 * It is optional for the child movement to implement this method.
      *
      * @param con The connection that changed
 	 * @author narwa
