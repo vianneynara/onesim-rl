@@ -5,9 +5,6 @@
 package movement;
 
 import core.*;
-import mcrltest.QModel.mcrltest;
-
-import java.util.List;
 
 /**
  * Random waypoint movement model. Creates zig-zag paths within the
@@ -18,9 +15,6 @@ public class RWPtest extends MovementModel
 	/** how many waypoints should there be per path */
 	private static final int PATH_LENGTH = 1;
 	private Coord lastWaypoint;
-
-	public mcrltest test;
-	private Coord next;
 
 	public RWPtest(Settings settings) {
 		super(settings);
