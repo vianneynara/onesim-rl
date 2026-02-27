@@ -270,5 +270,13 @@ public abstract class MovementModel {
 			rng = new Random();
 		}
 	}
-	
+
+	/**
+	 * Ensure RNG dependant operations outside MovementModel are reproducible by using the same RNG instance.
+	 * @return The RNG instance used by MovementModel
+	 * @author narwa
+	 * */
+	public static Random getRandom() {
+		return rng;
+	}
 }
