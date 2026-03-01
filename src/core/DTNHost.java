@@ -98,8 +98,7 @@ public class DTNHost implements Comparable<DTNHost> {
         this.movListeners = movLs;
 
         // create instances by replicating the prototypes
-        this.movement = mmProto.replicate();
-        this.movement.setComBus(comBus);
+        setMovement(mmProto.replicate());
         setRouter(mRouterProto.replicate());
 
         this.location = movement.getInitialLocation();
@@ -161,6 +160,16 @@ public class DTNHost implements Comparable<DTNHost> {
         router.init(this, msgListeners);
         this.router = router;
     }
+
+	/**
+	 * Set a movement model for this host
+	 * @param movement The movement model to set
+	 * @author narwa
+	 * */
+	private void setMovement(MovementModel movement) {
+		movement.init(this, comBus);
+		this.movement = movement;
+	}
 
     /**
      * Returns the router of this host

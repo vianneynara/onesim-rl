@@ -51,6 +51,10 @@ public abstract class MovementModel {
 	private int maxY;
 	
 	protected ModuleCommunicationBus comBus;
+    /**
+     * Host where this movement belongs to. (added by narwa)
+	 */
+    private DTNHost host;
 
 	// static initialization of all movement models' random number generator
 	static {
@@ -122,6 +126,17 @@ public abstract class MovementModel {
 		this.maxY = worldSize[1];
 
 		settings.restoreNameSpace();
+	}
+
+	/**
+	 * Initializes the movement model, added to provide the host implementing the movement model.
+	 * @param host The host where this movement model belongs to.
+	 * @param comBus The module communication bus toset for this movement model.
+	 * @author narwa
+	 * */
+	public void init(DTNHost host, ModuleCommunicationBus comBus) {
+		this.host = host;
+		setComBus(comBus);
 	}
 	
 	/**
@@ -229,6 +244,14 @@ public abstract class MovementModel {
 	 */
 	public ModuleCommunicationBus getComBus() {
 		return this.comBus;		
+	}
+
+	/**
+	 * Returns the host where this movement model belongs to.
+	 * @author narwa
+	 * */
+	public DTNHost getHost() {
+		return this.host;
 	}
 
 	/**
