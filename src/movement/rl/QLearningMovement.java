@@ -5,6 +5,7 @@ import movement.MovementModel;
 import movement.Path;
 import movement.rl.behavior.BehaviorPolicy;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,7 +26,7 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel {
+public class QLearningMovement extends MovementModel implements Serializable {
 	// [Bellman equation specific parameters]
 	/**
 	 * Alpha value, controls the amount of reward to update the Q-value. Values range: [0,1].
@@ -46,19 +47,21 @@ public class QLearningMovement extends MovementModel {
 
 	// [Configuration - Settings Keys]
 	public static final String QLEARNING_NS = "QLearningMovement";
-	public static final String ALPHA_S = "alpha";
-	public static final String LAMBDA_S = "lambda";
+	public static final String ALPHA_S = "learningRate";
+	public static final String LAMBDA_S = "discountFactor";
 	public static final String INITIAL_Q_S = "initialQValue";
 	public static final String BEHAVIOR_POLICY_S = "behaviorPolicy";
 	public static final String TARGET_PREFIX_S = "targetPrefix";
 	public static final String STEP_PENALTY_S = "stepPenalty";
 	public static final String FOUND_REWARD_S = "foundReward";
+	public static final String SPEED_S = "agentSpeed";
 
-	// [Explicitly defined constants for the problem]
-	private final int SPEED = 1;
+	// [Configuration - Fixed parameters]
+	private double agentSpeed = 1;
 	/**
 	 * Explicitly define the available actions.
-	 * */
+	 *
+	 */
 	private final Set<Integer> availableActions = Set.of(0, 1);
 
 	// [Other variables]
@@ -72,15 +75,28 @@ public class QLearningMovement extends MovementModel {
 	private String targetPrefix;
 
 	// [Reinforcement learning specific variables]
-	/** Penalty per step when no target found */
+	/**
+	 * Penalty per step when no target found
+	 */
 	private double stepPenalty;
-	/** Reward for finding a new target node */
+	/**
+	 * Reward for finding a new target node
+	 */
 	private double foundReward;
 	private Map<DTNHost, Double> targetFound;	// O_{f},
-	private int prevAction; 					// a_{t},
-	private long prevState; 					// s_{t},
-	private int currentAction; 					// a_{t+1},
-	private long currentState; 					// s_{t+1},
+	private int prevAction;						// a_{t},
+	private int prevState;						// s_{t},
+	private int currentAction;					// a_{t+1},
+	private int currentState;					// s_{t+1},
+	/**
+	 * Step counter n along current trajectory l. This is the RL state.
+	 */
+	private int stepCounterInCurrentTrajectory;
+	/**
+	 * Last simulation time when foundReward was granted. Used to avoid double-counting rewards
+	 * for the same detection step.
+	 */
+	private double lastRewardedTime;
 	/**
 	 * The Q-table, mapping every state's to the Q-value of each action.
 	 * {@link StateActionPair} is a pair of state and action, Double is Q-value's datatype of that state-action pair.
@@ -111,17 +127,21 @@ public class QLearningMovement extends MovementModel {
 		String behaviorClassName = s.getSetting(BEHAVIOR_POLICY_S, "movement.rl.behavior.EpsilonGreedyBehavior");
 		this.behaviorPolicy = (BehaviorPolicy) s.createIntializedObject(behaviorClassName);
 		this.targetPrefix = s.getSetting(TARGET_PREFIX_S, "T");
+		this.agentSpeed = s.getDouble(SPEED_S, 1.0);
 
 		// Reinforcement learning specific variables
 		this.targetFound = new HashMap<>();
-		this.qTable = new java.util.HashMap<>();
+		this.qTable = new HashMap<>();
 		this.prevAction = -1;
-		this.prevState = 0L;
+		this.prevState = 0;
 		this.currentAction = -1;
-		this.currentState = 0L;
+		this.currentState = 0;
+		this.stepCounterInCurrentTrajectory = 0;
+		this.lastRewardedTime = Double.NEGATIVE_INFINITY;
 
 		// Initialize direction randomly
 		this.direction = rng.nextDouble() * 2 * Math.PI;
+		this.lastWaypoint = null; // will be initialized on first getPath()
 	}
 
 	@Override
@@ -147,13 +167,21 @@ public class QLearningMovement extends MovementModel {
 		this.alpha = proto.alpha;
 		this.lambda = proto.lambda;
 		this.initialQValue = proto.initialQValue;
-		this.behaviorPolicy = proto.behaviorPolicy;
-		this.targetFound = null;
-		this.prevAction = 0;
-		this.prevState = 0L;
-		this.currentAction = 0;
-		this.currentState = 0L;
-		this.direction = 0.0;
+		this.behaviorPolicy = proto.behaviorPolicy.replicate();
+		this.agentSpeed = proto.agentSpeed;
+		this.stepPenalty = proto.stepPenalty;
+		this.foundReward = proto.foundReward;
+		this.targetPrefix = proto.targetPrefix;
+		this.targetFound = new HashMap<>();
+		this.qTable = new HashMap<>();
+		this.prevAction = -1;
+		this.prevState = 0;
+		this.currentAction = -1;
+		this.currentState = 0;
+		this.stepCounterInCurrentTrajectory = 0;
+		this.lastRewardedTime = Double.NEGATIVE_INFINITY;
+		this.direction = proto.direction;
+		this.lastWaypoint = null;
 	}
 
 	protected int selectAction(int state, Set<Integer> availableActions) {
@@ -208,48 +236,107 @@ public class QLearningMovement extends MovementModel {
 
 	@Override
 	public Path getPath() {
-		if (currentAction != -1) {
+		/* Perform Q-Learning update only if we have previous action */
+		if (prevAction != -1) {
+			// to make it easier to understand
+			int s_t = prevState;
+			int a_t = prevAction;
+			int s_tp1 = currentState;
 
-			return null;
-		} else {
-			// Initialize with a random action on first step
-			currentAction = rng.nextInt(availableActions.size());
+			// base movement reward, defaulting to penalty
+			double reward = -stepPenalty;
 
-			// Create path
-			Path p = new Path(SPEED);
-			p.addWaypoint(lastWaypoint);
-
-			double nextX;
-			double nextY;
-
-			do {
-				nextX = lastWaypoint.getX() + SPEED * Math.cos(direction);
-				nextY = lastWaypoint.getY() + SPEED * Math.sin(direction);
-			} while (nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0);
-			Coord nextWaypoint = new Coord(nextX, nextY);
-			p.addWaypoint(nextWaypoint);
-
-			prevAction = currentAction;
-
-			switch (currentAction) {
-				case 0: // No change in direction, go to the same direction
+			/* Determining reward using lastRewardedTime based on the recency of targets found */
+			double now = SimClock.getTime();
+			boolean foundNewTarget = false;
+			for (Double foundTime : new ArrayList<>(targetFound.values())) {
+				// check if any target was newly found since lastRewardedTime
+				if (foundTime != null && foundTime > lastRewardedTime) {
+					foundNewTarget = true;
 					break;
-				case 1: // Change direction
-					direction = rng.nextDouble() * 2 * Math.PI;
-					break;
-				default:
-					throw new IllegalStateException("Unexpected action: " + currentAction);
+				}
 			}
 
-			this.lastWaypoint = nextWaypoint;
-			return p;
+			if (foundNewTarget) {
+				reward = foundReward;
+				lastRewardedTime = now;
+			}
+
+			update(s_t, a_t, reward, s_tp1, availableActions);
 		}
+
+		/* Determining the next state s = (n = n + d), based on the previous action */
+		if (currentAction == -1) {
+			/* Start counting from 0 */
+			stepCounterInCurrentTrajectory = 0;
+		} else if (currentAction == 0) {
+			/* Continuing straight, increment the step counter */
+			stepCounterInCurrentTrajectory++;
+		} else if (currentAction == 1) {
+			/* Agent turned, reset n to 0 */
+			stepCounterInCurrentTrajectory = 0;
+		}
+
+		currentState = stepCounterInCurrentTrajectory;
+
+		/* Selecting action of this state */
+		int stateForAction = currentState; // to make sure consistency of data
+		int nextAction = selectAction(stateForAction, availableActions);
+
+		//============================================================================================ TRANSITION PHASE
+		/* Transition of the action and state from the previous time ({t} -> {t+1}) */
+		System.out.println("Transition: s=" + prevState + " -> " + currentState + ", a=" + prevAction + " -> " + nextAction);
+		prevState = currentState;
+		prevAction = nextAction;
+		currentAction = nextAction;
+
+		/* Variable changes during action */
+		switch (currentAction) {
+			case 0:
+				// keep direction
+				break;
+			case 1:
+				// change direction randomly and reset step counter for next call
+				direction = rng.nextDouble() * 2 * Math.PI;
+				break;
+			default:
+				throw new IllegalStateException("Unexpected action: " + currentAction);
+		}
+
+		/* Generate path for this action. */
+		Path p = new Path(agentSpeed);
+		p.addWaypoint(lastWaypoint);
+
+		double nextX;
+		double nextY;
+
+		int safetyCounter = 0;
+		do {
+			nextX = lastWaypoint.getX() + agentSpeed * Math.cos(direction);
+			nextY = lastWaypoint.getY() + agentSpeed * Math.sin(direction);
+
+			// the direction may lead out of bounds without changes, so we force a new random direction.
+			if ((nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0) && safetyCounter++ > 10) {
+				direction = rng.nextDouble() * 2 * Math.PI;
+			}
+		} while (nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0);
+
+		Coord nextWaypoint = new Coord(nextX, nextY);
+		p.addWaypoint(nextWaypoint);
+		lastWaypoint = nextWaypoint;
+
+		return p;
 	}
 
-	/** Initialize in a random position */
+	/**
+	 * Initialize in a random position in the map.
+	 */
 	@Override
 	public Coord getInitialLocation() {
-		return new Coord(rng.nextDouble() * getMaxX(), rng.nextDouble() * getMaxY());
+		assert rng != null : "MovementModel not initialized!";
+		Coord c = new Coord(rng.nextDouble() * getMaxX(), rng.nextDouble() * getMaxY());
+		this.lastWaypoint = c;
+		return c;
 	}
 
 	@Override
@@ -260,12 +347,15 @@ public class QLearningMovement extends MovementModel {
 	/**
 	 * This helper class represents a pair of state and action, used as the key for the Q-table.
 	 * It hashes and compares based on both state and action to retrieve Q-Values with more ease.
-	 * */
+	 *
+	 */
 	private static class StateActionPair {
 		private final long stateId;
 		private final int action;
 
-		/** The author loves this approach. */
+		/**
+		 * The author loves this approach.
+		 */
 		public static StateActionPair of(long stateId, int action) {
 			return new StateActionPair(stateId, action);
 		}
@@ -279,7 +369,8 @@ public class QLearningMovement extends MovementModel {
 		 * A specific implementation o avoid the same pair's key-value values being considered as the same.
 		 * For example, if we have two pairs (stateId=1, action=0) and (stateId=1, action=1),
 		 * they should be considered different keys in the Q-table.
-		 * */
+		 *
+		 */
 		@Override
 		public boolean equals(Object o) {
 			if (this == o) return true;
