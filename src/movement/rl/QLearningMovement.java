@@ -5,7 +5,6 @@ import movement.MovementModel;
 import movement.Path;
 import movement.rl.behavior.BehaviorPolicy;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +25,7 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel implements Serializable {
+public class QLearningMovement extends MovementModel {
 	// [Bellman equation specific parameters]
 	/**
 	 * Alpha value, controls the amount of reward to update the Q-value. Values range: [0,1].
