@@ -1,5 +1,7 @@
 package mcrltest.utils;
 
+import java.util.Random;
+
 public class QValue {
     private double straight; // action 0
     private double turn;     // action 1
@@ -31,8 +33,10 @@ public class QValue {
     }
 
     // What is the current best action?
-    public int getBestAction() {
-        return (straight >= turn) ? 0 : 1;
+    public int getBestAction(Random random) {
+        if (straight > turn) return 0;
+        if (turn > straight) return 1;
+        return random.nextBoolean() ? 0 : 1; // tie -> random
     }
 
     public double getMaxValue() {

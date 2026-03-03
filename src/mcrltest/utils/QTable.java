@@ -2,6 +2,7 @@ package mcrltest.utils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class QTable {
     private Map<Integer, QValue> table;
@@ -24,9 +25,9 @@ public class QTable {
         table.get(state).set(action, value);
     }
 
-    public int getBestAction(int state) {
+    public int getBestAction(int state, Random random) {
         initializeState(state);
-        return table.get(state).getBestAction();
+        return table.get(state).getBestAction(random);
     }
 
     public void printTable() {
