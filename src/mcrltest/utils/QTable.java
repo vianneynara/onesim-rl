@@ -2,15 +2,12 @@ package mcrltest.utils;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 public class QTable {
     private Map<Integer, QValue> table;
-    private Random random;
 
     public QTable() {
         table = new HashMap<>();
-        random = new Random();
     }
 
     private void initializeState(int state) {
