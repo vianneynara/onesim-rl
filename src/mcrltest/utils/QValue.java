@@ -34,9 +34,9 @@ public class QValue {
 
     // What is the current best action?
     public int getBestAction(Random random) {
-        if (straight > turn) return 0;
-        if (turn > straight) return 1;
-        return random.nextBoolean() ? 0 : 1; // tie -> random
+        return (straight == turn)
+                ? (random.nextBoolean() ? 0 : 1)
+                : (straight > turn ? 0 : 1);
     }
 
     public double getMaxValue() {
