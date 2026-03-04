@@ -1,6 +1,8 @@
 package movement.rl;
 
 import core.*;
+import lombok.Getter;
+import lombok.Setter;
 import movement.MovementModel;
 import movement.Path;
 import movement.rl.behavior.BehaviorPolicy;
@@ -54,12 +56,16 @@ public class QLearningMovement extends MovementModel {
 	public static final String STEP_PENALTY_S = "stepPenalty";
 	public static final String FOUND_REWARD_S = "foundReward";
 	public static final String SPEED_S = "agentSpeed";
+	public static final String TARGET_COOLDOWN_S = "targetCooldown";
 
 	// [Configuration - Fixed parameters]
-	private double agentSpeed = 1;
+	private final double agentSpeed;
+	/**
+	 * The target's regeneration time before it could be detected as new target. 0 for destructive search.
+	 */
+	private final double targetCooldown;
 	/**
 	 * Explicitly define the available actions.
-	 *
 	 */
 	private final Set<Integer> availableActions = Set.of(0, 1);
 
@@ -82,27 +88,24 @@ public class QLearningMovement extends MovementModel {
 	 * Reward for finding a new target node
 	 */
 	private double foundReward;
-	private Map<DTNHost, Double> targetFound;	// O_{f},
-	private int prevAction;						// a_{t},
-	private int prevState;						// s_{t},
-	private int currentAction;					// a_{t+1},
-	private int currentState;					// s_{t+1},
+	private Map<DTNHost, DetectionInfo> objectiveFound;    // O_{f},
+	private int prevAction;                                // a_{t},
+	private int prevState;                                // s_{t},
+	private int currentAction;                            // a_{t+1},
+	private int currentState;                            // s_{t+1},
 	/**
 	 * Step counter n along current trajectory l. This is the RL state.
 	 */
 	private int stepCounterInCurrentTrajectory;
-	/**
-	 * Last simulation time when foundReward was granted. Used to avoid double-counting rewards
-	 * for the same detection step.
-	 */
-	private double lastRewardedTime;
 	/**
 	 * The Q-table, mapping every state's to the Q-value of each action.
 	 * {@link StateActionPair} is a pair of state and action, Double is Q-value's datatype of that state-action pair.
 	 */
 	private Map<StateActionPair, Double> qTable;
 
-	/** Stores the previous Coordinate of the agent */
+	/**
+	 * Stores the previous Coordinate of the agent
+	 */
 	private Coord lastWaypoint;
 	/**
 	 * A radian value representing the direction of movement, used for reward calculation. Range: [0, 2*PI].
@@ -127,16 +130,16 @@ public class QLearningMovement extends MovementModel {
 		this.behaviorPolicy = (BehaviorPolicy) s.createIntializedObject(behaviorClassName);
 		this.targetPrefix = s.getSetting(TARGET_PREFIX_S, "T");
 		this.agentSpeed = s.getDouble(SPEED_S, 1.0);
+		this.targetCooldown = s.getDouble(TARGET_COOLDOWN_S, 0.0);
 
 		// Reinforcement learning specific variables
-		this.targetFound = new HashMap<>();
+		this.objectiveFound = new HashMap<>();
 		this.qTable = new HashMap<>();
 		this.prevAction = -1;
 		this.prevState = 0;
 		this.currentAction = -1;
 		this.currentState = 0;
 		this.stepCounterInCurrentTrajectory = 0;
-		this.lastRewardedTime = Double.NEGATIVE_INFINITY;
 
 		// Initialize direction randomly
 		this.direction = rng.nextDouble() * 2 * Math.PI;
@@ -152,7 +155,19 @@ public class QLearningMovement extends MovementModel {
 				// Check if the other node matches target prefix
 				if (otherNode.getGroupId().startsWith(targetPrefix)) {
 					// Update the last found time for this target
-					targetFound.put(otherNode, SimClock.getTime());
+					double now = SimClock.getTime();
+					objectiveFound.compute(otherNode, (node, existsInfo) -> {
+						if (existsInfo == null) {
+							/* First detection, negative infinity to ensure update */
+							DetectionInfo info = DetectionInfo.of(Double.NEGATIVE_INFINITY, 0);
+							info.update(now, targetCooldown);
+							return info;
+						} else {
+							/* Redetection */
+							existsInfo.update(now, targetCooldown);
+							return existsInfo;
+						}
+					});
 				}
 			}
 		}
@@ -168,17 +183,17 @@ public class QLearningMovement extends MovementModel {
 		this.initialQValue = proto.initialQValue;
 		this.behaviorPolicy = proto.behaviorPolicy.replicate();
 		this.agentSpeed = proto.agentSpeed;
+		this.targetCooldown = proto.targetCooldown;
 		this.stepPenalty = proto.stepPenalty;
 		this.foundReward = proto.foundReward;
 		this.targetPrefix = proto.targetPrefix;
-		this.targetFound = new HashMap<>();
+		this.objectiveFound = new HashMap<>();
 		this.qTable = new HashMap<>();
 		this.prevAction = -1;
 		this.prevState = 0;
 		this.currentAction = -1;
 		this.currentState = 0;
 		this.stepCounterInCurrentTrajectory = 0;
-		this.lastRewardedTime = Double.NEGATIVE_INFINITY;
 		this.direction = proto.direction;
 		this.lastWaypoint = null;
 	}
@@ -194,7 +209,8 @@ public class QLearningMovement extends MovementModel {
 	/**
 	 * Updates the Q-table based on the observed reward and the next state.
 	 * Also updates the behavior policy with the new experience.
-	 * */
+	 *
+	 */
 	protected void update(int state, int action, double reward, int nextState, Set<Integer> availableNextActions) {
 		double currentQ = getQ(state, action);
 		double maxNextQ = getMaxQ(nextState, availableNextActions);
@@ -209,14 +225,16 @@ public class QLearningMovement extends MovementModel {
 
 	/**
 	 * Getting Q-value of state-action pair (Q(s,a)). Defaults to {@link QLearningMovement#initialQValue}.
-	 * */
+	 *
+	 */
 	private double getQ(int state, int action) {
 		return qTable.getOrDefault(StateActionPair.of(state, action), initialQValue);
 	}
 
 	/**
 	 * Setting Q-value of state-action pair (Q(s,a)).
-	 * */
+	 *
+	 */
 	private void setQ(int state, int action, double value) {
 		qTable.put(StateActionPair.of(state, action), value);
 	}
@@ -247,18 +265,16 @@ public class QLearningMovement extends MovementModel {
 
 			/* Determining reward using lastRewardedTime based on the recency of targets found */
 			double now = SimClock.getTime();
-			boolean foundNewTarget = false;
-			for (Double foundTime : new ArrayList<>(targetFound.values())) {
-				// check if any target was newly found since lastRewardedTime
-				if (foundTime != null && foundTime > lastRewardedTime) {
-					foundNewTarget = true;
-					break;
-				}
+			int availableRewards = 0;
+			for (DetectionInfo info : new ArrayList<>(objectiveFound.values())) {
+				// check if there's an available reward for the current detection information
+				if (info.hasAvailableReward()) availableRewards++;
 			}
 
-			if (foundNewTarget) {
-				reward = foundReward;
-				lastRewardedTime = now;
+			if (availableRewards > 0) {
+				// if there's an available reward, multiply it with the foundReward
+				System.out.println("WOOHOO! Found " + availableRewards + "new target since last reward at time " + now);
+				reward = foundReward * availableRewards;
 			}
 
 			update(s_t, a_t, reward, s_tp1, availableActions);
@@ -381,6 +397,53 @@ public class QLearningMovement extends MovementModel {
 		@Override
 		public int hashCode() {
 			return 31 * Long.hashCode(stateId) + Integer.hashCode(action);
+		}
+	}
+
+	/**
+	 * This helper class represents detection information of a target, specifically the last found time and
+	 * the number of occurrences.
+	 *
+	 */
+	private static class DetectionInfo {
+		/** The last time a searching agent detected to this specific entry */
+		private double lastFoundTime;
+		/** A helper flag to determine whether this entry has an update and reward to consume */
+		private boolean rewardAvailable;
+
+		@Getter
+		private int occurrences;
+
+		private static DetectionInfo of(double lastFoundTime, int occurences) {
+			return new DetectionInfo(lastFoundTime, occurences);
+		}
+
+		public DetectionInfo(double lastFoundTime, int occurences) {
+			this.lastFoundTime = lastFoundTime;
+			this.occurrences = occurences;
+			this.rewardAvailable = false;
+		}
+
+		/**
+		 * Updates the detection info (last found time and occurrences) only if over the cooldown time.
+		 */
+		private boolean update(double foundTime, double cooldown) {
+			if (foundTime - lastFoundTime >= cooldown) {
+				lastFoundTime = foundTime;
+				occurrences++;
+				rewardAvailable = true;
+				return true;
+			}
+			return false;
+		}
+
+		private boolean hasAvailableReward() {
+			if (rewardAvailable) {
+				rewardAvailable = false;
+				return true;
+			} else {
+				return false;
+			}
 		}
 	}
 }
