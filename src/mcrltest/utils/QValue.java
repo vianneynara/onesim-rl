@@ -1,50 +1,108 @@
 package mcrltest.utils;
 
+import core.Settings;
+
+import java.util.ArrayList;
 import java.util.Random;
 
 public class QValue {
-    private double straight; // action 0
-    private double turn;     // action 1
 
-    public QValue() {
-        this.straight = 0.0;
-        this.turn = 0.0;
+//    public static final String NROF_ACTION = "nrofAction";
+//    public static final String USE_VISITCOUNT = "useVisitCount";
+//    public static final String QVALUE_NS = "QValue";
+//
+    private final double[] qValues;
+    private final int[] visitCounts; // Only used if Monte Carlo
+
+    private final int nrofAction;
+    private final boolean useVisitCount;
+
+//    public QValue(Settings s) {
+//        Settings QValueSettings = new Settings(QVALUE_NS);
+//
+//        this.useVisitCount = QValueSettings.getBoolean(USE_VISITCOUNT, true);
+//        this.nrofAction = QValueSettings.getInt(NROF_ACTION);
+//        this.qValues = new double[nrofAction];
+//        this.visitCounts = useVisitCount ? new int[nrofAction] : null;
+//
+//    }
+
+    public QValue(int nrofAction, boolean useVisitCount) {
+        this.nrofAction = nrofAction;
+        this.useVisitCount = useVisitCount;
+
+        this.qValues = new double[nrofAction];
+        this.visitCounts = useVisitCount ? new int[nrofAction] : null;
     }
 
-    // action: 0 = straight, 1 = turn
-    public double get(int action) {
-        if (action == 0) {
-            return straight;
-        } else if (action == 1) {
-            return turn;
-        } else {
-            throw new IllegalArgumentException("Invalid action: must be 0 or 1");
-        }
+    public double getQ(int action) {
+        validateAction(action);
+        return qValues[action];
     }
 
-    public void set(int action, double value) {
-        if (action == 0) {
-            straight = value;
-        } else if (action == 1) {
-            turn = value;
-        } else {
-            throw new IllegalArgumentException("Invalid action: must be 0 or 1");
-        }
+    public void setQ(int action, double value) {
+        validateAction(action);
+        qValues[action] = value;
     }
 
-    // What is the current best action?
+    public int getCount(int action) {
+        validateAction(action);
+        return visitCounts[action];
+    }
+
+    public void setCount(int action, int value) {
+        validateAction(action);
+        visitCounts[action] = value;
+    }
+
     public int getBestAction(Random random) {
-        return (straight == turn)
-                ? (random.nextBoolean() ? 0 : 1)
-                : (straight > turn ? 0 : 1);
+        double maxValue = Double.NEGATIVE_INFINITY;
+        ArrayList<Integer> ties = new ArrayList<>();
+
+        for (int i = 0; i < qValues.length; i++) {
+            if (qValues[i] > maxValue) {
+                maxValue = qValues[i];
+                ties.clear();
+                ties.add(i);
+            } else if (qValues[i] == maxValue) {
+                ties.add(i);
+            }
+        }
+
+        return ties.get(random.nextInt(ties.size()));
     }
 
     public double getMaxValue() {
-        return Math.max(straight, turn);
+        double max = Double.NEGATIVE_INFINITY;
+        for (double q : qValues) {
+            max = Math.max(max, q);
+        }
+        return max;
+    }
+
+    private void validateAction(int action) {
+        if (action < 0 || action >= qValues.length) {
+            throw new IllegalArgumentException("Invalid action index: " + action);
+        }
     }
 
     @Override
     public String toString() {
-        return "Straight(0)=" + straight + ", Turn(1)=" + turn;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < qValues.length; i++) {
+            sb.append("Action ")
+                    .append(i)
+                    .append(" = ")
+                    .append(qValues[i]);
+
+            if (useVisitCount) {
+                sb.append(" (count=")
+                        .append(visitCounts[i])
+                        .append(")");
+            }
+
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 }
