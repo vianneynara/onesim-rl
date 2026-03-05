@@ -19,8 +19,10 @@ public class TrajectoryFrequencyReporter extends Report {
 	@Override
 	public void done() {
 		/* Header with scenario name */
-		write("Trajectory frequency tracker for scenario " + getScenarioName() +
-			"\nsim_time: " + format(getSimTime()));
+		write("REPORT_TYPE: " + this.getClass().getSimpleName()
+			+ ", SCEN: " + getScenarioName()
+			+ ", SIM_TIME: " + format(getSimTime())
+		);
 
 		/* Retrieves all implementing nodes' movement */
 		final List<TrajectoryLengthReporter> trajectoryMovements = SimScenario.getInstance()
