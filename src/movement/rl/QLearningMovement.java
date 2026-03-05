@@ -329,25 +329,97 @@ public class QLearningMovement extends MovementModel implements TrajectoryLength
 		Path p = new Path(agentSpeed);
 		p.addWaypoint(lastWaypoint);
 
-		double nextX;
-		double nextY;
+		double nextX = lastWaypoint.getX() + agentSpeed * Math.cos(direction);
+		double nextY = lastWaypoint.getY() + agentSpeed * Math.sin(direction);
 
-		int safetyCounter = 0;
-		do {
-			nextX = lastWaypoint.getX() + agentSpeed * Math.cos(direction);
-			nextY = lastWaypoint.getY() + agentSpeed * Math.sin(direction);
+		// If the straight step would exit the world bounds, bounce off the wall instead.
+		if (nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0) {
+			double[] bounced = bounce(lastWaypoint.getX(), lastWaypoint.getY(), nextX, nextY);
+			double bounceX  = bounced[0];
+			double bounceY  = bounced[1];
+			direction       = bounced[2]; // reflected direction
+			double remainX  = bounced[3]; // remaining step X-component after bounce
+			double remainY  = bounced[4]; // remaining step Y-component after bounce
 
-			// the direction may lead out of bounds without changes, so we force a new random direction.
-			if ((nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0) && safetyCounter++ > 10) {
-				direction = rng.nextDouble() * 2 * Math.PI;
-			}
-		} while (nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0);
+			// Add the wall-contact point as an intermediate waypoint.
+			p.addWaypoint(new Coord(bounceX, bounceY));
+
+			// Continue from the bounce point with the remaining distance.
+			nextX = bounceX + remainX;
+			nextY = bounceY + remainY;
+
+			// Clamp to bounds in case a corner or very short remaining step still exits.
+			nextX = Math.max(0, Math.min(getMaxX(), nextX));
+			nextY = Math.max(0, Math.min(getMaxY(), nextY));
+		}
 
 		Coord nextWaypoint = new Coord(nextX, nextY);
 		p.addWaypoint(nextWaypoint);
 		lastWaypoint = nextWaypoint;
 
 		return p;
+	}
+
+	/**
+	 * Computes a wall-bounce for a movement step that would exit the world bounds.
+	 * <p>
+	 * Uses parametric ray-vs-axis-aligned-box intersection to find the exact point
+	 * where the step first crosses a boundary wall. The remaining distance after the
+	 * wall contact is then reflected about that wall's normal, producing a physically
+	 * plausible bounce trajectory without any random direction change.
+	 *
+	 * @param fromX     starting X coordinate
+	 * @param fromY     starting Y coordinate
+	 * @param toX       un-clipped target X (may be out of bounds)
+	 * @param toY       un-clipped target Y (may be out of bounds)
+	 * @return double[5] = { bounceX, bounceY, reflectedDirection, remainDX, remainDY }
+	 *
+	 * Made by Claude
+	 */
+	private double[] bounce(double fromX, double fromY, double toX, double toY) {
+		double dx = toX - fromX;
+		double dy = toY - fromY;
+
+		// Find the smallest t in (0,1] at which the ray (fromX+t*dx, fromY+t*dy) hits a wall.
+		double tMin = 1.0;
+		boolean hitVertical = false;   // true → hit left/right wall (reflect dx)
+		boolean hitHorizontal = false; // true → hit top/bottom wall (reflect dy)
+
+		if (dx > 0 && toX >= getMaxX()) {
+			double t = (getMaxX() - fromX) / dx;
+			if (t < tMin) { tMin = t; hitVertical = true; }
+		}
+		if (dx < 0 && toX <= 0) {
+			double t = -fromX / dx;
+			if (t < tMin) { tMin = t; hitVertical = true; }
+		}
+		if (dy > 0 && toY >= getMaxY()) {
+			double t = (getMaxY() - fromY) / dy;
+			if (t < tMin) { tMin = t; hitHorizontal = true; hitVertical = false; }
+		}
+		if (dy < 0 && toY <= 0) {
+			double t = -fromY / dy;
+			if (t < tMin) { tMin = t; hitHorizontal = true; hitVertical = false; }
+		}
+
+		// Wall contact point (clamp to avoid floating-point drift outside bounds).
+		double bounceX = Math.max(0, Math.min(getMaxX(), fromX + tMin * dx));
+		double bounceY = Math.max(0, Math.min(getMaxY(), fromY + tMin * dy));
+
+		// Remaining vector after the bounce point.
+		double remDX = (1.0 - tMin) * dx;
+		double remDY = (1.0 - tMin) * dy;
+
+		// Reflect the remaining vector about the wall normal.
+		if (hitVertical)   remDX = -remDX;
+		if (hitHorizontal) remDY = -remDY;
+
+		// Derive the new direction angle from the reflected vector.
+		double reflectedDir = Math.atan2(
+				hitHorizontal ? -dy : dy,
+				hitVertical   ? -dx : dx);
+
+		return new double[]{ bounceX, bounceY, reflectedDir, remDX, remDY };
 	}
 
 	/**
