@@ -366,6 +366,22 @@ public class QLearningMovement extends MovementModel implements TrajectoryLength
 		return new QLearningMovement(this);
 	}
 
+	// [ REPORTING METHODS ]
+
+	/**
+	 * Records a length value to {@link QLearningMovement#trajectoryFrequencies}.
+	 */
+	private void recordFinishedTrajectory(int length) {
+		if (length <= 0) return;
+		trajectoryFrequencies.merge(length, 1, Integer::sum);
+	}
+
+	@Override
+	public Map<Integer, Integer> getTrajectoryFrequencies() {
+		return trajectoryFrequencies;
+	}
+
+
 	/**
 	 * This helper class represents a pair of state and action, used as the key for the Q-table.
 	 * It hashes and compares based on both state and action to retrieve Q-Values with more ease.
@@ -405,20 +421,6 @@ public class QLearningMovement extends MovementModel implements TrajectoryLength
 		public int hashCode() {
 			return 31 * Long.hashCode(stateId) + Integer.hashCode(action);
 		}
-	}
-
-	// [ REPORTING METHODS ]
-	/**
-	 * Records a length value to {@link QLearningMovement#trajectoryFrequencies}.
-	 * */
-	private void recordFinishedTrajectory(int length) {
-		if (length <= 0) return;
-		trajectoryFrequencies.merge(length, 1, Integer::sum);
-	}
-
-	@Override
-	public Map<Integer, Integer> getTrajectoryFrequencies() {
-		return trajectoryFrequencies;
 	}
 
 	/**
