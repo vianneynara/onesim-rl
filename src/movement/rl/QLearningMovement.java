@@ -2,10 +2,10 @@ package movement.rl;
 
 import core.*;
 import lombok.Getter;
-import lombok.Setter;
 import movement.MovementModel;
 import movement.Path;
 import movement.rl.behavior.BehaviorPolicy;
+import report.TrajectoryLengthReporter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +27,10 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel {
+public class QLearningMovement extends MovementModel implements TrajectoryLengthReporter {
+	// [ REPORTING VARIABLES ]
+	private final Map<Integer, Integer> trajectoryFrequencies;
+
 	// [Bellman equation specific parameters]
 	/**
 	 * Alpha value, controls the amount of reward to update the Q-value. Values range: [0,1].
@@ -116,6 +119,8 @@ public class QLearningMovement extends MovementModel {
 		super(settings);
 		Settings s = new Settings(QLEARNING_NS);
 
+		this.trajectoryFrequencies = new HashMap<>();
+
 		// Bellman specific parameters
 		this.alpha = s.getDouble(ALPHA_S, 0.1);
 		this.lambda = s.getDouble(LAMBDA_S, 0.9);
@@ -178,6 +183,7 @@ public class QLearningMovement extends MovementModel {
 	 */
 	public QLearningMovement(QLearningMovement proto) {
 		super(proto);
+		this.trajectoryFrequencies = proto.trajectoryFrequencies;
 		this.alpha = proto.alpha;
 		this.lambda = proto.lambda;
 		this.initialQValue = proto.initialQValue;
@@ -289,6 +295,7 @@ public class QLearningMovement extends MovementModel {
 			stepCounterInCurrentTrajectory++;
 		} else if (currentAction == 1) {
 			/* Agent turned, reset n to 0 */
+			recordFinishedTrajectory(stepCounterInCurrentTrajectory);
 			stepCounterInCurrentTrajectory = 0;
 		}
 
@@ -400,15 +407,33 @@ public class QLearningMovement extends MovementModel {
 		}
 	}
 
+	// [ REPORTING METHODS ]
+	/**
+	 * Records a length value to {@link QLearningMovement#trajectoryFrequencies}.
+	 * */
+	private void recordFinishedTrajectory(int length) {
+		if (length <= 0) return;
+		trajectoryFrequencies.merge(length, 1, Integer::sum);
+	}
+
+	@Override
+	public Map<Integer, Integer> getTrajectoryFrequencies() {
+		return trajectoryFrequencies;
+	}
+
 	/**
 	 * This helper class represents detection information of a target, specifically the last found time and
 	 * the number of occurrences.
 	 *
 	 */
 	private static class DetectionInfo {
-		/** The last time a searching agent detected to this specific entry */
+		/**
+		 * The last time a searching agent detected to this specific entry
+		 */
 		private double lastFoundTime;
-		/** A helper flag to determine whether this entry has an update and reward to consume */
+		/**
+		 * A helper flag to determine whether this entry has an update and reward to consume
+		 */
 		private boolean rewardAvailable;
 
 		@Getter

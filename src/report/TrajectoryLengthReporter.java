@@ -12,5 +12,5 @@ public interface TrajectoryLengthReporter {
 	 * {@link Double} being the length of the trajectory and {@link Integer} being the frequency of that length.
 	 * @return map of trajectory length and frequencies.
 	 * */
-	Map<Double, Integer> getTrajectoryFrequencies();
+	Map<Integer, Integer> getTrajectoryFrequencies();
 }
