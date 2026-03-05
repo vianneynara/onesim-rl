@@ -1,18 +1,22 @@
 package movement.rl;
 
+import lombok.Getter;
+
 /**
  * This helper class represents a pair of state and action, used as the key for the Q-table.
  * It hashes and compares based on both state and action to retrieve Q-Values with more ease.
  *
  */
 public class StateActionPair {
+	@Getter
 	private final long stateId;
+	@Getter
 	private final int action;
 
 	/**
 	 * The author loves this approach.
 	 */
-	protected static StateActionPair of(long stateId, int action) {
+	public static StateActionPair of(long stateId, int action) {
 		return new StateActionPair(stateId, action);
 	}
 
