@@ -1,11 +1,10 @@
 package movement.rl;
 
 import core.*;
-import lombok.Getter;
 import movement.MovementModel;
 import movement.Path;
 import movement.rl.behavior.BehaviorPolicy;
-import report.TrajectoryLengthReporter;
+import report.TrajectoryLengthReporting;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +26,7 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel implements TrajectoryLengthReporter {
+public class QLearningMovement extends MovementModel implements TrajectoryLengthReporting {
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
 
