@@ -4,6 +4,7 @@ import core.*;
 import movement.MovementModel;
 import movement.Path;
 import movement.rl.behavior.BehaviorPolicy;
+import report.QTableReporting;
 import report.TrajectoryLengthReporting;
 
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel implements TrajectoryLengthReporting {
+public class QLearningMovement extends MovementModel implements TrajectoryLengthReporting, QTableReporting {
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
 
@@ -378,5 +379,10 @@ public class QLearningMovement extends MovementModel implements TrajectoryLength
 	@Override
 	public Map<Integer, Integer> getTrajectoryFrequencies() {
 		return trajectoryFrequencies;
+	}
+
+	@Override
+	public Map<StateActionPair, Double> getQTable() {
+		return qTable;
 	}
 }
