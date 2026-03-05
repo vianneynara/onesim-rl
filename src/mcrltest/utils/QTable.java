@@ -54,6 +54,11 @@ public class QTable {
         return table.get(state).getBestAction(random);
     }
 
+    public double getMaxValue(int state) {
+        initializeState(state);
+        return table.get(state).getMaxValue();
+    }
+
     public void printTable() {
         for (Map.Entry<Integer, QValue> entry : table.entrySet()) {
             System.out.println("State " + entry.getKey() + " -> " + entry.getValue());
