@@ -104,7 +104,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryLength
 	 * The Q-table, mapping every state's to the Q-value of each action.
 	 * {@link StateActionPair} is a pair of state and action, Double is Q-value's datatype of that state-action pair.
 	 */
-	private Map<StateActionPair, Double> qTable;
+	private final Map<StateActionPair, Double> qTable;
 
 	/**
 	 * Stores the previous Coordinate of the agent
@@ -379,98 +379,5 @@ public class QLearningMovement extends MovementModel implements TrajectoryLength
 	@Override
 	public Map<Integer, Integer> getTrajectoryFrequencies() {
 		return trajectoryFrequencies;
-	}
-
-
-	/**
-	 * This helper class represents a pair of state and action, used as the key for the Q-table.
-	 * It hashes and compares based on both state and action to retrieve Q-Values with more ease.
-	 *
-	 */
-	private static class StateActionPair {
-		private final long stateId;
-		private final int action;
-
-		/**
-		 * The author loves this approach.
-		 */
-		public static StateActionPair of(long stateId, int action) {
-			return new StateActionPair(stateId, action);
-		}
-
-		public StateActionPair(long stateId, int action) {
-			this.stateId = stateId;
-			this.action = action;
-		}
-
-		/**
-		 * A specific implementation o avoid the same pair's key-value values being considered as the same.
-		 * For example, if we have two pairs (stateId=1, action=0) and (stateId=1, action=1),
-		 * they should be considered different keys in the Q-table.
-		 *
-		 */
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
-			StateActionPair that = (StateActionPair) o;
-			return stateId == that.stateId && action == that.action;
-		}
-
-		@Override
-		public int hashCode() {
-			return 31 * Long.hashCode(stateId) + Integer.hashCode(action);
-		}
-	}
-
-	/**
-	 * This helper class represents detection information of a target, specifically the last found time and
-	 * the number of occurrences.
-	 *
-	 */
-	private static class DetectionInfo {
-		/**
-		 * The last time a searching agent detected to this specific entry
-		 */
-		private double lastFoundTime;
-		/**
-		 * A helper flag to determine whether this entry has an update and reward to consume
-		 */
-		private boolean rewardAvailable;
-
-		@Getter
-		private int occurrences;
-
-		private static DetectionInfo of(double lastFoundTime, int occurences) {
-			return new DetectionInfo(lastFoundTime, occurences);
-		}
-
-		public DetectionInfo(double lastFoundTime, int occurences) {
-			this.lastFoundTime = lastFoundTime;
-			this.occurrences = occurences;
-			this.rewardAvailable = false;
-		}
-
-		/**
-		 * Updates the detection info (last found time and occurrences) only if over the cooldown time.
-		 */
-		private boolean update(double foundTime, double cooldown) {
-			if (foundTime - lastFoundTime >= cooldown) {
-				lastFoundTime = foundTime;
-				occurrences++;
-				rewardAvailable = true;
-				return true;
-			}
-			return false;
-		}
-
-		private boolean hasAvailableReward() {
-			if (rewardAvailable) {
-				rewardAvailable = false;
-				return true;
-			} else {
-				return false;
-			}
-		}
 	}
 }
