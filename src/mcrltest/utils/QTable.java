@@ -7,20 +7,16 @@ import java.util.Map;
 import java.util.Random;
 
 public class QTable {
-    public static final String NROF_ACTION = "nrofAction";
-    public static final String USE_VISITCOUNT = "useVisitCount";
-    public static final String QTABLE_NS = "QTable";
 
     private final int nrofAction;
     private final boolean useVisitCount;
 
     private Map<Integer, QValue> table;
 
-    public QTable(Settings s) {
-        Settings QValueSettings = new Settings(QTABLE_NS);
+    public QTable(int nrofAction, boolean useVisitCount) {
 
-        this.useVisitCount = QValueSettings.getBoolean(USE_VISITCOUNT, true);
-        this.nrofAction = QValueSettings.getInt(NROF_ACTION);
+        this.useVisitCount = useVisitCount;
+        this.nrofAction = nrofAction;
 
         table = new HashMap<>();
     }
