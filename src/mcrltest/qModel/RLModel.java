@@ -1,8 +1,15 @@
 package mcrltest.qModel;
 
+import core.Settings;
 import mcrltest.utils.QTable;
 
 public abstract class RLModel {
+
+    public static final String RLMODEL_NS = "RLModel";
+
+    public static final String ALPHA_S = "learningRate";
+    public static final String LAMBDA_S = "discountFactor";
+    public static final String INITIAL_Q_S = "initialQValue";
 
     protected final double alpha;
     protected final double gamma;
@@ -10,11 +17,14 @@ public abstract class RLModel {
 
     protected final QTable qTable;
 
-    public RLModel(QTable qTable, double alpha, double gamma, double initialQ) {
-        this.alpha = alpha;
-        this.gamma = gamma;
-        this.initialQ = initialQ;
-        this.qTable = qTable;
+    public RLModel(Settings s) {
+        Settings rlModelSettings = new Settings(RLMODEL_NS);
+
+        this.alpha = rlModelSettings.getDouble(ALPHA_S, 0.1);
+        this.gamma = rlModelSettings.getDouble(LAMBDA_S, 0.9);
+        this.initialQ = rlModelSettings.getDouble(INITIAL_Q_S, 0.0);
+
+        this.qTable = new QTable(rlModelSettings);
     }
 
     /**
