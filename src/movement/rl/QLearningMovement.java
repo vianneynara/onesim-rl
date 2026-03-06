@@ -5,7 +5,7 @@ import movement.MovementModel;
 import movement.Path;
 import movement.rl.behavior.BehaviorPolicy;
 import report.QTableReporting;
-import report.TrajectoryLengthReporting;
+import report.TrajectoryFrequencyReporting;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +27,7 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel implements TrajectoryLengthReporting, QTableReporting {
+public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting {
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
 
