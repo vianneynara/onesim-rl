@@ -7,9 +7,6 @@ import mcrltest.utils.DetectionInfo;
 import java.util.*;
 
 public class RLMovementModel extends MovementModel {
-
-    public static final String RL_NS = "RLMovement";
-
     private RLAgent agent;
 
     private int prevState;
