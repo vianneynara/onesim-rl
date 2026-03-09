@@ -33,8 +33,10 @@ public class RLMovementModel extends MovementModel {
         this.currentState = 0;
         this.currentAction = -1;
 
+        // State = number of step before turn
         this.stepCounter = 0;
 
+        // theta
         this.direction = rng.nextDouble() * 2 * Math.PI;
 
         this.objectiveFound = new HashMap<>();
