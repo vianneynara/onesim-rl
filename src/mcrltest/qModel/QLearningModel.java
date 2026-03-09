@@ -1,17 +1,18 @@
 package mcrltest.qModel;
 
-import mcrltest.utils.QTable;
+import core.Settings;
 
 public class QLearningModel extends RLModel {
 
-    public QLearningModel(QTable qTable, double alpha, double gamma, double initialQ) {
-        super(qTable, alpha, gamma, initialQ);
+    public QLearningModel(Settings s) {
+        super(s);
     }
 
     @Override
     public void update(int state, int action, double reward, int nextState) {
 
         double currentQ = qTable.getQValue(state, action);
+
         double nextMaxQ = qTable.getMaxValue(nextState);
 
         double target = reward + gamma * nextMaxQ;
