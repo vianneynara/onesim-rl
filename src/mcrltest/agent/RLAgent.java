@@ -12,6 +12,7 @@ public class RLAgent {
     public static final String RLAGENT_NS = "RLAgent";
 
     public static final String BEHAVIOR_POLICY_S = "behaviorPolicy";
+    public static final String RL_MODEL_S = "rlModel";
 
     public static final String TARGET_PREFIX_S = "targetPrefix";
     public static final String STEP_PENALTY_S = "stepPenalty";
@@ -33,9 +34,25 @@ public class RLAgent {
 
         Settings rlSettings = new Settings(RLAGENT_NS);
 
-        //?
-        String behaviorClassName = s.getSetting(BEHAVIOR_POLICY_S, "mcrltest.policy.EpsilonGreedyPolicy");
-        this.policy = (BehaviorPolicy) s.createIntializedObject(behaviorClassName);
+        /* -------- POLICY -------- */
+
+        String policyClass = rlSettings.getSetting(
+                BEHAVIOR_POLICY_S,
+                "mcrltest.policy.EpsilonGreedyPolicy"
+        );
+
+        this.policy = (BehaviorPolicy) s.createIntializedObject(policyClass);
+
+        /* -------- RL MODEL -------- */
+
+        String modelClass = rlSettings.getSetting(
+                RL_MODEL_S,
+                "mcrltest.qModel.QLearningModel"
+        );
+
+        this.rlModel = (RLModel) s.createIntializedObject(modelClass);
+
+        /* -------- PARAMETERS -------- */
 
         this.targetPrefix = rlSettings.getSetting(TARGET_PREFIX_S);
         this.stepPenalty = rlSettings.getDouble(STEP_PENALTY_S, -0.01);
@@ -44,44 +61,33 @@ public class RLAgent {
         this.targetCooldown = rlSettings.getDouble(TARGET_COOLDOWN_S, 0);
 
         this.random = new Random();
-
-        //?
-        String modelClassName = s.getSetting(BEHAVIOR_POLICY_S, "mcrltest.policy.EpsilonGreedyPolicy");
-        this.rlModel = (RLModel) s.createIntializedObject(modelClassName);
     }
 
-//    /**
-//     * Ask the policy which action to take
-//     */
-//    public int selectAction(int state) {
-//        return policy.selectAction(state, qTable);
-//    }
+    /* ===============================
+       ACTION SELECTION
+       =============================== */
 
-    /**
-     * Learn from experience
-     */
+    public int selectAction(int state) {
+
+        QTable qTable = rlModel.getQTable();
+
+        return policy.selectAction(state, qTable, random);
+    }
+
+    /* ===============================
+       LEARNING
+       =============================== */
+
     public void learn(int state, int action, double reward, int nextState) {
 
         rlModel.update(state, action, reward, nextState);
 
-        policy.update(state, action, reward);
+        policy.update(state, action, reward, random);
     }
 
-//    public QTable getQTable() {
-//        return qTable;
-//    }
-
-    public BehaviorPolicy getPolicy() {
-        return policy;
-    }
-
-    public RLModel getRlModel() {
-        return rlModel;
-    }
-
-    public Random getRandom() {
-        return random;
-    }
+    /* ===============================
+       GETTERS
+       =============================== */
 
     public double getStepPenalty() {
         return stepPenalty;
@@ -101,5 +107,13 @@ public class RLAgent {
 
     public String getTargetPrefix() {
         return targetPrefix;
+    }
+
+    public Random getRandom() {
+        return random;
+    }
+
+    public QTable getQTable(){
+        return rlModel.getQTable();
     }
 }

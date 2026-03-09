@@ -2,6 +2,7 @@ package movement;
 
 import core.*;
 import mcrltest.agent.RLAgent;
+import mcrltest.utils.DetectionInfo;
 
 import java.util.*;
 
@@ -13,6 +14,7 @@ public class RLMovementModel extends MovementModel {
 
     private int prevState;
     private int prevAction;
+
     private int currentState;
     private int currentAction;
 
@@ -20,8 +22,6 @@ public class RLMovementModel extends MovementModel {
 
     private Coord lastWaypoint;
     private double direction;
-
-    private final Set<Integer> availableActions = Set.of(0,1);
 
     private Map<DTNHost, DetectionInfo> objectiveFound;
 
@@ -32,6 +32,7 @@ public class RLMovementModel extends MovementModel {
 
         this.prevState = 0;
         this.prevAction = -1;
+
         this.currentState = 0;
         this.currentAction = -1;
 
@@ -45,16 +46,18 @@ public class RLMovementModel extends MovementModel {
     protected RLMovementModel(RLMovementModel proto) {
         super(proto);
 
-        this.agent = proto.agent;
+        /* IMPORTANT: create new agent per host */
+        this.agent = new RLAgent(new Settings(RLAgent.RLAGENT_NS));
 
         this.prevState = 0;
         this.prevAction = -1;
+
         this.currentState = 0;
         this.currentAction = -1;
 
         this.stepCounter = 0;
 
-        this.direction = proto.direction;
+        this.direction = rng.nextDouble() * 2 * Math.PI;
 
         this.objectiveFound = new HashMap<>();
     }
@@ -81,10 +84,15 @@ public class RLMovementModel extends MovementModel {
 
             double now = SimClock.getTime();
 
-            objectiveFound.compute(other,(node,info)->{
+            objectiveFound.compute(other, (node, info) -> {
 
-                if(info == null)
-                    info = DetectionInfo.of(Double.NEGATIVE_INFINITY,0);
+                if (info == null) {
+                    info = DetectionInfo.of(
+                            Double.NEGATIVE_INFINITY,
+                            Double.NEGATIVE_INFINITY,
+                            agent.getTargetCooldown()
+                    );
+                }
 
                 info.update(now, agent.getTargetCooldown());
 
@@ -94,42 +102,42 @@ public class RLMovementModel extends MovementModel {
     }
 
     /* ===============================
-       RL ACTION SELECTION
+       ACTION SELECTION
        =============================== */
 
-    private int selectAction(int state){
+    private int selectAction(int state) {
         return agent.selectAction(state);
     }
 
     /* ===============================
-       RL UPDATE
+       LEARNING
        =============================== */
 
-    private void learn(double reward){
+    private void learn(double reward) {
 
         agent.learn(prevState, prevAction, reward, currentState);
 
     }
 
     /* ===============================
-       REWARD CALCULATION
+       REWARD
        =============================== */
 
-    private double computeReward(){
+    private double computeReward() {
 
         double reward = -agent.getStepPenalty();
 
         int foundTargets = 0;
 
-        for(DetectionInfo info : objectiveFound.values()){
+        for (DetectionInfo info : objectiveFound.values()) {
 
-            if(info.hasAvailableReward()){
+            if (info.hasAvailableReward()) {
                 foundTargets++;
             }
 
         }
 
-        if(foundTargets > 0){
+        if (foundTargets > 0) {
             reward = agent.getFoundReward() * foundTargets;
         }
 
@@ -143,9 +151,9 @@ public class RLMovementModel extends MovementModel {
     @Override
     public Path getPath() {
 
-        /* -------- RL UPDATE -------- */
+        /* -------- LEARN FROM PREVIOUS STEP -------- */
 
-        if(prevAction != -1){
+        if (prevAction != -1) {
 
             double reward = computeReward();
 
@@ -155,15 +163,15 @@ public class RLMovementModel extends MovementModel {
 
         /* -------- STATE UPDATE -------- */
 
-        if(currentAction == -1){
+        if (currentAction == -1) {
 
             stepCounter = 0;
 
-        } else if(currentAction == 0){
+        } else if (currentAction == 0) {
 
             stepCounter++;
 
-        } else if(currentAction == 1){
+        } else if (currentAction == 1) {
 
             stepCounter = 0;
 
@@ -171,7 +179,7 @@ public class RLMovementModel extends MovementModel {
 
         currentState = stepCounter;
 
-        /* -------- ACTION SELECTION -------- */
+        /* -------- SELECT ACTION -------- */
 
         int action = selectAction(currentState);
 
@@ -181,28 +189,28 @@ public class RLMovementModel extends MovementModel {
 
         /* -------- APPLY ACTION -------- */
 
-        if(action == 1){
+        if (action == 1) {
 
             direction = rng.nextDouble() * 2 * Math.PI;
 
         }
 
-        /* -------- PATH GENERATION -------- */
+        /* -------- GENERATE PATH -------- */
 
-        Path p = new Path(agent.getAgentSpeed());
+        Path p = new Path(agent.getSpeed());
 
         p.addWaypoint(lastWaypoint);
 
         double nextX = lastWaypoint.getX() +
-                agent.getAgentSpeed() * Math.cos(direction);
+                agent.getSpeed() * Math.cos(direction);
 
         double nextY = lastWaypoint.getY() +
-                agent.getAgentSpeed() * Math.sin(direction);
+                agent.getSpeed() * Math.sin(direction);
 
         nextX = Math.max(0, Math.min(getMaxX(), nextX));
         nextY = Math.max(0, Math.min(getMaxY(), nextY));
 
-        Coord next = new Coord(nextX,nextY);
+        Coord next = new Coord(nextX, nextY);
 
         p.addWaypoint(next);
 
@@ -212,7 +220,7 @@ public class RLMovementModel extends MovementModel {
     }
 
     /* ===============================
-       INITIAL POSITION
+       INITIAL LOCATION
        =============================== */
 
     @Override
