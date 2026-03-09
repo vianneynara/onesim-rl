@@ -23,4 +23,18 @@ public class EpisodeStep {
     public double getReward() {
         return reward;
     }
+
+    public String toCSV() {
+        return state + "," + action + "," + reward;
+    }
+
+    @Override
+    public String toString() {
+
+        String actionName = (action == 0) ? "STRAIGHT" : "TURN";
+
+        return "EpisodeStep[state=" + state +
+                ", action=" + actionName +
+                ", reward=" + reward + "]";
+    }
 }
