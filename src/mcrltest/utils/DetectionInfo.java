@@ -11,10 +11,11 @@ import java.io.Serializable;
  * Used by RLMovementModel to track when a target was seen and
  * whether a reward can be granted again.
  */
-public class DetectionInfo implements Serializable {
+//public class DetectionInfo implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+//    private static final long serialVersionUID = 1L;
 
+public class DetectionInfo {
     /** Last time this target was detected */
     private double lastDetectionTime;
 
