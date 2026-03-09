@@ -25,11 +25,11 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy {
         this.decayRate = behaviorSettings.getDouble(DECAY_S, 0.995);
         this.minEpsilon = behaviorSettings.getDouble(MIN_EPSILON_S, 0.01);
 
-        // use seed from MovementModel for reproducibility
+        // Use MovementModel RNG for reproducibility
         this.random = MovementModel.getRandom();
-        // failsafe in case MovementModel's random is not properly initialized
+
         if (this.random == null) {
-            System.out.println("Warning: MovementModel random not initialized, using new Random() for EpsilonGreedyBehavior");
+            System.out.println("Warning: MovementModel random not initialized, using new Random()");
             this.random = new Random();
         }
     }
@@ -44,27 +44,46 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy {
         this.random = random;
     }
 
+    /**
+     * Select action using epsilon-greedy strategy
+     */
     @Override
-    public Integer selectAction(int state, QTable qTable) {
+    public Integer selectAction(int state, QTable qTable, Random random) {
 
-        if (random.nextDouble() < epsilon) {
+        Random rng = (random != null) ? random : this.random;
+
+        if (rng.nextDouble() < epsilon) {
             // Explore
-            return random.nextBoolean() ? 1 : 0;
+            return rng.nextBoolean() ? 1 : 0;
         } else {
             // Exploit
-            return qTable.getBestAction(state, random);
+            return qTable.getBestAction(state, rng);
         }
     }
 
+    /**
+     * Decay epsilon after learning step
+     */
     @Override
-    public void update(int state, int action, double reward) {
-        // Decay epsilon after each step
+    public void update(int state, int action, double reward, Random random) {
+
         epsilon = Math.max(minEpsilon, epsilon * decayRate);
+
     }
 
+    /**
+     * Clone policy for another agent
+     */
     @Override
     public BehaviorPolicy replicate() {
-        return new EpsilonGreedyPolicy(epsilon, minEpsilon, decayRate, random);
+
+        return new EpsilonGreedyPolicy(
+                epsilon,
+                minEpsilon,
+                decayRate,
+                random
+        );
+
     }
 
     @Override

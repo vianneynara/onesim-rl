@@ -3,6 +3,7 @@ package mcrltest.policy;
 import mcrltest.utils.QTable;
 
 import java.io.Serializable;
+import java.util.Random;
 
 
 /**
@@ -19,12 +20,12 @@ public interface BehaviorPolicy extends Serializable, Cloneable {
      *
      * @author ZeroKampus
      */
-    Integer selectAction(int state, QTable qTable);
+    Integer selectAction(int state, QTable qTable, Random random);
 
     /**
      * Update internal policy parameters (if needed).
      */
-    void update(int state, int action, double reward);
+    void update(int state, int action, double reward, Random random);
 
     /**
      * Copy policy for another agent
