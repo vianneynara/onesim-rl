@@ -6,26 +6,11 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class QValue {
-
-//    public static final String NROF_ACTION = "nrofAction";
-//    public static final String USE_VISITCOUNT = "useVisitCount";
-//    public static final String QVALUE_NS = "QValue";
-//
     private final double[] qValues;
     private final int[] visitCounts; // Only used if Monte Carlo
 
     private final int nrofAction;
     private final boolean useVisitCount;
-
-//    public QValue(Settings s) {
-//        Settings QValueSettings = new Settings(QVALUE_NS);
-//
-//        this.useVisitCount = QValueSettings.getBoolean(USE_VISITCOUNT, true);
-//        this.nrofAction = QValueSettings.getInt(NROF_ACTION);
-//        this.qValues = new double[nrofAction];
-//        this.visitCounts = useVisitCount ? new int[nrofAction] : null;
-//
-//    }
 
     public QValue(int nrofAction, boolean useVisitCount) {
         this.nrofAction = nrofAction;
