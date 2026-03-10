@@ -4,23 +4,31 @@ import core.*;
 import mcrltest.agent.RLAgent;
 import mcrltest.utils.DetectionInfo;
 
-import java.util.*;
+import java.awt.Color;
+import java.util.HashMap;
+import java.util.Map;
 
 public class RLMovementModel extends MovementModel {
+
     private RLAgent agent;
 
     private int prevState;
     private int prevAction;
 
     private int currentState;
-    private int currentAction;
 
+    /* state = number of straight steps before turning */
     private int stepCounter;
 
     private Coord lastWaypoint;
     private double direction;
 
     private Map<DTNHost, DetectionInfo> objectiveFound;
+
+    /* flag to force turn after finding target */
+    private boolean targetDetectedThisStep = false;
+
+    private int[] RED = {255, 0, 0};
 
     public RLMovementModel(Settings settings) {
         super(settings);
@@ -31,12 +39,9 @@ public class RLMovementModel extends MovementModel {
         this.prevAction = -1;
 
         this.currentState = 0;
-        this.currentAction = -1;
 
-        // State = number of step before turn
         this.stepCounter = 0;
 
-        // theta
         this.direction = rng.nextDouble() * 2 * Math.PI;
 
         this.objectiveFound = new HashMap<>();
@@ -45,14 +50,12 @@ public class RLMovementModel extends MovementModel {
     protected RLMovementModel(RLMovementModel proto) {
         super(proto);
 
-        /* IMPORTANT: create new agent per host */
         this.agent = new RLAgent(new Settings(RLAgent.RLAGENT_NS));
 
         this.prevState = 0;
         this.prevAction = -1;
 
         this.currentState = 0;
-        this.currentAction = -1;
 
         this.stepCounter = 0;
 
@@ -66,18 +69,27 @@ public class RLMovementModel extends MovementModel {
         return new RLMovementModel(this);
     }
 
-    /* ===============================
+    /* =====================================
        TARGET DETECTION
-       =============================== */
+       ===================================== */
 
     @Override
     public void changedConnection(Connection con) {
 
-        if (!con.isUp()) return;
+        System.out.println("Masuk Changed Connection RL Movement Model");
+
+        if (!con.isUp()) {
+            return;
+        }
 
         DTNHost other = con.getOtherNode(getHost());
 
-        if (other == null) return;
+        if (other == null) {
+            return;
+        }
+
+        System.out.println("Other Group ID : " + other.getGroupId() + "||" + other.getName());
+        System.out.println("Target Prefix : " + agent.getTargetPrefix());
 
         if (other.getGroupId().startsWith(agent.getTargetPrefix())) {
 
@@ -91,36 +103,51 @@ public class RLMovementModel extends MovementModel {
                             Double.NEGATIVE_INFINITY,
                             agent.getTargetCooldown()
                     );
+                } else {
+                    System.out.println("||||||||||||||||||||||||||||||||||");
+                    System.out.println("Target has been found before");
+                    System.out.println("||||||||||||||||||||||||||||||||||\n");
                 }
 
                 info.update(now, agent.getTargetCooldown());
+
+                /* change target color */
+                other.setColor(RED);
+                System.out.println("Change into RED\n");
+
+                /* force turn next step */
+                targetDetectedThisStep = true;
+
+                System.out.println("++++++++++++++++++++++++++++++++++++");
+                System.out.println("++++++++++++++++++++++++++++++++++++");
+                System.out.println(node.getName() + " meet " + other.getName());
+                System.out.println("++++++++++++++++++++++++++++++++++++");
+                System.out.println("++++++++++++++++++++++++++++++++++++\n");
 
                 return info;
             });
         }
     }
 
-    /* ===============================
-       ACTION SELECTION
-       =============================== */
+    /* =====================================
+       RL ACTION SELECTION
+       ===================================== */
 
     private int selectAction(int state) {
         return agent.selectAction(state);
     }
 
-    /* ===============================
+    /* =====================================
        LEARNING
-       =============================== */
+       ===================================== */
 
     private void learn(double reward) {
-
         agent.learn(prevState, prevAction, reward, currentState);
-
     }
 
-    /* ===============================
-       REWARD
-       =============================== */
+    /* =====================================
+       REWARD FUNCTION
+       ===================================== */
 
     private double computeReward() {
 
@@ -143,58 +170,44 @@ public class RLMovementModel extends MovementModel {
         return reward;
     }
 
-    /* ===============================
-       MOVEMENT
-       =============================== */
+    /* =====================================
+       STATE UPDATE
+       ===================================== */
 
-    @Override
-    public Path getPath() {
+    private void updateState() {
 
-        /* -------- LEARN FROM PREVIOUS STEP -------- */
-
-        if (prevAction != -1) {
-
-            double reward = computeReward();
-
-            learn(reward);
-
+        if (prevAction == -1) {
+            stepCounter = 0;
+            return;
         }
 
-        /* -------- STATE UPDATE -------- */
-
-        if (currentAction == -1) {
-
-            stepCounter = 0;
-
-        } else if (currentAction == 0) {
-
+        if (prevAction == 0) {
             stepCounter++;
-
-        } else if (currentAction == 1) {
-
+        }
+        else if (prevAction == 1) {
             stepCounter = 0;
-
         }
 
         currentState = stepCounter;
+    }
 
-        /* -------- SELECT ACTION -------- */
+    /* =====================================
+       APPLY ACTION
+       ===================================== */
 
-        int action = selectAction(currentState);
-
-        prevState = currentState;
-        prevAction = action;
-        currentAction = action;
-
-        /* -------- APPLY ACTION -------- */
+    private void applyAction(int action) {
 
         if (action == 1) {
-
             direction = rng.nextDouble() * 2 * Math.PI;
-
         }
 
-        /* -------- GENERATE PATH -------- */
+    }
+
+    /* =====================================
+       PATH GENERATION
+       ===================================== */
+
+    private Path generatePath() {
 
         Path p = new Path(agent.getSpeed());
 
@@ -218,9 +231,52 @@ public class RLMovementModel extends MovementModel {
         return p;
     }
 
-    /* ===============================
+    /* =====================================
+       MAIN RL LOOP
+       ===================================== */
+
+    @Override
+    public Path getPath() {
+
+        /* 1️⃣ learn from previous step */
+        if (prevAction != -1) {
+
+            double reward = computeReward();
+
+            learn(reward);
+        }
+
+        /* 2️⃣ observe state */
+        updateState();
+
+        /* 3️⃣ choose action */
+        int action = selectAction(currentState);
+
+        /* force turn if target detected */
+        if (targetDetectedThisStep) {
+            action = 1;
+            targetDetectedThisStep = false;
+        }
+
+        /* 4️⃣ store transition */
+        prevState = currentState;
+        prevAction = action;
+
+        System.out.println("=================================");
+        System.out.println("State : " + currentState);
+        System.out.println("Action : " + action);
+        System.out.println("=================================\n");
+
+        /* 5️⃣ execute action */
+        applyAction(action);
+
+        /* 6️⃣ move agent */
+        return generatePath();
+    }
+
+    /* =====================================
        INITIAL LOCATION
-       =============================== */
+       ===================================== */
 
     @Override
     public Coord getInitialLocation() {
