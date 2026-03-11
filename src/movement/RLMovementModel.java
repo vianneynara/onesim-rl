@@ -4,7 +4,6 @@ import core.*;
 import mcrltest.agent.RLAgent;
 import mcrltest.utils.DetectionInfo;
 
-import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
 
