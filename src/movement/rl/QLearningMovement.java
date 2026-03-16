@@ -257,6 +257,19 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		return (maxQ == Double.NEGATIVE_INFINITY) ? initialQValue : maxQ;
 	}
 
+	/**
+	 * Not only generates the path, it will also do and process all the Markovian Decision Process.
+	 * Including:
+	 * <ol>
+	 *     <li>Updating the Q-table</li>
+	 *     <li>Determining next state (n) based on the previous action</li>
+	 *     <li>Selection action for the current state</li>
+	 *     <li>Doing variable changes regarding the selected action</li>
+	 *     <li>Generates path with agent's speed and direction</li>
+	 * </ol>
+	 *
+	 * @author narwa
+	 * */
 	@Override
 	public Path getPath() {
 		/* Perform Q-Learning update only if we have previous action */
