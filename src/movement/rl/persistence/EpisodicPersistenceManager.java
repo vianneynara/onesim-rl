@@ -49,6 +49,9 @@ public class EpisodicPersistenceManager {
 			System.out.println("[Warning] [EpisodicPersistenceManager] Persistence path not set. No data will be saved.");
 		}
 
+		/* Episode number, injected from -d command (in multi batch runner) */
+        episodeNumber = s.getInt(EPISODE_NUMBER_S, 1);
+
 		initialized = true;
 	}
 
