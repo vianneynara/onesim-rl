@@ -10,14 +10,14 @@ public interface EpisodicPersistable {
 	/**
 	 * Saves by passing an empty persistence class.
 	 *
-	 * @param data
+	 * @param epd
 	 * */
-	void saveTo(EpisodicPersistenceData data);
+	void saveTo(EpisodicPersistenceData epd);
 
 	/**
 	 * Loads the implementor's components from the passed data.
 	 *
-	 * @param data
+	 * @param epd
 	 * */
-	void loadFrom(EpisodicPersistenceData data);
+	void loadFrom(EpisodicPersistenceData epd);
 }
