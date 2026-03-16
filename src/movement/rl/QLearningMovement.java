@@ -99,7 +99,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	/**
 	 * Step counter n along current trajectory l. This is the RL state.
 	 */
-	private int stepCounterInCurrentTrajectory;
+	private int currentTrajectorySteps;
 	/**
 	 * The Q-table, mapping every state's to the Q-value of each action.
 	 * {@link StateActionPair} is a pair of state and action, Double is Q-value's datatype of that state-action pair.
@@ -144,7 +144,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.prevState = 0;
 		this.currentAction = -1;
 		this.currentState = 0;
-		this.stepCounterInCurrentTrajectory = 0;
+		this.currentTrajectorySteps = 0;
 
 		// Initialize direction randomly
 		this.direction = rng.nextDouble() * 2 * Math.PI;
@@ -199,7 +199,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.prevState = 0;
 		this.currentAction = -1;
 		this.currentState = 0;
-		this.stepCounterInCurrentTrajectory = 0;
+		this.currentTrajectorySteps = 0;
 		this.direction = proto.direction;
 		this.lastWaypoint = null;
 	}
@@ -289,20 +289,20 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		/* Determining the next state s = (n = n + d), based on the previous action */
 		if (currentAction == -1) {
 			/* Start counting from 0 */
-			stepCounterInCurrentTrajectory = 0;
+			currentTrajectorySteps = 0;
 		} else if (currentAction == 0) {
 			/* Continuing straight, increment the step counter */
-			stepCounterInCurrentTrajectory++;
+			currentTrajectorySteps++;
 		} else if (currentAction == 1) {
 			/* Agent turned, reset n to 0 */
-			recordFinishedTrajectory(stepCounterInCurrentTrajectory);
-			stepCounterInCurrentTrajectory = 0;
+			recordFinishedTrajectory(currentTrajectorySteps);
+			currentTrajectorySteps = 0;
 		}
 
-		currentState = stepCounterInCurrentTrajectory;
+		currentState = currentTrajectorySteps;
 
 		/* Selecting action of this state */
-		int stateForAction = currentState; // to make sure consistency of data
+		int stateForAction = -currentState; // to make sure consistency of data
 		int nextAction = selectAction(stateForAction, availableActions);
 
 		//============================================================================================ TRANSITION PHASE
