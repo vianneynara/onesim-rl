@@ -27,6 +27,8 @@ public class QLearningModel extends RLModel {
 
         double newQ = currentQ + alpha * (target - currentQ);   // Q(s,a) ← Q(s,a) + α[r + γ * maxQ(s′,a′) − Q(s,a)]
 
+        totalTrainingReward += reward;
+
         qTable.setQValue(state, action, newQ);
     }
 }

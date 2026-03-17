@@ -15,6 +15,8 @@ public abstract class RLModel {
     protected final double gamma;
     protected final double initialQ;
 
+    protected double totalTrainingReward = 0;
+
     protected final QTable qTable;
 
     public RLModel(Settings s) {
@@ -48,5 +50,9 @@ public abstract class RLModel {
 
     public QTable getQTable() {
         return qTable;
+    }
+
+    public double getTotalTrainingReward() {
+        return totalTrainingReward;
     }
 }

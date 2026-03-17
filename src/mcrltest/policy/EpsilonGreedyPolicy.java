@@ -6,7 +6,7 @@ import movement.MovementModel;
 
 import java.util.Random;
 
-public class EpsilonGreedyPolicy implements BehaviorPolicy {
+public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
 
     private double epsilon;
     private final double minEpsilon;
@@ -89,5 +89,10 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy {
     @Override
     public String getName() {
         return "EpsilonGreedyDecay";
+    }
+
+    @Override
+    public double getEpsilon() {
+        return epsilon;
     }
 }

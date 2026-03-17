@@ -13,10 +13,9 @@ public class RLMovementModel extends MovementModel {
 
     private int prevState;
     private int prevAction;
-
     private int currentState;
 
-    /* state = number of straight steps before turning */
+    /* number of straight steps before turning */
     private int stepCounter;
 
     private Coord lastWaypoint;
@@ -27,7 +26,7 @@ public class RLMovementModel extends MovementModel {
     /* flag to force turn after finding target */
     private boolean targetDetectedThisStep = false;
 
-    private int[] RED = {255, 0, 0};
+    private final int[] RED = {255, 0, 0};
 
     public RLMovementModel(Settings settings) {
         super(settings);
@@ -36,7 +35,6 @@ public class RLMovementModel extends MovementModel {
 
         this.prevState = 0;
         this.prevAction = -1;
-
         this.currentState = 0;
 
         this.stepCounter = 0;
@@ -53,7 +51,6 @@ public class RLMovementModel extends MovementModel {
 
         this.prevState = 0;
         this.prevAction = -1;
-
         this.currentState = 0;
 
         this.stepCounter = 0;
@@ -75,20 +72,15 @@ public class RLMovementModel extends MovementModel {
     @Override
     public void changedConnection(Connection con) {
 
-        System.out.println("Masuk Changed Connection RL Movement Model");
-
         if (!con.isUp()) {
             return;
         }
 
         DTNHost other = con.getOtherNode(getHost());
 
-        if (other == null) {
+        if (other == null || other == getHost()) {
             return;
         }
-
-        System.out.println("Other Group ID : " + other.getGroupId() + "||" + other.getName());
-        System.out.println("Target Prefix : " + agent.getTargetPrefix());
 
         if (other.getGroupId().startsWith(agent.getTargetPrefix())) {
 
@@ -102,26 +94,15 @@ public class RLMovementModel extends MovementModel {
                             Double.NEGATIVE_INFINITY,
                             agent.getTargetCooldown()
                     );
-                } else {
-                    System.out.println("||||||||||||||||||||||||||||||||||");
-                    System.out.println("Target has been found before");
-                    System.out.println("||||||||||||||||||||||||||||||||||\n");
                 }
 
                 info.update(now, agent.getTargetCooldown());
 
                 /* change target color */
                 other.setColor(RED);
-                System.out.println("Change into RED\n");
 
                 /* force turn next step */
                 targetDetectedThisStep = true;
-
-                System.out.println("++++++++++++++++++++++++++++++++++++");
-                System.out.println("++++++++++++++++++++++++++++++++++++");
-                System.out.println(node.getName() + " meet " + other.getName());
-                System.out.println("++++++++++++++++++++++++++++++++++++");
-                System.out.println("++++++++++++++++++++++++++++++++++++\n");
 
                 return info;
             });
@@ -237,7 +218,10 @@ public class RLMovementModel extends MovementModel {
     @Override
     public Path getPath() {
 
-        /* 1️⃣ learn from previous step */
+        /* load QTable once */
+        agent.tryLoad();
+
+        /* learn from previous step */
         if (prevAction != -1) {
 
             double reward = computeReward();
@@ -245,31 +229,25 @@ public class RLMovementModel extends MovementModel {
             learn(reward);
         }
 
-        /* 2️⃣ observe state */
+        /* observe state */
         updateState();
 
-        /* 3️⃣ choose action */
+        /* choose action */
         int action = selectAction(currentState);
 
-        /* force turn if target detected */
         if (targetDetectedThisStep) {
             action = 1;
             targetDetectedThisStep = false;
         }
 
-        /* 4️⃣ store transition */
+        /* store transition */
         prevState = currentState;
         prevAction = action;
 
-        System.out.println("=================================");
-        System.out.println("State : " + currentState);
-        System.out.println("Action : " + action);
-        System.out.println("=================================\n");
-
-        /* 5️⃣ execute action */
+        /* execute action */
         applyAction(action);
 
-        /* 6️⃣ move agent */
+        /* move */
         return generatePath();
     }
 
@@ -290,4 +268,13 @@ public class RLMovementModel extends MovementModel {
         return c;
     }
 
+//    /* =====================================
+//       SAVE QTABLE WHEN SIMULATION ENDS
+//       ===================================== */
+//
+//    @Override
+//    public void finalize() {
+//
+//        agent.trySave();
+//    }
 }
