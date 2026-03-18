@@ -4,6 +4,9 @@ import core.*;
 import movement.MovementModel;
 import movement.Path;
 import movement.rl.behavior.BehaviorPolicy;
+import movement.rl.persistence.EpisodicPersistable;
+import movement.rl.persistence.EpisodicPersistenceData;
+import movement.rl.persistence.EpisodicPersistenceManager;
 import report.QTableReporting;
 import report.TrajectoryFrequencyReporting;
 
@@ -27,9 +30,12 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting {
+public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting, EpisodicPersistable {
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
+
+//	// [ EPISODIC VARIABLES]
+//	private final int episodeNumber;
 
 	// [Bellman equation specific parameters]
 	/**
@@ -149,6 +155,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		// Initialize direction randomly
 		this.direction = rng.nextDouble() * 2 * Math.PI;
 		this.lastWaypoint = null; // will be initialized on first getPath()
+
+		// Re/Initializes episodic persistence
+		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
+		if (epd != null) {
+			loadFrom(epd);
+		}
 	}
 
 	@Override
@@ -320,7 +332,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		//============================================================================================ TRANSITION PHASE
 		/* Transition of the action and state from the previous time ({t} -> {t+1}) */
-		System.out.println("Transition: s=" + prevState + " -> " + currentState + ", a=" + prevAction + " -> " + nextAction);
+//		System.out.println("Transition: s=" + prevState + " -> " + currentState + ", a=" + prevAction + " -> " + nextAction);
 		prevState = currentState;
 		prevAction = nextAction;
 		currentAction = nextAction;
@@ -469,5 +481,83 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	@Override
 	public Map<StateActionPair, Double> getQTable() {
 		return qTable;
+	}
+
+	// [ EPISODIC PERSISTENCE METHODS ]
+
+	/**
+	 * Minimizes the process of saving an episode.
+	 * */
+	@Override
+	public void saveCurrentEpisode() {
+		EpisodicPersistenceData epd = new EpisodicPersistenceData();
+		saveTo(epd);
+		EpisodicPersistenceManager.save(epd);
+	}
+
+	@Override
+	public void saveTo(EpisodicPersistenceData epd) {
+		System.out.printf("<%s> Saving persistence data...%n", QLearningMovement.class.getName());
+
+		/* Saving RL cores */
+		epd.prevAction = this.prevAction;
+		epd.prevState = this.prevState;
+		epd.currentAction = this.currentAction;
+		epd.currentState = this.currentState;
+		epd.currentTrajectorySteps = this.currentTrajectorySteps;
+		epd.direction = this.direction;
+
+		/* Saving Q-Table */
+		epd.qTable = new HashMap<>();
+		for (var entr : qTable.entrySet()) {
+			String key = entr.getKey().getStateId() + ":" + entr.getKey().getAction();
+			epd.qTable.put(key, entr.getValue());
+		}
+
+		/* Saving trajectory recorder */
+		epd.trajectoryFrequencies = new HashMap<>();
+		for (var entry : trajectoryFrequencies.entrySet()) {
+			epd.trajectoryFrequencies.put(String.valueOf(entry.getKey()), entry.getValue());
+		}
+
+		// Also save the persistence data for the BP
+		behaviorPolicy.saveTo(epd);
+	}
+
+	@Override
+	public void loadFrom(EpisodicPersistenceData epd) {
+		System.out.printf("<%s> Loading persistence data...%n", QLearningMovement.class.getName());
+
+		/* Loading RL cores */
+		this.prevAction = epd.prevAction;
+		this.prevState = epd.prevState;
+		this.currentAction = epd.currentAction;
+		this.currentState = epd.currentState;
+		this.currentTrajectorySteps = epd.currentTrajectorySteps;
+		this.direction = epd.direction;
+
+		/* Loading Q-Table */
+		qTable.clear();
+		if (epd.qTable != null) {
+			for (var entry : epd.qTable.entrySet()) {
+				String[] values = entry.getKey().split(":");
+				assert values.length != 2 : "Invalid Q-Table key format in persistence data: " + entry.getKey();
+				qTable.put(
+					StateActionPair.of(Integer.parseInt(values[0]), Integer.parseInt(values[1])),
+					entry.getValue()
+				);
+			}
+		}
+
+		/* Loading trajectory recorder */
+		trajectoryFrequencies.clear();
+		if (epd.trajectoryFrequencies != null) {
+			for (var entry : epd.trajectoryFrequencies.entrySet()) {
+				this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+			}
+		}
+
+		// Now, also load persistence for the BP
+		behaviorPolicy.loadFrom(epd);
 	}
 }
