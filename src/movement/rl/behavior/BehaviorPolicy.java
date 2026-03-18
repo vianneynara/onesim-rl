@@ -1,7 +1,7 @@
 
 package movement.rl.behavior;
 
-import movement.rl.Action;
+import movement.rl.persistence.EpisodicPersistable;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -13,7 +13,7 @@ import java.util.Set;
  *
  * @author narwa
  */
-public interface BehaviorPolicy extends Serializable, Cloneable {
+public interface BehaviorPolicy extends EpisodicPersistable, Serializable, Cloneable {
     
     /**
      * Selects an action given current state, Q-values, and available actions. Q-value stored as Q(s,a) in the map, uses Action
