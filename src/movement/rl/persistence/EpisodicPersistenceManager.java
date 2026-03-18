@@ -19,7 +19,7 @@ import java.nio.file.StandardOpenOption;
  * */
 public class EpisodicPersistenceManager {
 	// [ Configuration - Namespace and keys ]
-	public static final String EPISODIC_NS = "EPM";
+	public static final String EPISODIC_NS = "EpisodicPersistenceManager";
 	public static final String PERSISTENCE_PATH_S = "persistencePath";
 	public static final String EPISODE_NUMBER_S = "episodeNumber";
 
