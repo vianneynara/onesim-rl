@@ -4,7 +4,7 @@ import core.Settings;
 import lombok.Getter;
 import lombok.NonNull;
 import movement.MovementModel;
-import movement.rl.Action;
+import movement.rl.persistence.EpisodicPersistenceData;
 
 import java.util.*;
 
@@ -140,7 +140,15 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 		return "EpsilonGreedyBehavior(ε=" + String.format("%.3f", epsilon) + ")";
 	}
 
-	public double getEpsilon() {
-		return epsilon;
+	@Override
+	public void saveTo(EpisodicPersistenceData epd) {
+		epd.epsilon = this.epsilon;
+		System.out.println("[EpsilonGreedyBehavior] Saved epsilon of: " + epd.epsilon);
+	}
+
+	@Override
+	public void loadFrom(EpisodicPersistenceData epd) {
+		this.epsilon = epd.epsilon;
+		System.out.println("[EpsilonGreedyBehavior] Loaded epsilon of: " + this.epsilon);
 	}
 }
