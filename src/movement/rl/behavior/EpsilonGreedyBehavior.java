@@ -26,8 +26,10 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	public static final String DECAY_S = "epsilonDecay";
 	public static final String MIN_EPSILON_S = "minEpsilon";
 
-	/** Constructor called reflectively by Settings. The {@code _settings} param is unused
-	 *  because this policy reads its own sub-namespace ({@value #BEHAVIOR_NS}). */
+	/**
+	 * Constructor called reflectively by Settings. The {@code _settings} param is unused
+	 * because this policy reads its own sub-namespace ({@value #BEHAVIOR_NS}).
+	 */
 	public EpsilonGreedyBehavior(Settings _settings) {
 		Settings behaviorSettings = new Settings(BEHAVIOR_NS);
 
@@ -54,8 +56,9 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	/**
 	 * Decides the use of random or best selection (`arg max Q(s,a)`) using the epsilon as threshold.
 	 * Explores if RNG is under epsilon threshold {@link EpsilonGreedyBehavior#epsilon}.
+	 *
 	 * @param availableActions valid actions to choose from; if empty falls back to {0,1}
-	 * */
+	 */
 	@Override
 	public Integer selectAction(int stateId, Map<Integer, Double> qValues, @NonNull Set<Integer> availableActions) {
 		if (random.nextDouble() < epsilon) {
@@ -84,6 +87,7 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	/**
 	 * Selects a random action from the given set of available actions.
 	 * If the set is empty, it will use default an undefined action space (0 and 1) for random selection.
+	 *
 	 * @param availableActions set of valid action indices to pick from
 	 */
 	private Integer selectRandomAction(@NonNull Set<Integer> availableActions) {
@@ -100,7 +104,8 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 
 	/**
 	 * Selects the best action given the qValue (`arg max Q(s,a)`).
-	 * @param qValues is the Q Action-Value
+	 *
+	 * @param qValues          is the Q Action-Value
 	 * @param availableActions permissible actions
 	 * @return Integer index of action
 	 */
@@ -112,12 +117,12 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 			Double qValue = qValues.getOrDefault(action, 0.0);
 
 			if (qValue > maxQ) {
-                /* Clear all previous similar qValues */
+				/* Clear all previous similar qValues */
 				bestActions.clear();
 				bestActions.add(action);
 				maxQ = qValue;
 			} else if (qValue == maxQ) {
-                /* Add equally high q-value action */
+				/* Add equally high q-value action */
 				bestActions.add(action);
 			}
 		}
