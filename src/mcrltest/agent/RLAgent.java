@@ -29,7 +29,7 @@ public class RLAgent {
 
     public static final String ENABLE_PERSISTENCE = "enablePersistence";
     public static final String FILE_FORMAT = "fileFormat";
-    public static final String EPISODE = "episode";
+//    public static final String EPISODE = "episode";
 
     /* ===============================
        PARAMETERS
@@ -91,7 +91,8 @@ public class RLAgent {
 
         this.enablePersistence = rlSettings.getBoolean(ENABLE_PERSISTENCE, false);
         this.fileFormat = rlSettings.getSetting(FILE_FORMAT, "csv");
-        this.episode = rlSettings.getInt(EPISODE, 1);
+//        this.episode = rlSettings.getInt(EPISODE, 1);
+        this.episode = 1;
 
         this.random = new Random();
     }
