@@ -2,6 +2,10 @@ package movement;
 
 import core.Coord;
 import core.Settings;
+import report.TrajectoryFrequencyReporting;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Generates movement paths according to human-like behavior,
@@ -10,12 +14,20 @@ import core.Settings;
  * @see <a href="https://en.wikipedia.org/wiki/L%C3%A9vy_flight">Lévy flight</a>
  * @see <a href="https://ieeexplore.ieee.org/document/5750071">On the Levy-Walk Nature of Human Mobility</a>
  */
-public class LevyFlight extends MovementModel {
-	/** Number of waypoints per path */
+public class LevyFlight extends MovementModel implements TrajectoryFrequencyReporting {
+	// [ REPORTING VARIABLES ]
+
+	private final Map<Integer, Integer> trajectoryFrequencies;
+
+	/**
+	 * Number of waypoints per path
+	 */
 	private static final int PATH_LENGTH = 1;
 	private Coord lastWaypoint;
 
-	/** Controls how heavy the distribution tail is */
+	/**
+	 * Controls how heavy the distribution tail is
+	 */
 	public static final String ALPHA = "levyAlpha";
 	public static final double DEFAULT_ALPHA = 1.5;
 
@@ -26,18 +38,25 @@ public class LevyFlight extends MovementModel {
 
 	public LevyFlight(Settings settings) {
 		super(settings);
+
+		this.trajectoryFrequencies = new HashMap<>();
+
 		this.alpha = settings.contains(ALPHA) ? settings.getDouble(ALPHA) : DEFAULT_ALPHA;
 		this.xm = settings.contains(XM) ? settings.getDouble(XM) : DEFAULT_XM;
 	}
 
-	protected LevyFlight(LevyFlight rwp) {
-		super(rwp);
-		this.xm = rwp.xm;
-		this.alpha = rwp.alpha;
+	public LevyFlight(LevyFlight lf) {
+		super(lf);
+
+		this.trajectoryFrequencies = lf.trajectoryFrequencies;
+
+		this.xm = lf.xm;
+		this.alpha = lf.alpha;
 	}
 
 	/**
 	 * Returns a random initial location for a host on the map.
+	 *
 	 * @return Random position on the map
 	 */
 	@Override
@@ -54,6 +73,8 @@ public class LevyFlight extends MovementModel {
 		p.addWaypoint(lastWaypoint.clone());
 
 		Coord c = levyFlight();
+		int trajLength = (int) lastWaypoint.distance(c);
+		recordFinishedTrajectory(trajLength);
 		p.addWaypoint(c);
 
 		this.lastWaypoint = c;
@@ -70,8 +91,8 @@ public class LevyFlight extends MovementModel {
 	 */
 	protected Coord randomCoord() {
 		return new Coord(
-				rng.nextDouble() * getMaxX(),
-				rng.nextDouble() * getMaxY()
+			rng.nextDouble() * getMaxX(),
+			rng.nextDouble() * getMaxY()
 		);
 	}
 
@@ -95,10 +116,27 @@ public class LevyFlight extends MovementModel {
 
 	/**
 	 * Calculates a step length based on the Pareto distribution.
+	 *
 	 * @return A value representing the step length
 	 */
 	public double pareto() {
 		double u = 1 - rng.nextDouble(); // Ensures u is in (0, 1]
 		return this.xm / Math.pow(u, 1 / this.alpha);
 	}
+
+	// [ REPORTING METHODS ]
+
+	/**
+	 * Records a length value to {@link LevyFlight#trajectoryFrequencies}.
+	 */
+	private void recordFinishedTrajectory(int length) {
+		if (length <= 0) return;
+		trajectoryFrequencies.merge(length, 1, Integer::sum);
+	}
+
+	@Override
+	public Map<Integer, Integer> getTrajectoryFrequencies() {
+		return trajectoryFrequencies;
+	}
+
 }

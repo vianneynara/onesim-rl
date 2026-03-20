@@ -25,14 +25,14 @@ public class TrajectoryFrequencyReporter extends Report {
 		);
 
 		/* Retrieves all implementing nodes' movement */
-		final List<TrajectoryLengthReporting> trajectoryMovements = SimScenario.getInstance()
+		final List<TrajectoryFrequencyReporting> trajectoryMovements = SimScenario.getInstance()
 			.getHosts()
 			.stream()
-			.filter(host -> host.getMovement() instanceof TrajectoryLengthReporting)
-			.map(host -> (TrajectoryLengthReporting) host.getMovement())
+			.filter(host -> host.getMovement() instanceof TrajectoryFrequencyReporting)
+			.map(host -> (TrajectoryFrequencyReporting) host.getMovement())
 			.toList();
 		/* Helper representative node */
-		TrajectoryLengthReporting representative = trajectoryMovements.getFirst();
+		TrajectoryFrequencyReporting representative = trajectoryMovements.getFirst();
 
 		assert representative != null;
 
