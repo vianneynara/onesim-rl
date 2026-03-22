@@ -1,3 +1,4 @@
+import re
 import sys
 import subprocess
 
@@ -22,6 +23,40 @@ qlearn_template = (
     ".\\settings\\skripsi\\randomsearch-qlearn.cfg"
 )
 
+# Characters not allowed in Windows filenames/path components
+INVALID_CHARS_RE = re.compile(r'[<>:"/\\|?*]')
+
+def validate_run_id(run_id: str) -> None:
+    """
+    Validate that run_id is safe to use as a Windows path component.
+
+    Raises ValueError with a clear message if invalid.
+    """
+    if not run_id:
+        raise ValueError("run_id must not be empty")
+
+    # Check for illegal characters
+    if INVALID_CHARS_RE.search(run_id):
+        raise ValueError(
+            f"run_id '{run_id}' contains invalid path characters. "
+            r"Disallowed characters are: < > : \" / \ | ? *"
+        )
+
+    # Check for control chars (ASCII 0-31)
+    if any(ord(ch) < 32 for ch in run_id):
+        raise ValueError(
+            f"run_id '{run_id}' contains control characters, which are not "
+            "allowed in Windows filenames."
+        )
+
+    # Check for reserved device names (case-insensitive, exact matches only)
+    if run_id.upper() in WINDOWS_RESERVED_NAMES:
+        raise ValueError(
+            f"run_id '{run_id}' is a reserved device name on Windows "
+            "(CON, PRN, AUX, NUL, COM1..COM9, LPT1..LPT9). "
+            "Please choose a different run_id."
+        )
+
 
 def _run(command: str) -> None:
     """Executes a single one.bat command, printing output and raising on error."""
@@ -45,7 +80,7 @@ def run_scripts(runs: int) -> None:
             _run(script.replace(label_placeholder, str(i + 1)))
 
 
-def run_episodes(run_id: int, episodes: int) -> None:
+def run_episodes(run_id: str, episodes: int) -> None:
     """
     Run `episodes` sequential Q-Learning episodes for a single experiment run.
 
@@ -56,6 +91,9 @@ def run_episodes(run_id: int, episodes: int) -> None:
         run_id:   Identifier for this overall experiment run (used in path).
         episodes: Number of episodes to execute.
     """
+    # Making sure the run_id has no PATH illegal characters
+    validate_run_id(run_id)
+
     for ep in range(1, episodes + 1):
         cmd = (
             qlearn_template
@@ -79,7 +117,7 @@ if __name__ == "__main__":
 
     # Episodic Q-Learning
     p_episodes = subparsers.add_parser("qlearn", help="Run episodic Q-Learning")
-    p_episodes.add_argument("run_id", type=int, help="Run identifier (used in paths)")
+    p_episodes.add_argument("run_id", type=str, help="Run identifier (used in paths)")
     p_episodes.add_argument("episodes", type=int, help="Number of episodes")
 
     args = parser.parse_args()
