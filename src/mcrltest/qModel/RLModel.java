@@ -48,11 +48,24 @@ public abstract class RLModel {
         qTable.setQValue(state, action, value);
     }
 
+    /**
+     * Access QTable
+     */
     public QTable getQTable() {
         return qTable;
     }
 
+    /**
+     * Total accumulated reward during training
+     */
     public double getTotalTrainingReward() {
         return totalTrainingReward;
+    }
+
+    /**
+     * 🔥 IMPORTANT: restore reward from saved QTable
+     */
+    public void setTotalTrainingReward(double totalTrainingReward) {
+        this.totalTrainingReward = totalTrainingReward;
     }
 }
