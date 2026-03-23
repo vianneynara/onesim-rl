@@ -19,6 +19,10 @@ public class QTable {
 
     private Map<Integer, QValue> table;
 
+    /* ===== Stored metadata (loaded from file) ===== */
+    private double loadedEpsilon = 0;
+    private double loadedTotalReward = 0;
+
     public QTable(Settings s) {
         Settings qSettings = new Settings(QTABLE_NS);
 
@@ -85,9 +89,7 @@ public class QTable {
             pw.print("state");
 
             for (int a = 0; a < nrofAction; a++) {
-
                 pw.print(",q" + a);
-
                 if (useVisitCount) {
                     pw.print(",count" + a);
                 }
@@ -102,7 +104,6 @@ public class QTable {
                 pw.print(state);
 
                 for (int a = 0; a < nrofAction; a++) {
-
                     pw.print("," + q.getQ(a));
 
                     if (useVisitCount) {
@@ -139,8 +140,14 @@ public class QTable {
 
             BufferedReader br = new BufferedReader(new FileReader(file));
 
+            /* ===== LOAD METADATA ===== */
             br.readLine(); // header
-            br.readLine(); // epsilon
+
+            String[] metaLine = br.readLine().split(",");
+
+            loadedEpsilon = Double.parseDouble(metaLine[0]);
+            loadedTotalReward = Double.parseDouble(metaLine[1]);
+
             br.readLine(); // empty
             br.readLine(); // table header
 
@@ -162,7 +169,6 @@ public class QTable {
                     q.setQ(a, qv);
 
                     if (useVisitCount) {
-
                         int count = Integer.parseInt(parts[index++]);
                         q.setCount(a, count);
                     }
@@ -221,7 +227,6 @@ public class QTable {
                 pw.print("\"qValues\": [");
 
                 for (int a = 0; a < nrofAction; a++) {
-
                     pw.print(q.getQ(a));
                     if (a < nrofAction - 1) pw.print(",");
                 }
@@ -229,11 +234,9 @@ public class QTable {
                 pw.println("],");
 
                 if (useVisitCount) {
-
                     pw.print("\"visitCounts\": [");
 
                     for (int a = 0; a < nrofAction; a++) {
-
                         pw.print(q.getCount(a));
                         if (a < nrofAction - 1) pw.print(",");
                     }
@@ -258,7 +261,7 @@ public class QTable {
     }
 
     /* =========================
-       LOAD JSON
+       LOAD JSON (FIXED)
     ========================= */
 
     public void loadFromJSON(String filename) {
@@ -282,6 +285,22 @@ public class QTable {
 
                 line = line.trim();
 
+                /* ===== LOAD METADATA ===== */
+
+                if (line.startsWith("\"epsilon\"")) {
+                    loadedEpsilon = Double.parseDouble(
+                            line.split(":")[1].replace(",", "").trim()
+                    );
+                }
+
+                if (line.startsWith("\"totalReward\"")) {
+                    loadedTotalReward = Double.parseDouble(
+                            line.split(":")[1].replace(",", "").trim()
+                    );
+                }
+
+                /* ===== LOAD STATES ===== */
+
                 if (line.startsWith("\"state\"")) {
 
                     state = Integer.parseInt(
@@ -300,9 +319,23 @@ public class QTable {
                     String[] qVals = values.split(",");
 
                     for (String q : qVals) {
-
                         table.get(state)
                                 .setQ(actionIndex++, Double.parseDouble(q));
+                    }
+                }
+
+                if (line.startsWith("\"visitCounts\"")) {
+
+                    String values = line
+                            .substring(line.indexOf("[") + 1, line.indexOf("]"));
+
+                    String[] counts = values.split(",");
+
+                    int idx = 0;
+
+                    for (String c : counts) {
+                        table.get(state)
+                                .setCount(idx++, Integer.parseInt(c));
                     }
                 }
             }
@@ -314,5 +347,17 @@ public class QTable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /* =========================
+       GET LOADED VALUES
+    ========================= */
+
+    public double getLoadedEpsilon() {
+        return loadedEpsilon;
+    }
+
+    public double getLoadedTotalReward() {
+        return loadedTotalReward;
     }
 }
