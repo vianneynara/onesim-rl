@@ -36,9 +36,7 @@ public class RLSaveReport extends Report {
 
                     agent.trySave();
 
-                    agent.saveEpisodeSteps(
-                            "data/episodes/episode_" + getSimTime() + ".csv"
-                    );
+                    agent.saveEpisodeSteps(getSimTime());
 
                     System.out.println("Saved RL data for host: " + host);
                 }

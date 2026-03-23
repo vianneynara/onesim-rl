@@ -36,6 +36,10 @@ public class RLAgent {
     public static final String ENABLE_PERSISTENCE = "enablePersistence";
     public static final String FILE_FORMAT = "fileFormat";
 
+    public static final String SAVE_FILE_NAME = "saveFileName";
+    public static final String LOAD_FILE_NAME = "loadFileName";
+    public static final String EPISODE_FILE_NAME = "episodeFileName";
+
     /* ===============================
        PARAMETERS
        =============================== */
@@ -54,6 +58,10 @@ public class RLAgent {
     private final boolean enablePersistence;
     private final String fileFormat;
     private final int episode;
+
+    private final String saveFileName;
+    private final String loadFileName;
+    private final String episodeFileName;
 
     private boolean loaded = false;
 
@@ -96,6 +104,10 @@ public class RLAgent {
         this.enablePersistence = rlSettings.getBoolean(ENABLE_PERSISTENCE, false);
         this.fileFormat = rlSettings.getSetting(FILE_FORMAT, "csv");
         this.episode = 1;
+
+        this.saveFileName = rlSettings.getSetting(SAVE_FILE_NAME, "save_qtable_latest");
+        this.loadFileName = rlSettings.getSetting(LOAD_FILE_NAME, "load_qtable_latest");
+        this.episodeFileName = rlSettings.getSetting(EPISODE_FILE_NAME, "episode");
 
         this.random = new Random();
 
@@ -145,18 +157,20 @@ public class RLAgent {
 
             QTable qTable = rlModel.getQTable();
 
+            String path = "data/qtable/" + loadFileName;
+
             if (fileFormat.equalsIgnoreCase("csv")) {
 
-                qTable.loadFromCSV("data/qtable/qtable_latest.csv");
+                qTable.loadFromCSV(path + ".csv");
 
             } else {
 
-                qTable.loadFromJSON("data/qtable/qtable_latest.json");
+                qTable.loadFromJSON(path + ".json");
             }
 
             syncFromQTable(qTable);
 
-            System.out.println("RLAgent: QTable loaded for episode " + episode);
+            System.out.println("RLAgent: QTable loaded from " + path);
 
         } catch (Exception e) {
 
@@ -197,16 +211,28 @@ public class RLAgent {
 
         try {
 
+            String path = "data/qtable/" + saveFileName + "_" + episode;
+
             if (fileFormat.equalsIgnoreCase("csv")) {
 
-                rlModel.getQTable().saveToCSV("data/qtable/qtable_latest.csv", epsilon, reward, episode);
+                rlModel.getQTable().saveToCSV(
+                        path + ".csv",
+                        epsilon,
+                        reward,
+                        episode
+                );
 
             } else {
 
-                rlModel.getQTable().saveToJSON("data/qtable/qtable_latest.json", epsilon, reward, episode);
+                rlModel.getQTable().saveToJSON(
+                        path + ".json",
+                        epsilon,
+                        reward,
+                        episode
+                );
             }
 
-            System.out.println("RLAgent: QTable saved for episode " + episode);
+            System.out.println("RLAgent: QTable saved → " + path);
 
         } catch (Exception e) {
 
@@ -219,12 +245,15 @@ public class RLAgent {
        EPISODE DEBUG EXPORT
        =============================== */
 
-    public void saveEpisodeSteps(String filename) {
+    public void saveEpisodeSteps(double simTime) {
 
         try {
 
             File dir = new File("data/episodes");
             if (!dir.exists()) dir.mkdirs();
+
+            String filename = "data/episodes/" +
+                    episodeFileName + "_" + episode + "_" + (int) simTime + ".csv";
 
             PrintWriter pw = new PrintWriter(new FileWriter(filename));
 
