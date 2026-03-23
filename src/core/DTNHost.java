@@ -30,7 +30,7 @@ public class DTNHost implements Comparable<DTNHost> {
     private Coord destination;	// where is it going
 
     private MessageRouter router;
-    @Getter private MovementModel movement;
+    private MovementModel movement;
     private Path path;
     private double speed;
     private double nextTimeToMove;
@@ -178,6 +178,10 @@ public class DTNHost implements Comparable<DTNHost> {
      */
     public MessageRouter getRouter() {
         return this.router;
+    }
+
+    public MovementModel getMovement() {
+        return this.movement;
     }
 
     /**
