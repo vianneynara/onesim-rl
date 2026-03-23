@@ -268,13 +268,7 @@ public class RLMovementModel extends MovementModel {
         return c;
     }
 
-//    /* =====================================
-//       SAVE QTABLE WHEN SIMULATION ENDS
-//       ===================================== */
-//
-//    @Override
-//    public void finalize() {
-//
-//        agent.trySave();
-//    }
+    public RLAgent getAgent() {
+        return agent;
+    }
 }
