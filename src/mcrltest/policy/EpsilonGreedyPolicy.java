@@ -95,4 +95,9 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
     public double getEpsilon() {
         return epsilon;
     }
+
+    @Override
+    public void setEpsilon(double epsilon) {
+        this.epsilon = epsilon;
+    }
 }
