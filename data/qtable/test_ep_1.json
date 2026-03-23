@@ -1,0 +1,47 @@
+{
+"epsilon": 0.1,
+"totalReward": 67009.69,
+"episode": 1,
+"states": [
+{
+"state": 0,
+"qValues": [592.817347827782,599.6588671782554],
+"visitCounts": [0,0]
+},
+{
+"state": 1,
+"qValues": [72.28544281061694,249.502773745791],
+"visitCounts": [0,0]
+},
+{
+"state": 2,
+"qValues": [22.6701834139401,-0.00199],
+"visitCounts": [0,0]
+},
+{
+"state": 3,
+"qValues": [7.51465767309,16.839529701],
+"visitCounts": [0,0]
+},
+{
+"state": 4,
+"qValues": [6.0,-0.001],
+"visitCounts": [0,0]
+},
+{
+"state": 5,
+"qValues": [6.0,0.0],
+"visitCounts": [0,0]
+},
+{
+"state": 6,
+"qValues": [6.0,0.0],
+"visitCounts": [0,0]
+},
+{
+"state": 7,
+"qValues": [0.0,6.0],
+"visitCounts": [0,0]
+}
+]
+}

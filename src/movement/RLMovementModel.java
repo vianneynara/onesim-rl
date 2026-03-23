@@ -218,9 +218,6 @@ public class RLMovementModel extends MovementModel {
     @Override
     public Path getPath() {
 
-        /* load QTable once */
-        agent.tryLoad();
-
         /* learn from previous step */
         if (prevAction != -1) {
 
@@ -257,6 +254,8 @@ public class RLMovementModel extends MovementModel {
 
     @Override
     public Coord getInitialLocation() {
+        /* load QTable once */
+        this.agent.tryLoad();
 
         Coord c = new Coord(
                 rng.nextDouble() * getMaxX(),

@@ -22,8 +22,10 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
         Settings behaviorSettings = new Settings(BEHAVIOR_NS);
 
         this.epsilon = behaviorSettings.getDouble(EPSILON_S, 0.9);
-        this.decayRate = behaviorSettings.getDouble(DECAY_S, 0.995);
+        this.decayRate = behaviorSettings.getDouble(DECAY_S, 0.99999);
         this.minEpsilon = behaviorSettings.getDouble(MIN_EPSILON_S, 0.01);
+
+        System.out.println("==============================================================" + epsilon);
 
         // Use MovementModel RNG for reproducibility
         this.random = MovementModel.getRandom();
@@ -67,7 +69,18 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
     @Override
     public void update(int state, int action, double reward, Random random) {
 
-        epsilon = Math.max(minEpsilon, epsilon * decayRate);
+        System.out.println("Min epsilon= " + minEpsilon);
+
+        System.out.println("epsilon= " +epsilon);
+        System.out.println("decay= " + decayRate);
+
+        double d = epsilon * decayRate;
+        System.out.println("after decay= " + d);
+
+        epsilon = Math.max(minEpsilon, d);
+        System.out.println("========= NEW EPSILON ===============");
+        System.out.println(epsilon);
+        System.out.println("=====================================");
 
     }
 
@@ -83,7 +96,6 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
                 decayRate,
                 random
         );
-
     }
 
     @Override
