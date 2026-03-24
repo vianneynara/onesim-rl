@@ -8,27 +8,26 @@ import java.util.Map;
 import java.util.Random;
 
 public class QTable {
+
     public static final String QTABLE_NS = "QTable";
     public static final String NROF_ACTION = "nrofAction";
     public static final String USE_VISITCOUNT = "useVisitCount";
-    public static final String ENABLE_SNAPSHOT = "enableSnapshot";
 
     private final int nrofAction;
     private final boolean useVisitCount;
-    private final boolean enableSnapshot;
 
     private Map<Integer, QValue> table;
 
-    /* ===== Stored metadata (loaded from file) ===== */
+    /* ===== Stored metadata ===== */
     private double loadedEpsilon = 0;
     private double loadedTotalReward = 0;
+    private int loadedEpisode = 0;
 
     public QTable(Settings s) {
         Settings qSettings = new Settings(QTABLE_NS);
 
         this.nrofAction = qSettings.getInt(NROF_ACTION);
         this.useVisitCount = qSettings.getBoolean(USE_VISITCOUNT, true);
-        this.enableSnapshot = qSettings.getBoolean(ENABLE_SNAPSHOT, false);
 
         table = new HashMap<>();
     }
@@ -65,27 +64,24 @@ public class QTable {
        SAVE CSV
     ========================= */
 
-    public void saveToCSV(String baseFilename,
+    public void saveToCSV(String filename,
                           double epsilon,
                           double totalReward,
                           int episode) {
 
-        String filename = baseFilename;
-
-        if (enableSnapshot) {
-            filename = "data/qtable/qtable_episode_" + episode + ".csv";
-        }
-
         try {
-            File dir = new File("data/qtable");
-            if (!dir.exists()) dir.mkdirs();
 
-            PrintWriter pw = new PrintWriter(new FileWriter(filename));
+            File file = new File(filename);
+            file.getParentFile().mkdirs();
 
-            pw.println("epsilon,totalTrainingReward");
-            pw.println(epsilon + "," + totalReward);
+            PrintWriter pw = new PrintWriter(new FileWriter(file));
+
+            /* ===== METADATA ===== */
+            pw.println("epsilon,totalTrainingReward,episode");
+            pw.println(epsilon + "," + totalReward + "," + episode);
             pw.println();
 
+            /* ===== HEADER ===== */
             pw.print("state");
 
             for (int a = 0; a < nrofAction; a++) {
@@ -97,13 +93,16 @@ public class QTable {
 
             pw.println();
 
+            /* ===== DATA ===== */
             for (Map.Entry<Integer, QValue> entry : table.entrySet()) {
+
                 int state = entry.getKey();
                 QValue q = entry.getValue();
 
                 pw.print(state);
 
                 for (int a = 0; a < nrofAction; a++) {
+
                     pw.print("," + q.getQ(a));
 
                     if (useVisitCount) {
@@ -140,13 +139,13 @@ public class QTable {
 
             BufferedReader br = new BufferedReader(new FileReader(file));
 
-            /* ===== LOAD METADATA ===== */
             br.readLine(); // header
 
-            String[] metaLine = br.readLine().split(",");
+            String[] meta = br.readLine().split(",");
 
-            loadedEpsilon = Double.parseDouble(metaLine[0]);
-            loadedTotalReward = Double.parseDouble(metaLine[1]);
+            loadedEpsilon = Double.parseDouble(meta[0]);
+            loadedTotalReward = Double.parseDouble(meta[1]);
+            loadedEpisode = Integer.parseInt(meta[2]);
 
             br.readLine(); // empty
             br.readLine(); // table header
@@ -157,27 +156,25 @@ public class QTable {
 
                 String[] parts = line.split(",");
 
-                int index = 0;
-                int state = Integer.parseInt(parts[index++]);
+                int idx = 0;
+                int state = Integer.parseInt(parts[idx++]);
 
                 initializeState(state);
                 QValue q = table.get(state);
 
                 for (int a = 0; a < nrofAction; a++) {
 
-                    double qv = Double.parseDouble(parts[index++]);
-                    q.setQ(a, qv);
+                    q.setQ(a, Double.parseDouble(parts[idx++]));
 
                     if (useVisitCount) {
-                        int count = Integer.parseInt(parts[index++]);
-                        q.setCount(a, count);
+                        q.setCount(a, Integer.parseInt(parts[idx++]));
                     }
                 }
             }
 
             br.close();
 
-            System.out.println("CSV QTable loaded.");
+            System.out.println("CSV loaded.");
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -188,27 +185,22 @@ public class QTable {
        SAVE JSON
     ========================= */
 
-    public void saveToJSON(String baseFilename,
+    public void saveToJSON(String filename,
                            double epsilon,
                            double totalReward,
                            int episode) {
 
-        String filename = baseFilename;
-
-        if (enableSnapshot) {
-            filename = "data/qtable/qtable_episode_" + episode + ".json";
-        }
-
         try {
 
-            File dir = new File("data/qtable");
-            if (!dir.exists()) dir.mkdirs();
+            File file = new File(filename);
+            file.getParentFile().mkdirs();
 
-            PrintWriter pw = new PrintWriter(new FileWriter(filename));
+            PrintWriter pw = new PrintWriter(new FileWriter(file));
 
             pw.println("{");
             pw.println("\"epsilon\": " + epsilon + ",");
             pw.println("\"totalReward\": " + totalReward + ",");
+            pw.println("\"episode\": " + episode + ",");
             pw.println("\"states\": [");
 
             boolean first = true;
@@ -225,22 +217,18 @@ public class QTable {
                 pw.println("\"state\": " + state + ",");
 
                 pw.print("\"qValues\": [");
-
                 for (int a = 0; a < nrofAction; a++) {
                     pw.print(q.getQ(a));
                     if (a < nrofAction - 1) pw.print(",");
                 }
-
                 pw.println("],");
 
                 if (useVisitCount) {
                     pw.print("\"visitCounts\": [");
-
                     for (int a = 0; a < nrofAction; a++) {
                         pw.print(q.getCount(a));
                         if (a < nrofAction - 1) pw.print(",");
                     }
-
                     pw.println("]");
                 }
 
@@ -261,7 +249,7 @@ public class QTable {
     }
 
     /* =========================
-       LOAD JSON (FIXED)
+       LOAD JSON
     ========================= */
 
     public void loadFromJSON(String filename) {
@@ -285,73 +273,56 @@ public class QTable {
 
                 line = line.trim();
 
-                /* ===== LOAD METADATA ===== */
-
                 if (line.startsWith("\"epsilon\"")) {
-                    loadedEpsilon = Double.parseDouble(
-                            line.split(":")[1].replace(",", "").trim()
-                    );
+                    loadedEpsilon = Double.parseDouble(line.split(":")[1].replace(",", "").trim());
                 }
 
                 if (line.startsWith("\"totalReward\"")) {
-                    loadedTotalReward = Double.parseDouble(
-                            line.split(":")[1].replace(",", "").trim()
-                    );
+                    loadedTotalReward = Double.parseDouble(line.split(":")[1].replace(",", "").trim());
                 }
 
-                /* ===== LOAD STATES ===== */
+                if (line.startsWith("\"episode\"")) {
+                    loadedEpisode = Integer.parseInt(line.split(":")[1].replace(",", "").trim());
+                }
 
                 if (line.startsWith("\"state\"")) {
-
-                    state = Integer.parseInt(
-                            line.split(":")[1].replace(",", "").trim()
-                    );
-
+                    state = Integer.parseInt(line.split(":")[1].replace(",", "").trim());
                     initializeState(state);
                     actionIndex = 0;
                 }
 
                 if (line.startsWith("\"qValues\"")) {
 
-                    String values = line
-                            .substring(line.indexOf("[") + 1, line.indexOf("]"));
-
+                    String values = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
                     String[] qVals = values.split(",");
 
                     for (String q : qVals) {
-                        table.get(state)
-                                .setQ(actionIndex++, Double.parseDouble(q));
+                        table.get(state).setQ(actionIndex++, Double.parseDouble(q));
                     }
                 }
 
                 if (line.startsWith("\"visitCounts\"")) {
 
-                    String values = line
-                            .substring(line.indexOf("[") + 1, line.indexOf("]"));
-
+                    String values = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
                     String[] counts = values.split(",");
 
                     int idx = 0;
-
                     for (String c : counts) {
-                        table.get(state)
-                                .setCount(idx++, Integer.parseInt(c));
+                        table.get(state).setCount(idx++, Integer.parseInt(c));
                     }
                 }
             }
 
             br.close();
 
-            System.out.println("JSON QTable loaded.");
+            System.out.println("JSON loaded.");
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    /* =========================
-       GET LOADED VALUES
-    ========================= */
+    /* ========================= */
 
     public double getLoadedEpsilon() {
         return loadedEpsilon;
@@ -359,5 +330,9 @@ public class QTable {
 
     public double getLoadedTotalReward() {
         return loadedTotalReward;
+    }
+
+    public int getLoadedEpisode() {
+        return loadedEpisode;
     }
 }

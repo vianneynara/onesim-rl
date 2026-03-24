@@ -57,13 +57,13 @@ public class RLAgent {
     /* persistence */
     private final boolean enablePersistence;
     private final String fileFormat;
-    private final int episode;
+    private int episode;
 
     private final String saveFileName;
     private final String loadFileName;
     private final String episodeFileName;
 
-    private boolean loaded = false;
+    private static boolean globalLoaded = false;
 
     /* ===============================
        EPISODE DEBUGGING
@@ -106,7 +106,7 @@ public class RLAgent {
         this.episode = 1;
 
         this.saveFileName = rlSettings.getSetting(SAVE_FILE_NAME, "save_qtable_latest");
-        this.loadFileName = rlSettings.getSetting(LOAD_FILE_NAME, "load_qtable_latest");
+        this.loadFileName = rlSettings.getSetting(LOAD_FILE_NAME, null);
         this.episodeFileName = rlSettings.getSetting(EPISODE_FILE_NAME, "episode");
 
         this.random = new Random();
@@ -147,11 +147,11 @@ public class RLAgent {
 
     public void tryLoad() {
 
-        if (!enablePersistence || loaded) {
+        if (!enablePersistence || globalLoaded || loadFileName == null || loadFileName.isEmpty()) {
             return;
         }
 
-        loaded = true;
+        globalLoaded = true;
 
         try {
 
@@ -169,7 +169,6 @@ public class RLAgent {
             }
 
             syncFromQTable(qTable);
-
             System.out.println("RLAgent: QTable loaded from " + path);
 
         } catch (Exception e) {
@@ -186,6 +185,7 @@ public class RLAgent {
 
         double epsilon = qTable.getLoadedEpsilon();
         double reward = qTable.getLoadedTotalReward();
+        this.episode = qTable.getLoadedEpisode() + 1;
 
         if (policy instanceof EpsilonGreedyPolicy) {
             ((EpsilonGreedyPolicy) policy).setEpsilon(epsilon);
@@ -193,7 +193,7 @@ public class RLAgent {
 
         rlModel.setTotalTrainingReward(reward);
 
-        System.out.println("Synced → epsilon=" + epsilon + ", reward=" + reward);
+        System.out.println("Synced → epsilon=" + epsilon + ", reward=" + reward + ", episode=" + this.episode);
     }
 
     /* ===============================
