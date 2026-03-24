@@ -322,4 +322,8 @@ public class RLAgent {
     public QTable getQTable() {
         return rlModel.getQTable();
     }
+
+    public List<EpisodeStep> getEpisodeSteps() {
+        return episodeSteps;
+    }
 }
