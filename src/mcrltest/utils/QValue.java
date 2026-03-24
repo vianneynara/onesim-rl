@@ -1,46 +1,59 @@
 package mcrltest.utils;
 
+import java.util.ArrayList;
+import java.util.Random;
+
 public class QValue {
-    private double straight; // action 0
-    private double turn;     // action 1
+    private final double[] qValues;
+    private final int[] visitCounts;
 
-    public QValue() {
-        this.straight = 0.0;
-        this.turn = 0.0;
+    public QValue(int nrofAction, boolean useVisitCount) {
+        this.qValues = new double[nrofAction];
+
+        visitCounts = useVisitCount ? new int[nrofAction] : null;
     }
 
-    // action: 0 = straight, 1 = turn
-    public double get(int action) {
-        if (action == 0) {
-            return straight;
-        } else if (action == 1) {
-            return turn;
-        } else {
-            throw new IllegalArgumentException("Invalid action: must be 0 or 1");
+    public double getQ(int action) {
+        return qValues[action];
+    }
+
+    public void setQ(int action, double value) {
+        qValues[action] = value;
+    }
+
+    public int getCount(int action) {
+        return visitCounts[action];
+    }
+
+    public void setCount(int action, int value) {
+        visitCounts[action] = value;
+    }
+
+    public int getBestAction(Random rng) {
+        double best = Double.NEGATIVE_INFINITY;
+        ArrayList<Integer> ties = new ArrayList<>();
+
+        for (int i = 0; i < qValues.length; i++) {
+            if (qValues[i] > best) {
+                best = qValues[i];
+                ties.clear();
+                ties.add(i);
+
+            } else if (qValues[i] == best) {
+                ties.add(i);
+            }
         }
-    }
 
-    public void set(int action, double value) {
-        if (action == 0) {
-            straight = value;
-        } else if (action == 1) {
-            turn = value;
-        } else {
-            throw new IllegalArgumentException("Invalid action: must be 0 or 1");
-        }
-    }
-
-    // What is the current best action?
-    public int getBestAction() {
-        return (straight >= turn) ? 0 : 1;
+        return ties.get(rng.nextInt(ties.size()));
     }
 
     public double getMaxValue() {
-        return Math.max(straight, turn);
-    }
+        double max = Double.NEGATIVE_INFINITY;
 
-    @Override
-    public String toString() {
-        return "Straight(0)=" + straight + ", Turn(1)=" + turn;
+        for (double q : qValues) {
+            max = Math.max(max, q);
+        }
+
+        return max;
     }
 }
