@@ -50,6 +50,16 @@ public class QTable {
         table.get(state).setQ(action, value);
     }
 
+    public int getVisitCount(int state, int action) {
+        initializeState(state);
+        return table.get(state).getCount(action);
+    }
+
+    public void setVisitCount(int state, int action, int value) {
+        initializeState(state);
+        table.get(state).setCount(action, value);
+    }
+
     public int getBestAction(int state, Random rng) {
         initializeState(state);
         return table.get(state).getBestAction(rng);

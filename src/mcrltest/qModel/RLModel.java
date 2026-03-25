@@ -48,6 +48,12 @@ public abstract class RLModel {
         qTable.setQValue(state, action, value);
     }
 
+    public void updateVisitCount(int state, int action) {
+        int prev = qTable.getVisitCount(state, action) == 0 ? 0 : qTable.getVisitCount(state, action);
+
+        qTable.setVisitCount(state, action, prev+1);
+    }
+
     /**
      * Access QTable
      */
