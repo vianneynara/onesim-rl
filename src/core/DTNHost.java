@@ -1,6 +1,6 @@
-/* 
+/*
  * Copyright 2010 Aalto University, ComNet
- * Released under GPLv3. See LICENSE.txt for details. 
+ * Released under GPLv3. See LICENSE.txt for details.
  */
 package core;
 
@@ -30,7 +30,7 @@ public class DTNHost implements Comparable<DTNHost> {
     private Coord destination;	// where is it going
 
     private MessageRouter router;
-    @Getter private MovementModel movement;
+    private MovementModel movement;
     private Path path;
     private double speed;
     private double nextTimeToMove;
@@ -45,7 +45,7 @@ public class DTNHost implements Comparable<DTNHost> {
     // tambahan testing
     public List<Duration> intervals;
     public List<Double> congestionRatio = new ArrayList<Double>();
-	public List<Double> dataInContact = new ArrayList<Double>();
+    public List<Double> dataInContact = new ArrayList<Double>();
     public List<Double> ema = new ArrayList<Double>();
     public List<Double> dummyForReward = new ArrayList<Double>();
 
@@ -57,7 +57,7 @@ public class DTNHost implements Comparable<DTNHost> {
     public Map<DTNHost, Duration> durPerNode;
     public Map<DTNHost, List<Duration>> listDurPerNode;
     public double totalContactTime = 0;
-        
+
     static {
         DTNSim.registerForReset(DTNHost.class.getCanonicalName());
         reset();
@@ -75,10 +75,10 @@ public class DTNHost implements Comparable<DTNHost> {
      * @param mRouterProto Prototype of the message router of this host
      */
     public DTNHost(List<MessageListener> msgLs,
-            List<MovementListener> movLs,
-            String groupId, List<NetworkInterface> interf,
-            ModuleCommunicationBus comBus,
-            MovementModel mmProto, MessageRouter mRouterProto) {
+                   List<MovementListener> movLs,
+                   String groupId, List<NetworkInterface> interf,
+                   ModuleCommunicationBus comBus,
+                   MovementModel mmProto, MessageRouter mRouterProto) {
         this.comBus = comBus;
         this.location = new Coord(0, 0);
         this.address = getNextAddress();
@@ -98,8 +98,7 @@ public class DTNHost implements Comparable<DTNHost> {
         this.movListeners = movLs;
 
         // create instances by replicating the prototypes
-        this.movement = mmProto.replicate();
-        this.movement.setComBus(comBus);
+        setMovement(mmProto.replicate());
         setRouter(mRouterProto.replicate());
 
         this.location = movement.getInitialLocation();
@@ -163,12 +162,26 @@ public class DTNHost implements Comparable<DTNHost> {
     }
 
     /**
+     * Set a movement model for this host
+     * @param movement The movement model to set
+     * @author narwa
+     * */
+    private void setMovement(MovementModel movement) {
+        movement.init(this, comBus);
+        this.movement = movement;
+    }
+
+    /**
      * Returns the router of this host
      *
      * @return the router of this host
      */
     public MessageRouter getRouter() {
         return this.router;
+    }
+
+    public MovementModel getMovement() {
+        return this.movement;
     }
 
     /**
@@ -199,10 +212,12 @@ public class DTNHost implements Comparable<DTNHost> {
      */
     public void connectionUp(Connection con) {
         this.router.changedConnection(con);
+        this.movement.changedConnection(con);
     }
 
     public void connectionDown(Connection con) {
         this.router.changedConnection(con);
+        this.movement.changedConnection(con);
     }
 
     /**
@@ -259,7 +274,7 @@ public class DTNHost implements Comparable<DTNHost> {
 
     /**
      * Sets the Node's color overriding the default color
-     *  
+     *
      * @param color The color to set
      */
     public void setColor(int[] color) {
@@ -343,7 +358,7 @@ public class DTNHost implements Comparable<DTNHost> {
      * Force a connection event
      */
     public void forceConnection(DTNHost anotherHost, String interfaceId,
-            boolean up) {
+                                boolean up) {
         NetworkInterface ni;
         NetworkInterface no;
 
@@ -374,7 +389,7 @@ public class DTNHost implements Comparable<DTNHost> {
     public void connect(DTNHost h) {
         System.err.println(
                 "WARNING: using deprecated DTNHost.connect(DTNHost)"
-                + "\n Use DTNHost.forceConnection(DTNHost,null,true) instead");
+                        + "\n Use DTNHost.forceConnection(DTNHost,null,true) instead");
         forceConnection(h, null, true);
     }
 
@@ -588,7 +603,7 @@ public class DTNHost implements Comparable<DTNHost> {
         return this.getAddress() - h.getAddress();
     }
 
-	/**
+    /**
      * Method tambahan untuk menambah Duration ke list
      */
     public void addDuration(Duration dur) {
