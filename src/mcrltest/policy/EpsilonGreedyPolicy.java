@@ -75,9 +75,9 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
 //        System.out.println("decay= " + decayRate);
 
         double d = epsilon * decayRate;
-//        System.out.println("after decay= " + d);
-//
         epsilon = Math.max(minEpsilon, d);
+
+//        System.out.println("after decay= " + d);
 //        System.out.println("========= NEW EPSILON ===============");
 //        System.out.println(epsilon);
 //        System.out.println("=====================================");
