@@ -4,14 +4,15 @@ import subprocess
 NUM_EPISODES = 3
 BASE_CONFIG = "settings/RLTest.cfg"
 # This MUST match the RLAgent.saveFileName in your .cfg
-SAVE_PREFIX = "tt_ep"
+# SAVE_PREFIX = "montst-sampel_ep"
+SAVE_PREFIX = "montst-constant-1_ep"
 
 def run_simulation():
     for ep in range(1, NUM_EPISODES + 1):
         print(f"\n🚀 Starting Episode {ep}...")
 
         # 1. Base command - KEEP THE PREFIX CONSTANT
-        overrides = f"Scenario.name=RLTest_Ep_{ep}"
+        overrides = f"Scenario.name=RLTest_Ep_{ep}_@%%RLAgent.rlModel%%-@%%MonteCarlo.firstVisit%%"
 
         # 2. Handoff Logic
         if ep > 1:
@@ -30,7 +31,13 @@ def run_simulation():
             "-d", overrides,
             BASE_CONFIG
         ]
-        # ... rest of the script
+
+#         cmd = [
+#                     r".\one.bat",
+#                     "1",
+#                     "-d", overrides,
+#                     BASE_CONFIG
+#                 ]
 
         try:
             subprocess.run(cmd, check=True, shell=True)
