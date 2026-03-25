@@ -326,4 +326,8 @@ public class RLAgent {
     public List<EpisodeStep> getEpisodeSteps() {
         return episodeSteps;
     }
+
+    public RLModel getRlModel() {
+        return rlModel;
+    }
 }
