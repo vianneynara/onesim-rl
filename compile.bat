@@ -1,89 +1,81 @@
 @echo off
+:: ^Turn on echo if you need to debug
 setlocal EnableDelayedExpansion
 
-:: ==============================
-:: CONFIGURATION
-:: ==============================
+:: Configuration variables - easier to modify
 set "targetdir=target"
 set "srcdir=src"
 set "libdir=lib"
 set "resourcesdir=src\gui\buttonGraphics"
 
-echo.
-echo ======================================
-echo        ONE SIMULATOR BUILD
-echo ======================================
-echo.
+echo [INFO] Starting build process...
 
-:: ==============================
-:: CHECK LIB FOLDER
-:: ==============================
-if not exist "%libdir%" (
-    echo [ERROR] lib folder not found!
-    echo Make sure folder "lib" exists and contains lombok.jar and other dependencies.
-    exit /b 1
-)
-
-:: ==============================
-:: CHECK LOMBOK
-:: ==============================
-if not exist "%libdir%\lombok.jar" (
-    echo [ERROR] lombok.jar not found inside lib folder!
-    echo Download from https://projectlombok.org/download
-    exit /b 1
-)
-
-:: ==============================
-:: CREATE TARGET DIRECTORY
-:: ==============================
-if not exist "%targetdir%" (
+:: Create target directory if it doesn't exist
+IF NOT EXIST "%targetdir%" (
     echo [INFO] Creating target directory...
-    mkdir "%targetdir%"
+    mkdir "%targetdir%" || (
+        echo [ERROR] Failed to create target directory.
+        exit /b 1
+    )
 )
 
-:: ==============================
-:: COLLECT ALL JAVA FILES
-:: ==============================
+:: Build classpath from all JAR files
+echo [INFO] Building classpath...
+set "CLASSPATH="
+if NOT EXIST "%libdir%" (
+    echo [WARNING] Library directory '%libdir%' not found. Continuing without external libraries.
+) else (
+    for %%f in (%libdir%\*.jar) do (
+        if defined CLASSPATH (
+            echo [INFO] Adding '%%f' to classpath.
+            set "CLASSPATH=!CLASSPATH!;%%f"
+        ) else (
+            set "CLASSPATH=%%f"
+        )
+    )
+)
+
+:: Verify source directory exists
+if NOT EXIST "%srcdir%" (
+    echo [ERROR] Source directory '%srcdir%' not found.
+    exit /b 1
+)
+
+:: Collect all Java source files
 echo [INFO] Collecting Java source files...
-dir /s /b "%srcdir%\*.java" > sources.txt
-
+dir /s /b "%srcdir%\*.java" > sources.txt 2>nul
 if not exist sources.txt (
-    echo [ERROR] No Java files found in src folder!
+    echo [ERROR] No Java source files found in '%srcdir%'.
     exit /b 1
 )
 
-:: ==============================
-:: COMPILE
-:: ==============================
-echo [INFO] Compiling...
-
-javac ^
--d "%targetdir%" ^
--cp "%libdir%\*" ^
--processorpath "%libdir%\lombok.jar" ^
-@sources.txt
-
+:: Compile the sources
+echo [INFO] Compiling Java sources...
+javac -sourcepath "%srcdir%" -d "%targetdir%" -cp "%CLASSPATH%" @sources.txt
 if %ERRORLEVEL% NEQ 0 (
-    echo.
-    echo [ERROR] Compilation failed!
-    del sources.txt
-    exit /b 1
+    echo [ERROR] Compilation failed with error code %ERRORLEVEL%.
+    del sources.txt 2>nul
+    exit /b %ERRORLEVEL%
 )
 
-del sources.txt
+:: Clean up the sources list
+del sources.txt 2>nul
 
-:: ==============================
-:: COPY RESOURCES (if exist)
-:: ==============================
+:: Copy resources if they exist
 if exist "%resourcesdir%" (
-    echo [INFO] Copying GUI resources...
-    xcopy /y /e /q "%resourcesdir%" "%targetdir%\gui\buttonGraphics\" >nul
+    echo [INFO] Copying resources...
+    if not exist "%targetdir%\gui\buttonGraphics\" (
+        mkdir "%targetdir%\gui\buttonGraphics" || (
+            echo [WARNING] Failed to create resource directory in target. Resources may not be copied.
+        )
+    )
+    xcopy /y /q "%resourcesdir%\*" "%targetdir%\gui\buttonGraphics\" >nul
+    if %ERRORLEVEL% NEQ 0 (
+        echo [WARNING] Some resources may not have been copied properly.
+    ) else (
+        echo [INFO] Resources copied successfully.
+    )
 )
 
-echo.
-echo ======================================
-echo      BUILD SUCCESSFUL
-echo ======================================
-echo.
-
+echo [INFO] Build completed successfully!
 endlocal
