@@ -4,8 +4,11 @@ import subprocess
 NUM_EPISODES = 3
 BASE_CONFIG = "settings/RLTest.cfg"
 # This MUST match the RLAgent.saveFileName in your .cfg
-# SAVE_PREFIX = "montst-sampel_ep"
-SAVE_PREFIX = "montst-constant-1_ep"
+# SAVE_PREFIX = "montst-2_ep"
+# EPISODE_PREFIX = "EpS-mont_ep"
+
+SAVE_PREFIX = "qlrn-2_ep"
+EPISODE_PREFIX = "EpS-qlrn-2_ep"
 
 def run_simulation():
     for ep in range(1, NUM_EPISODES + 1):
@@ -24,6 +27,7 @@ def run_simulation():
         # We tell it to save using the BASE prefix.
         # The simulator will append '_1', '_2', etc., automatically.
         overrides += f"@@RLAgent.saveFileName={SAVE_PREFIX}"
+        overrides += f"@@RLAgent.episodeFileName={EPISODE_PREFIX}"
 
         cmd = [
             r".\one.bat",

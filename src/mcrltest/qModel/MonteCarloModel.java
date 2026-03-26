@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class MonteCarloModel extends RLModel {
+public class MonteCarloModel extends RLModel {
 
     public static final String MC_NS = "MonteCarlo";
     public static final String FIRST_VISIT_S = "firstVisit";
@@ -20,6 +20,9 @@ public abstract class MonteCarloModel extends RLModel {
         Settings mcSettings = new Settings(MC_NS);
         this.firstVisit = mcSettings.getBoolean(FIRST_VISIT_S, true);
     }
+
+    @Override
+    public void update(int state, int action, double reward, int nextState) {}
 
     /**
      * TRUE Monte Carlo (First-Visit / Every-Visit)
