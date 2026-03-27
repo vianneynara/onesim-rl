@@ -1,21 +1,24 @@
 import subprocess
 
 # --- Configuration ---
-NUM_EPISODES = 3
+NUM_EPISODES = 1
 BASE_CONFIG = "settings/RLTest.cfg"
 # This MUST match the RLAgent.saveFileName in your .cfg
-# SAVE_PREFIX = "montst-2_ep"
-# EPISODE_PREFIX = "EpS-mont_ep"
+# SAVE_PREFIX = "mont-t_ep"
+# EPISODE_PREFIX = "EpS-mont-t_ep"
 
-SAVE_PREFIX = "qlrn-2_ep"
-EPISODE_PREFIX = "EpS-qlrn-2_ep"
+# SAVE_PREFIX = "qlrn-2_ep"
+# EPISODE_PREFIX = "EpS-qlrn-2_ep"
+
+SAVE_PREFIX = "test_ep"
+EPISODE_PREFIX = "t_ep"
 
 def run_simulation():
     for ep in range(1, NUM_EPISODES + 1):
         print(f"\n🚀 Starting Episode {ep}...")
 
         # 1. Base command - KEEP THE PREFIX CONSTANT
-        overrides = f"Scenario.name=RLTest_Ep_{ep}_@%%RLAgent.rlModel%%-@%%MonteCarlo.firstVisit%%"
+        overrides = f"Scenario.name=RL_Test_Ep_{ep}_@%%RLAgent.rlModel%%-@%%MonteCarlo.firstVisit%%"
 
         # 2. Handoff Logic
         if ep > 1:
