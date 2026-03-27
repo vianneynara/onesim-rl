@@ -8,6 +8,7 @@ import movement.rl.persistence.EpisodicPersistable;
 import movement.rl.persistence.EpisodicPersistenceData;
 import movement.rl.persistence.EpisodicPersistenceManager;
 import report.QTableReporting;
+import report.RewardReporting;
 import report.TrajectoryFrequencyReporting;
 
 import java.util.ArrayList;
@@ -30,9 +31,12 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting, EpisodicPersistable {
+public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting, RewardReporting, EpisodicPersistable {
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
+
+	double currentCumulativeReward;
+	private double currentEpisodeRewards;
 
 //	// [ EPISODIC VARIABLES]
 //	private final int episodeNumber;
@@ -126,6 +130,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		Settings s = new Settings(QLEARNING_NS);
 
 		this.trajectoryFrequencies = new HashMap<>();
+		this.currentCumulativeReward = 0.0;
+		this.currentEpisodeRewards = 0.0;
 
 		// Bellman specific parameters
 		this.alpha = s.getDouble(ALPHA_S, 0.1);
@@ -167,12 +173,15 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 	@Override
 	public void changedConnection(Connection con) {
+//		System.out.println("A connection is approached");
 		if (con.isUp()) {
+//			System.out.println("Connected to a host at time " + SimClock.getTime());
 			// The host
 			DTNHost otherNode = con.getOtherNode(getHost());
 			if (otherNode != null && !otherNode.getGroupId().equals(getHost().getGroupId())) {
 				// Check if the other node matches target prefix
 				if (otherNode.getGroupId().startsWith(targetPrefix)) {
+//					System.out.println("Detected target node " + otherNode.getName() + " at time " + SimClock.getTime());
 					// Update the last found time for this target
 					double now = SimClock.getTime();
 					objectiveFound.compute(otherNode, (node, existsInfo) -> {
@@ -198,6 +207,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	public QLearningMovement(QLearningMovement proto) {
 		super(proto);
 		this.trajectoryFrequencies = proto.trajectoryFrequencies;
+		this.currentCumulativeReward = proto.currentCumulativeReward;
+		this.currentEpisodeRewards = proto.currentEpisodeRewards;
 		this.alpha = proto.alpha;
 		this.lambda = proto.lambda;
 		this.initialQValue = proto.initialQValue;
@@ -283,7 +294,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 * </ol>
 	 *
 	 * @author narwa
-	 * */
+	 *
+	 */
 	@Override
 	public Path getPath() {
 		/* Perform Q-Learning update only if we have previous action */
@@ -301,15 +313,23 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 			int availableRewards = 0;
 			for (DetectionInfo info : new ArrayList<>(objectiveFound.values())) {
 				// check if there's an available reward for the current detection information
-				if (info.hasAvailableReward()) availableRewards++;
+				if (info.hasAvailableReward()) {
+					availableRewards++;
+//					System.out.println("GOT A REWARD");
+				}
 			}
 
 			if (availableRewards > 0) {
 				// if there's an available reward, multiply it with the foundReward
-				System.out.println("WOOHOO! Found " + availableRewards + "new target since last reward at time " + now);
+//				System.out.println("WOOHOO! Found " + availableRewards + " new target since last reward at time " + now);
 				reward = foundReward * availableRewards;
+
+				// increment the reward tracker variable
+				currentEpisodeRewards += reward;
 			}
 
+//			System.out.printf("Updating with (s_t, a_t, reward, s_tp1, availableActions): %s, %s, %s, %s, %s\n",
+//				s_t, a_t, reward, s_tp1, availableActions);
 			update(s_t, a_t, reward, s_tp1, availableActions);
 		}
 
@@ -362,11 +382,11 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		// If the straight step would exit the world bounds, bounce off the wall instead.
 		if (nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0) {
 			double[] bounced = bounce(lastWaypoint.getX(), lastWaypoint.getY(), nextX, nextY);
-			double bounceX  = bounced[0];
-			double bounceY  = bounced[1];
-			direction       = bounced[2]; // reflected direction
-			double remainX  = bounced[3]; // remaining step X-component after bounce
-			double remainY  = bounced[4]; // remaining step Y-component after bounce
+			double bounceX = bounced[0];
+			double bounceY = bounced[1];
+			direction = bounced[2]; // reflected direction
+			double remainX = bounced[3]; // remaining step X-component after bounce
+			double remainY = bounced[4]; // remaining step Y-component after bounce
 
 			// Add the wall-contact point as an intermediate waypoint.
 			p.addWaypoint(new Coord(bounceX, bounceY));
@@ -395,12 +415,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 * wall contact is then reflected about that wall's normal, producing a physically
 	 * plausible bounce trajectory without any random direction change.
 	 *
-	 * @param fromX     starting X coordinate
-	 * @param fromY     starting Y coordinate
-	 * @param toX       un-clipped target X (may be out of bounds)
-	 * @param toY       un-clipped target Y (may be out of bounds)
+	 * @param fromX starting X coordinate
+	 * @param fromY starting Y coordinate
+	 * @param toX   un-clipped target X (may be out of bounds)
+	 * @param toY   un-clipped target Y (may be out of bounds)
 	 * @return double[5] = { bounceX, bounceY, reflectedDirection, remainDX, remainDY }
-	 *
+	 * <p>
 	 * Made by Claude
 	 */
 	private double[] bounce(double fromX, double fromY, double toX, double toY) {
@@ -414,19 +434,33 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		if (dx > 0 && toX >= getMaxX()) {
 			double t = (getMaxX() - fromX) / dx;
-			if (t < tMin) { tMin = t; hitVertical = true; }
+			if (t < tMin) {
+				tMin = t;
+				hitVertical = true;
+			}
 		}
 		if (dx < 0 && toX <= 0) {
 			double t = -fromX / dx;
-			if (t < tMin) { tMin = t; hitVertical = true; }
+			if (t < tMin) {
+				tMin = t;
+				hitVertical = true;
+			}
 		}
 		if (dy > 0 && toY >= getMaxY()) {
 			double t = (getMaxY() - fromY) / dy;
-			if (t < tMin) { tMin = t; hitHorizontal = true; hitVertical = false; }
+			if (t < tMin) {
+				tMin = t;
+				hitHorizontal = true;
+				hitVertical = false;
+			}
 		}
 		if (dy < 0 && toY <= 0) {
 			double t = -fromY / dy;
-			if (t < tMin) { tMin = t; hitHorizontal = true; hitVertical = false; }
+			if (t < tMin) {
+				tMin = t;
+				hitHorizontal = true;
+				hitVertical = false;
+			}
 		}
 
 		// Wall contact point (clamp to avoid floating-point drift outside bounds).
@@ -438,15 +472,15 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		double remDY = (1.0 - tMin) * dy;
 
 		// Reflect the remaining vector about the wall normal.
-		if (hitVertical)   remDX = -remDX;
+		if (hitVertical) remDX = -remDX;
 		if (hitHorizontal) remDY = -remDY;
 
 		// Derive the new direction angle from the reflected vector.
 		double reflectedDir = Math.atan2(
-				hitHorizontal ? -dy : dy,
-				hitVertical   ? -dx : dx);
+			hitHorizontal ? -dy : dy,
+			hitVertical ? -dx : dx);
 
-		return new double[]{ bounceX, bounceY, reflectedDir, remDX, remDY };
+		return new double[]{bounceX, bounceY, reflectedDir, remDX, remDY};
 	}
 
 	/**
@@ -485,11 +519,17 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		return qTable;
 	}
 
+	@Override
+	public double retrieveCurrentReward() {
+		return currentEpisodeRewards;
+	}
+
 	// [ EPISODIC PERSISTENCE METHODS ]
 
 	/**
 	 * Minimizes the process of saving an episode.
-	 * */
+	 *
+	 */
 	@Override
 	public void saveCurrentEpisode() {
 		EpisodicPersistenceData epd = new EpisodicPersistenceData();
@@ -521,6 +561,13 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		for (var entry : trajectoryFrequencies.entrySet()) {
 			epd.trajectoryFrequencies.put(String.valueOf(entry.getKey()), entry.getValue());
 		}
+
+		/* Saving reward recorder */
+		double newTotalReward = this.currentCumulativeReward + this.currentEpisodeRewards;
+		epd.previousCumulativeReward = this.currentCumulativeReward;
+		epd.currentCumulativeReward = newTotalReward;
+		System.out.println("Saved prev and new cumulative reward: (" + this.currentCumulativeReward + ", " + newTotalReward + ")");
+		this.currentCumulativeReward = newTotalReward;
 
 		// Also save the persistence data for the BP
 		behaviorPolicy.saveTo(epd);
@@ -558,6 +605,11 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 				this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
 			}
 		}
+
+		/* Loading reward recorder */
+		System.out.println("Loading EPD.currentCumulativeReward: " + epd.currentCumulativeReward);
+		this.currentCumulativeReward = epd.currentCumulativeReward;
+		this.currentEpisodeRewards = 0.0;
 
 		// Now, also load persistence for the BP
 		behaviorPolicy.loadFrom(epd);
