@@ -137,7 +137,9 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.foundReward = s.getDouble(FOUND_REWARD_S, 10.0);
 
 		// Load the behavior policy & target prefix
+		System.out.println("before loading BP");
 		String behaviorClassName = s.getSetting(BEHAVIOR_POLICY_S, "movement.rl.behavior.EpsilonGreedyBehavior");
+		System.out.println("is it loading this");
 		this.behaviorPolicy = (BehaviorPolicy) s.createIntializedObject(behaviorClassName);
 		this.targetPrefix = s.getSetting(TARGET_PREFIX_S, "T");
 		this.agentSpeed = s.getDouble(SPEED_S, 1.0);

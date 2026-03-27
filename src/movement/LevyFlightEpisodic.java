@@ -1,0 +1,184 @@
+package movement;
+
+import core.Coord;
+import core.Settings;
+import movement.rl.QLearningMovement;
+import movement.rl.persistence.EpisodicPersistable;
+import movement.rl.persistence.EpisodicPersistenceData;
+import movement.rl.persistence.EpisodicPersistenceManager;
+import report.TrajectoryFrequencyReporting;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Generates movement paths according to human-like behavior,
+ * where short steps are more frequent than long ones (Lévy Flight pattern).
+ *
+ * @see <a href="https://en.wikipedia.org/wiki/L%C3%A9vy_flight">Lévy flight</a>
+ * @see <a href="https://ieeexplore.ieee.org/document/5750071">On the Levy-Walk Nature of Human Mobility</a>
+ */
+public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequencyReporting, EpisodicPersistable {
+	// [ REPORTING VARIABLES ]
+	private final Map<Integer, Integer> trajectoryFrequencies;
+
+	/**
+	 * Number of waypoints per path
+	 */
+	private static final int PATH_LENGTH = 1;
+	private Coord lastWaypoint;
+
+	/**
+	 * Controls how heavy the distribution tail is
+	 */
+	public static final String ALPHA = "levyAlpha";
+	public static final double DEFAULT_ALPHA = 1.5;
+
+	public static final String XM = "xm";
+	public static final double DEFAULT_XM = 1;
+
+	private double xm, alpha;
+
+	public LevyFlightEpisodic(Settings settings) {
+		super(settings);
+
+		this.trajectoryFrequencies = new HashMap<>();
+
+		this.alpha = settings.contains(ALPHA) ? settings.getDouble(ALPHA) : DEFAULT_ALPHA;
+		this.xm = settings.contains(XM) ? settings.getDouble(XM) : DEFAULT_XM;
+		
+		// Re/Initializes episodic persistence
+		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
+		if (epd != null) {
+			loadFrom(epd);
+		}
+	}
+
+	public LevyFlightEpisodic(LevyFlightEpisodic lf) {
+		super(lf);
+
+		this.trajectoryFrequencies = lf.trajectoryFrequencies;
+
+		this.xm = lf.xm;
+		this.alpha = lf.alpha;
+	}
+
+	/**
+	 * Returns a random initial location for a host on the map.
+	 *
+	 * @return Random position on the map
+	 */
+	@Override
+	public Coord getInitialLocation() {
+		assert rng != null : "MovementModel not initialized!";
+		Coord c = randomCoord();
+		this.lastWaypoint = c;
+		return c;
+	}
+
+	@Override
+	public Path getPath() {
+		Path p = new Path(generateSpeed());
+		p.addWaypoint(lastWaypoint.clone());
+
+		Coord c = LevyFlightEpisodic();
+//		int trajLength = (int) lastWaypoint.distance(c);
+//		recordFinishedTrajectory(trajLength);
+		p.addWaypoint(c);
+
+		this.lastWaypoint = c;
+		return p;
+	}
+
+	@Override
+	public LevyFlightEpisodic replicate() {
+		return new LevyFlightEpisodic(this);
+	}
+
+	/**
+	 * Generates a random coordinate within the bounds of the map.
+	 */
+	protected Coord randomCoord() {
+		return new Coord(
+			rng.nextDouble() * getMaxX(),
+			rng.nextDouble() * getMaxY()
+		);
+	}
+
+	/**
+	 * Performs a Lévy Flight step to determine the next coordinate.
+	 */
+	protected Coord LevyFlightEpisodic() {
+		double next_X, next_Y;
+
+		do {
+			double step_length = pareto();
+			double theta = rng.nextDouble(0, 2 * Math.PI);
+
+			next_X = lastWaypoint.getX() + step_length * Math.cos(theta);
+			next_Y = lastWaypoint.getY() + step_length * Math.sin(theta);
+
+		} while (next_X >= getMaxX() || next_Y >= getMaxY() || next_X <= 0 || next_Y <= 0);
+
+		return new Coord(next_X, next_Y);
+	}
+
+	/**
+	 * Calculates a step length based on the Pareto distribution.
+	 *
+	 * @return A value representing the step length
+	 */
+	public double pareto() {
+		double u = 1 - rng.nextDouble(); // Ensures u is in (0, 1]
+		return this.xm / Math.pow(u, 1 / this.alpha);
+	}
+
+	// [ REPORTING METHODS ]
+
+	/**
+	 * Records a length value to {@link LevyFlightEpisodic#trajectoryFrequencies}.
+	 */
+	private void recordFinishedTrajectory(int length) {
+		if (length <= 0) return;
+		trajectoryFrequencies.merge(length, 1, Integer::sum);
+	}
+
+	@Override
+	public Map<Integer, Integer> getTrajectoryFrequencies() {
+		return trajectoryFrequencies;
+	}
+
+	/**
+	 * Minimizes the process of saving an episode.
+	 */
+	@Override
+	public void saveCurrentEpisode() {
+		EpisodicPersistenceData epd = new EpisodicPersistenceData();
+		saveTo(epd);
+		EpisodicPersistenceManager.save(epd);
+	}
+
+	@Override
+	public void saveTo(EpisodicPersistenceData epd) {
+		System.out.printf("<%s> Saving persistence data...%n", QLearningMovement.class.getName());
+
+		/* Saving trajectory recorder */
+		epd.trajectoryFrequencies = new HashMap<>();
+		for (var entry : trajectoryFrequencies.entrySet()) {
+			epd.trajectoryFrequencies.put(String.valueOf(entry.getKey()), entry.getValue());
+		}
+	}
+
+	@Override
+	public void loadFrom(EpisodicPersistenceData epd) {
+		System.out.printf("<%s> Loading persistence data...%n", QLearningMovement.class.getName());
+
+		/* Loading trajectory recorder */
+		trajectoryFrequencies.clear();
+		if (epd.trajectoryFrequencies != null) {
+			for (var entry : epd.trajectoryFrequencies.entrySet()) {
+				this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+			}
+		}
+	}
+}
