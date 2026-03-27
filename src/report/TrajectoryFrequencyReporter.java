@@ -38,12 +38,12 @@ public class TrajectoryFrequencyReporter extends Report {
 
 		Map<Integer, Integer> trajectoryFrequencies = representative.getTrajectoryFrequencies();
 
-		System.out.printf("<%s> Current Trajectory Frequencies: %n", TrajectoryFrequencyReporter.class.getName());
+//		System.out.printf("<%s> Current Trajectory Frequencies: %n", TrajectoryFrequencyReporter.class.getName());
 		write("length,frequency");
 		for (var entry : trajectoryFrequencies.entrySet()) {
-			int trajLength = entry.getKey();
-			int trajFreq = entry.getValue();
-			System.out.println(trajLength + ":" + trajFreq);
+//			int trajLength = entry.getKey();
+//			int trajFreq = entry.getValue();
+//			System.out.println(trajLength + ":" + trajFreq);
 			write(entry.getKey() + "," + entry.getValue());
 		}
 
