@@ -11,10 +11,6 @@ import java.io.Serializable;
  * Used by RLMovementModel to track when a target was seen and
  * whether a reward can be granted again.
  */
-//public class DetectionInfo implements Serializable {
-
-//    private static final long serialVersionUID = 1L;
-
 public class DetectionInfo {
     /** Last time this target was detected */
     private double lastDetectionTime;
@@ -24,6 +20,8 @@ public class DetectionInfo {
 
     /** Minimum time between rewards */
     private double cooldown;
+
+    private int nrofMeet;
 
     /**
      * Private constructor (use factory method)
@@ -35,6 +33,7 @@ public class DetectionInfo {
         this.lastDetectionTime = lastDetectionTime;
         this.lastRewardTime = lastRewardTime;
         this.cooldown = cooldown;
+        this.nrofMeet = 0;
     }
 
     /**
@@ -54,6 +53,10 @@ public class DetectionInfo {
 
         this.lastDetectionTime = now;
         this.cooldown = cooldown;
+
+        System.out.println("BEFORE NUMBER OF MEET = " + this.nrofMeet);
+        this.nrofMeet++;
+        System.out.println("AFTER NUMBER OF MEET = " + this.nrofMeet);
 
     }
 
@@ -95,6 +98,10 @@ public class DetectionInfo {
      */
     public double getCooldown() {
         return cooldown;
+    }
+
+    public int getNrofMeet() {
+        return nrofMeet;
     }
 
     @Override
