@@ -38,19 +38,23 @@ public class RewardReporter extends Report {
 		assert representative != null;
 
 		/* Retrieves the episode's total reward and the cumulative rewards (from previous episodes) */
-		double currentEpisodeRewards = representative.retrieveCurrentReward();
-		System.out.println("Retrieved reward of " + currentEpisodeRewards);
+		double currentEpisodeReward = representative.retrieveCurrentReward();
+		System.out.println("Retrieved reward of " + currentEpisodeReward);
 
+		/* Load the EPD from the JSON file using the manager */
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
 		double currentCumulativeReward = 0;
+		double previousCumulativeReward = 0;
 		if (epd != null) {
 			currentCumulativeReward = epd.currentCumulativeReward;
+			previousCumulativeReward = epd.previousCumulativeReward;
 		} else {
 			System.out.println("[RewardReporter] No previous episode data found, starting fresh.");
 		}
 
+		write("previousCumulativeReward: " + previousCumulativeReward);
 		write("currentCumulativeReward: " + currentCumulativeReward);
-		write("currentTotalReward: " + currentEpisodeRewards);
+		write("currentTotalReward: " + currentEpisodeReward);
 
 		super.done();
 	}

@@ -31,6 +31,7 @@ public class EpisodicPersistenceData {
 	// [ RewardReporting addon ]
 	public double previousCumulativeReward;
 	public double currentCumulativeReward;
+	public double currentEpisodeReward;
 
 	// [ Episodic bookkeeping ]
 	public int episodeNumber;

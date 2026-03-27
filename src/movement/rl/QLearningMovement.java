@@ -35,8 +35,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
 
-	double currentCumulativeReward;
-	private double currentEpisodeRewards;
+	private double currentCumulativeReward;
+	private double currentEpisodeReward;
 
 //	// [ EPISODIC VARIABLES]
 //	private final int episodeNumber;
@@ -131,7 +131,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		this.trajectoryFrequencies = new HashMap<>();
 		this.currentCumulativeReward = 0.0;
-		this.currentEpisodeRewards = 0.0;
+		this.currentEpisodeReward = 0.0;
 
 		// Bellman specific parameters
 		this.alpha = s.getDouble(ALPHA_S, 0.1);
@@ -208,7 +208,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		super(proto);
 		this.trajectoryFrequencies = proto.trajectoryFrequencies;
 		this.currentCumulativeReward = proto.currentCumulativeReward;
-		this.currentEpisodeRewards = proto.currentEpisodeRewards;
+		this.currentEpisodeReward = proto.currentEpisodeReward;
 		this.alpha = proto.alpha;
 		this.lambda = proto.lambda;
 		this.initialQValue = proto.initialQValue;
@@ -325,7 +325,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 				reward = foundReward * availableRewards;
 
 				// increment the reward tracker variable
-				currentEpisodeRewards += reward;
+				currentEpisodeReward += reward;
 			}
 
 //			System.out.printf("Updating with (s_t, a_t, reward, s_tp1, availableActions): %s, %s, %s, %s, %s\n",
@@ -521,7 +521,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 	@Override
 	public double retrieveCurrentReward() {
-		return currentEpisodeRewards;
+		return currentEpisodeReward;
 	}
 
 	// [ EPISODIC PERSISTENCE METHODS ]
@@ -563,9 +563,10 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		}
 
 		/* Saving reward recorder */
-		double newTotalReward = this.currentCumulativeReward + this.currentEpisodeRewards;
+		double newTotalReward = this.currentCumulativeReward + this.currentEpisodeReward;
 		epd.previousCumulativeReward = this.currentCumulativeReward;
 		epd.currentCumulativeReward = newTotalReward;
+		epd.currentEpisodeReward =  this.currentEpisodeReward;
 		System.out.println("Saved prev and new cumulative reward: (" + this.currentCumulativeReward + ", " + newTotalReward + ")");
 		this.currentCumulativeReward = newTotalReward;
 
@@ -609,7 +610,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		/* Loading reward recorder */
 		System.out.println("Loading EPD.currentCumulativeReward: " + epd.currentCumulativeReward);
 		this.currentCumulativeReward = epd.currentCumulativeReward;
-		this.currentEpisodeRewards = 0.0;
+		this.currentEpisodeReward = 0.0;
 
 		// Now, also load persistence for the BP
 		behaviorPolicy.loadFrom(epd);
