@@ -270,4 +270,8 @@ public class RLMovementModel extends MovementModel {
     public RLAgent getAgent() {
         return agent;
     }
+
+    public Map<DTNHost, DetectionInfo> getObjectiveFound() {
+        return this.objectiveFound;
+    }
 }
