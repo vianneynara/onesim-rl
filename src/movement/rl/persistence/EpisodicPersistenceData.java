@@ -11,7 +11,8 @@ public class EpisodicPersistenceData {
 	/**
 	 * Stores the value, but uses String keys because fastjson cannot use complex objects as keys.
 	 * The key's format will be `stateId:actionId`.
-	 * */
+	 *
+	 */
 	public Map<String, Double> qTable;
 	public int prevAction;
 	public int prevState;
@@ -26,6 +27,10 @@ public class EpisodicPersistenceData {
 	// [ SearchingAgentReporting ]
 	public int totalDiscovered;
 	public int totalUndiscovered;
+
+	// [ RewardReporting addon ]
+	public double previousCumulativeReward;
+	public double currentCumulativeReward;
 
 	// [ Episodic bookkeeping ]
 	public int episodeNumber;
