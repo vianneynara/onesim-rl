@@ -50,6 +50,16 @@ public class QTable {
         table.get(state).setQ(action, value);
     }
 
+    public int getVisitCount(int state, int action) {
+        initializeState(state);
+        return table.get(state).getCount(action);
+    }
+
+    public void setVisitCount(int state, int action, int value) {
+        initializeState(state);
+        table.get(state).setCount(action, value);
+    }
+
     public int getBestAction(int state, Random rng) {
         initializeState(state);
         return table.get(state).getBestAction(rng);
@@ -322,8 +332,6 @@ public class QTable {
         }
     }
 
-    /* ========================= */
-
     public double getLoadedEpsilon() {
         return loadedEpsilon;
     }
@@ -334,5 +342,35 @@ public class QTable {
 
     public int getLoadedEpisode() {
         return loadedEpisode;
+    }
+
+    public void printTable() {
+
+        System.out.println("========== Q TABLE ==========");
+
+        for (Map.Entry<Integer, QValue> entry : table.entrySet()) {
+
+            int state = entry.getKey();
+            QValue q = entry.getValue();
+
+            System.out.print("State " + state + " → ");
+
+            for (int a = 0; a < nrofAction; a++) {
+
+                System.out.print("A" + a + "=" + q.getQ(a));
+
+                if (useVisitCount) {
+                    System.out.print(" (n=" + q.getCount(a) + ")");
+                }
+
+                if (a < nrofAction - 1) {
+                    System.out.print(" | ");
+                }
+            }
+
+            System.out.println();
+        }
+
+        System.out.println("================================");
     }
 }

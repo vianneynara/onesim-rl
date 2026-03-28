@@ -1,17 +1,24 @@
 import subprocess
 
 # --- Configuration ---
-NUM_EPISODES = 3
+NUM_EPISODES = 2
 BASE_CONFIG = "settings/RLTest.cfg"
 # This MUST match the RLAgent.saveFileName in your .cfg
-SAVE_PREFIX = "tt_ep"
+# SAVE_PREFIX = "mont-t_ep"
+# EPISODE_PREFIX = "EpS-mont-t_ep"
+
+# SAVE_PREFIX = "qlrn-2_ep"
+# EPISODE_PREFIX = "EpS-qlrn-2_ep"
+
+SAVE_PREFIX = "test-cd-1_ep"
+EPISODE_PREFIX = "t-cd-1_ep"
 
 def run_simulation():
     for ep in range(1, NUM_EPISODES + 1):
         print(f"\n🚀 Starting Episode {ep}...")
 
         # 1. Base command - KEEP THE PREFIX CONSTANT
-        overrides = f"Scenario.name=RLTest_Ep_{ep}"
+        overrides = f"Scenario.name=RL_Test_Ep_{ep}_@%%RLAgent.rlModel%%-@%%MonteCarlo.firstVisit%%"
 
         # 2. Handoff Logic
         if ep > 1:
@@ -23,14 +30,21 @@ def run_simulation():
         # We tell it to save using the BASE prefix.
         # The simulator will append '_1', '_2', etc., automatically.
         overrides += f"@@RLAgent.saveFileName={SAVE_PREFIX}"
+        overrides += f"@@RLAgent.episodeFileName={EPISODE_PREFIX}"
+
+#         cmd = [
+#             r".\one.bat",
+#             "-b", "1",
+#             "-d", overrides,
+#             BASE_CONFIG
+#         ]
 
         cmd = [
-            r".\one.bat",
-            "-b", "1",
-            "-d", overrides,
-            BASE_CONFIG
-        ]
-        # ... rest of the script
+                    r".\one.bat",
+                    "1",
+                    "-d", overrides,
+                    BASE_CONFIG
+                ]
 
         try:
             subprocess.run(cmd, check=True, shell=True)

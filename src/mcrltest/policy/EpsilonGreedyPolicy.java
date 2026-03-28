@@ -69,18 +69,18 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
     @Override
     public void update(int state, int action, double reward, Random random) {
 
-        System.out.println("Min epsilon= " + minEpsilon);
-
-        System.out.println("epsilon= " +epsilon);
-        System.out.println("decay= " + decayRate);
+//        System.out.println("Min epsilon= " + minEpsilon);
+//
+//        System.out.println("epsilon= " +epsilon);
+//        System.out.println("decay= " + decayRate);
 
         double d = epsilon * decayRate;
-        System.out.println("after decay= " + d);
-
         epsilon = Math.max(minEpsilon, d);
-        System.out.println("========= NEW EPSILON ===============");
-        System.out.println(epsilon);
-        System.out.println("=====================================");
+
+//        System.out.println("after decay= " + d);
+//        System.out.println("========= NEW EPSILON ===============");
+//        System.out.println(epsilon);
+//        System.out.println("=====================================");
 
     }
 

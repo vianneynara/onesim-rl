@@ -4,6 +4,9 @@
 
 /target
 /reports
+
+data/episodes
+data/qtable
 # Ignore Gradle project-specific cache directory
 .gradle
 

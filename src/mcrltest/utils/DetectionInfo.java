@@ -11,98 +11,136 @@ import java.io.Serializable;
  * Used by RLMovementModel to track when a target was seen and
  * whether a reward can be granted again.
  */
-//public class DetectionInfo implements Serializable {
+public class DetectionInfo implements Serializable {
 
-//    private static final long serialVersionUID = 1L;
-
-public class DetectionInfo {
-    /** Last time this target was detected */
     private double lastDetectionTime;
-
-    /** Last time reward was granted */
     private double lastRewardTime;
-
-    /** Minimum time between rewards */
     private double cooldown;
 
-    /**
-     * Private constructor (use factory method)
-     */
+    private int nrofMeet;
+
+    /* 🔥 mode */
+    private boolean destructive;
+
+    /* 🔥 flags */
+    private boolean newlyDetected;
+    private boolean alreadyRewarded;
+
     private DetectionInfo(double lastDetectionTime,
                           double lastRewardTime,
-                          double cooldown) {
+                          double cooldown,
+                          boolean destructive) {
 
         this.lastDetectionTime = lastDetectionTime;
         this.lastRewardTime = lastRewardTime;
         this.cooldown = cooldown;
+
+        this.destructive = destructive;
+
+        this.nrofMeet = 0;
+        this.newlyDetected = false;
+        this.alreadyRewarded = false;
     }
 
-    /**
-     * Factory method used for initialization
-     */
     public static DetectionInfo of(double lastDetectionTime,
                                    double lastRewardTime,
-                                   double cooldown) {
+                                   double cooldown,
+                                   boolean destructive) {
 
-        return new DetectionInfo(lastDetectionTime, lastRewardTime, cooldown);
+        return new DetectionInfo(
+                lastDetectionTime,
+                lastRewardTime,
+                cooldown,
+                destructive
+        );
     }
 
     /**
-     * Update detection timestamp when target is seen.
+     * Called when connection (detection) happens
      */
-    public void update(double now, double cooldown) {
-
+    public void update(double now) {
         this.lastDetectionTime = now;
-        this.cooldown = cooldown;
-
+        this.nrofMeet++;
+        this.newlyDetected = true;
     }
 
     /**
-     * Check whether a reward can be granted again.
-     *
-     * Reward is allowed only if cooldown has passed.
+     * 🔥 MAIN REWARD LOGIC
      */
-    public boolean hasAvailableReward() {
+    public boolean consumeDetectionReward() {
 
         double now = SimClock.getTime();
 
-        if (now - lastRewardTime >= cooldown) {
+        /* =========================
+           🔴 DESTRUCTIVE TARGET
+           ========================= */
+        if (destructive) {
+//            System.out.println("==============================");
+//            System.out.println("DESTRUCTIVE");
 
-            lastRewardTime = now;
-            return true;
+            if (alreadyRewarded) {
+//                System.out.println("HAVE ALREADY BEING REWARDED");
+//                System.out.println("==============================");
+                return false;
+            }
 
+            if (newlyDetected) {
+//                System.out.println("FIRST MEET, GIVE REWARD");
+//                System.out.println("==============================");
+                newlyDetected = false;
+                alreadyRewarded = true;
+                lastRewardTime = now;
+                return true;
+            }
+
+            return false;
         }
 
-        return false;
+        /* =========================
+        🔵 NON-DESTRUCTIVE TARGET
+        ========================= */
+        else {
+            if (newlyDetected) {
+//                System.out.println("==============================");
+//                System.out.println("NON - DESTRUCTIVE");
+
+                /* 🔥 FIRST TIME: always reward */
+                if (lastRewardTime == Double.NEGATIVE_INFINITY) {
+//                    System.out.println("FIRST TIME MEET,GIVE REWARD");
+//                    System.out.println("==============================");
+
+                    newlyDetected = false;
+                    lastRewardTime = now;
+
+                    return true;
+                }
+
+//                System.out.println("DIFFERENT : " + (now - lastRewardTime));
+//                System.out.println("COOLDOWN : " +cooldown);
+//                System.out.println("==============================");
+
+                /* 🔥 NEXT TIMES: respect cooldown */
+                if (now - lastRewardTime >= cooldown) {
+//                    System.out.println("==============================");
+//                    System.out.println("HAVE PAST THE COOLDOWN");
+//                    System.out.println("==============================");
+
+                    newlyDetected = false;
+                    lastRewardTime = now;
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
-    /**
-     * Get last time this target was detected.
-     */
-    public double getLastDetectionTime() {
-        return lastDetectionTime;
+    public int getNrofMeet() {
+        return nrofMeet;
     }
 
-    /**
-     * Get last time reward was given.
-     */
-    public double getLastRewardTime() {
-        return lastRewardTime;
-    }
-
-    /**
-     * Get reward cooldown duration.
-     */
-    public double getCooldown() {
-        return cooldown;
-    }
-
-    @Override
-    public String toString() {
-        return "DetectionInfo{" +
-                "lastDetectionTime=" + lastDetectionTime +
-                ", lastRewardTime=" + lastRewardTime +
-                ", cooldown=" + cooldown +
-                '}';
+    public boolean isDestructive() {
+        return destructive;
     }
 }

@@ -31,6 +31,7 @@ public class RLAgent {
     public static final String FOUND_REWARD_S = "foundReward";
     public static final String SPEED_S = "agentSpeed";
     public static final String TARGET_COOLDOWN_S = "targetCooldown";
+    public static final String DESTRUCTIVE_TARGET_S = "destructiveTarget";
 
     /* persistence */
     public static final String ENABLE_PERSISTENCE = "enablePersistence";
@@ -49,6 +50,7 @@ public class RLAgent {
     protected final double foundReward;
     protected final double speed;
     protected final double targetCooldown;
+    private final boolean destructiveTarget;
 
     private final BehaviorPolicy policy;
     private final RLModel rlModel;
@@ -98,6 +100,7 @@ public class RLAgent {
         this.foundReward = rlSettings.getDouble(FOUND_REWARD_S, 10.0);
         this.speed = rlSettings.getDouble(SPEED_S, 1.0);
         this.targetCooldown = rlSettings.getDouble(TARGET_COOLDOWN_S, 0);
+        this.destructiveTarget = rlSettings.getBoolean(DESTRUCTIVE_TARGET_S, true);
 
         /* -------- PERSISTENCE -------- */
 
@@ -325,5 +328,13 @@ public class RLAgent {
 
     public List<EpisodeStep> getEpisodeSteps() {
         return episodeSteps;
+    }
+
+    public RLModel getRlModel() {
+        return rlModel;
+    }
+
+    public boolean isDestructiveTarget() {
+        return destructiveTarget;
     }
 }

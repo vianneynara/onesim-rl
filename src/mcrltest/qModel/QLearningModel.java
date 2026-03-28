@@ -23,6 +23,7 @@ public class QLearningModel extends RLModel {
         double newQ = currentQ + alpha * (target - currentQ);
 
         qTable.setQValue(state, action, newQ);
+        updateVisitCount(state, action);
 
         totalTrainingReward += reward;
     }
