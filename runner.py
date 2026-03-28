@@ -1,7 +1,7 @@
 import subprocess
 
 # --- Configuration ---
-NUM_EPISODES = 1
+NUM_EPISODES = 2
 BASE_CONFIG = "settings/RLTest.cfg"
 # This MUST match the RLAgent.saveFileName in your .cfg
 # SAVE_PREFIX = "mont-t_ep"
@@ -10,8 +10,8 @@ BASE_CONFIG = "settings/RLTest.cfg"
 # SAVE_PREFIX = "qlrn-2_ep"
 # EPISODE_PREFIX = "EpS-qlrn-2_ep"
 
-SAVE_PREFIX = "test_ep"
-EPISODE_PREFIX = "t_ep"
+SAVE_PREFIX = "test-cd-1_ep"
+EPISODE_PREFIX = "t-cd-1_ep"
 
 def run_simulation():
     for ep in range(1, NUM_EPISODES + 1):
@@ -32,19 +32,19 @@ def run_simulation():
         overrides += f"@@RLAgent.saveFileName={SAVE_PREFIX}"
         overrides += f"@@RLAgent.episodeFileName={EPISODE_PREFIX}"
 
-        cmd = [
-            r".\one.bat",
-            "-b", "1",
-            "-d", overrides,
-            BASE_CONFIG
-        ]
-
 #         cmd = [
-#                     r".\one.bat",
-#                     "1",
-#                     "-d", overrides,
-#                     BASE_CONFIG
-#                 ]
+#             r".\one.bat",
+#             "-b", "1",
+#             "-d", overrides,
+#             BASE_CONFIG
+#         ]
+
+        cmd = [
+                    r".\one.bat",
+                    "1",
+                    "-d", overrides,
+                    BASE_CONFIG
+                ]
 
         try:
             subprocess.run(cmd, check=True, shell=True)
