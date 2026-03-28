@@ -1,50 +1,48 @@
 import subprocess
 
-# --- Configuration ---
 NUM_EPISODES = 2
 BASE_CONFIG = "settings/RLTest.cfg"
-# This MUST match the RLAgent.saveFileName in your .cfg
-# SAVE_PREFIX = "mont-t_ep"
-# EPISODE_PREFIX = "EpS-mont-t_ep"
-
-# SAVE_PREFIX = "qlrn-2_ep"
-# EPISODE_PREFIX = "EpS-qlrn-2_ep"
 
 SAVE_PREFIX = "test-cd-1_ep"
 EPISODE_PREFIX = "t-cd-1_ep"
+BASE_FOLDER = "test-cd-1"
 
 def run_simulation():
+
     for ep in range(1, NUM_EPISODES + 1):
-        print(f"\n🚀 Starting Episode {ep}...")
 
-        # 1. Base command - KEEP THE PREFIX CONSTANT
-        overrides = f"Scenario.name=RL_Test_Ep_{ep}_@%%RLAgent.rlModel%%-@%%MonteCarlo.firstVisit%%"
+        print(f"\n🚀 Starting Episode {ep}")
 
-        # 2. Handoff Logic
+        overrides = f"Scenario.name=RL_Test_Ep_{ep}"
+
+        # 🔁 Load previous QTable
         if ep > 1:
-            # We load the file saved by the PREVIOUS episode
-            # The simulator automatically saved Ep 1 as 'tt_ep_1'
-            load_val = f"{SAVE_PREFIX}_{ep-1}"
-            overrides += f"@@RLAgent.loadFileName={load_val}"
+            overrides += f"@@RLAgent.loadFileName={SAVE_PREFIX}_{ep-1}"
 
-        # We tell it to save using the BASE prefix.
-        # The simulator will append '_1', '_2', etc., automatically.
+        # 💾 Save settings
         overrides += f"@@RLAgent.saveFileName={SAVE_PREFIX}"
         overrides += f"@@RLAgent.episodeFileName={EPISODE_PREFIX}"
 
+        # 📁 Folder control
+        overrides += f"@@RLAgent.baseFolder={BASE_FOLDER}"
+        overrides += f"@@RLAgent.currentEpisode={ep}"
+
+        # 📊 Report folder (NO JAVA CHANGE NEEDED)
+        overrides += f"@@Report.reportDir=reports/{BASE_FOLDER}/{ep}"
+
 #         cmd = [
 #             r".\one.bat",
-#             "-b", "1",
+#             "1",
 #             "-d", overrides,
 #             BASE_CONFIG
 #         ]
 
         cmd = [
-                    r".\one.bat",
-                    "1",
-                    "-d", overrides,
-                    BASE_CONFIG
-                ]
+            r".\one.bat",
+            "-b","1",
+            "-d", overrides,
+            BASE_CONFIG
+        ]
 
         try:
             subprocess.run(cmd, check=True, shell=True)
@@ -52,6 +50,7 @@ def run_simulation():
         except subprocess.CalledProcessError as e:
             print(f"❌ Error: {e}")
             break
+
 
 if __name__ == "__main__":
     run_simulation()
