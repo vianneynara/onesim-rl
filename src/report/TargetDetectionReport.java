@@ -2,9 +2,7 @@ package report;
 
 import core.DTNHost;
 import core.SimScenario;
-import mcrltest.agent.RLAgent;
 import mcrltest.utils.DetectionInfo;
-import mcrltest.utils.EpisodeStep;
 import movement.RLMovementModel;
 
 import java.util.HashMap;
@@ -35,7 +33,6 @@ public class TargetDetectionReport extends Report {
                     Map<DTNHost, DetectionInfo> objectiveFound = movement.getObjectiveFound();
 
                     for (Map.Entry<DTNHost, DetectionInfo> step : objectiveFound.entrySet()) {
-//                        String name = step.getKey().getName();
                         DTNHost theHost = step.getKey();
                         int count = step.getValue().getNrofMeet();
 
