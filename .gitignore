@@ -7,6 +7,7 @@
 
 data/episodes
 data/qtable
+data/plotter
 # Ignore Gradle project-specific cache directory
 .gradle
 
