@@ -7,14 +7,9 @@ import movement.rl.behavior.BehaviorPolicy;
 import movement.rl.persistence.EpisodicPersistable;
 import movement.rl.persistence.EpisodicPersistenceData;
 import movement.rl.persistence.EpisodicPersistenceManager;
-import report.QTableReporting;
-import report.RewardReporting;
-import report.TrajectoryFrequencyReporting;
+import report.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Movement implementing Temporal Difference (TD) Off-Policy reinforcement learning, namely Q-Learning.
@@ -31,12 +26,14 @@ import java.util.Set;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting, RewardReporting, EpisodicPersistable {
+public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting, RewardReporting, SearchingAgentReporting, SearchingOccurrencesReporting, EpisodicPersistable {
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
 
 	private double currentCumulativeReward;
 	private double currentEpisodeReward;
+
+	private int currentCumulativeTrueDetections;
 
 //	// [ EPISODIC VARIABLES]
 //	private final int episodeNumber;
@@ -132,6 +129,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.trajectoryFrequencies = new HashMap<>();
 		this.currentCumulativeReward = 0.0;
 		this.currentEpisodeReward = 0.0;
+		this.currentCumulativeTrueDetections = 0;
 
 		// Bellman specific parameters
 		this.alpha = s.getDouble(ALPHA_S, 0.1);
@@ -209,6 +207,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.trajectoryFrequencies = proto.trajectoryFrequencies;
 		this.currentCumulativeReward = proto.currentCumulativeReward;
 		this.currentEpisodeReward = proto.currentEpisodeReward;
+		this.currentCumulativeTrueDetections = proto.currentCumulativeTrueDetections;
 		this.alpha = proto.alpha;
 		this.lambda = proto.lambda;
 		this.initialQValue = proto.initialQValue;
@@ -501,6 +500,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 	// [ REPORTING METHODS ]
 
+	/* Trajectory Frequency Reporter */
+
 	/**
 	 * Records a length value to {@link QLearningMovement#trajectoryFrequencies}.
 	 */
@@ -514,15 +515,58 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		return trajectoryFrequencies;
 	}
 
+	/* Q-Table Reporter */
+
 	@Override
 	public Map<StateActionPair, Double> getQTable() {
 		return qTable;
 	}
 
+	/* Reward Reporter */
+
 	@Override
 	public double retrieveCurrentReward() {
 		return currentEpisodeReward;
 	}
+
+	/* Searching Agent Reporter */
+
+	/**
+	 * This might be useless for our case.
+	 *
+	 */
+	@Override
+	public double getInitialDiscovery() {
+		return 0;
+	}
+
+	@Override
+	public Collection<DTNHost> getDiscoveredNodes() {
+		return List.of(objectiveFound.keySet().toArray(new DTNHost[0]));
+	}
+
+	@Override
+	public String getTargetPrefix() {
+		return targetPrefix;
+	}
+
+	/**
+	 * Returns the true amount of detections, derived from adding all occurrences in {@link QLearningMovement#objectiveFound}.
+	 *
+	 */
+	@Override
+	public int retrieveTrueDetections() {
+		return retrieveCurrentNewTrueDetections();
+	}
+
+	public int retrieveCurrentNewTrueDetections() {
+		return objectiveFound.entrySet().stream().reduce(
+			0,
+			(sum, entry) -> sum + entry.getValue().getOccurrences(),
+			Integer::sum
+		);
+	}
+
 
 	// [ EPISODIC PERSISTENCE METHODS ]
 
@@ -566,9 +610,15 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		double newTotalReward = this.currentCumulativeReward + this.currentEpisodeReward;
 		epd.previousCumulativeReward = this.currentCumulativeReward;
 		epd.currentCumulativeReward = newTotalReward;
-		epd.currentEpisodeReward =  this.currentEpisodeReward;
-		System.out.println("Saved prev and new cumulative reward: (" + this.currentCumulativeReward + ", " + newTotalReward + ")");
+		epd.currentEpisodeReward = this.currentEpisodeReward;
 		this.currentCumulativeReward = newTotalReward;
+
+		/* Saving Total occurrences recorder */
+		int newCumulativeTrueDetections = this.currentCumulativeTrueDetections + retrieveCurrentNewTrueDetections();
+		epd.previousCumulativeTrueDetections = this.currentCumulativeTrueDetections;
+		epd.currentCumulativeTrueDetections = newCumulativeTrueDetections;
+		epd.currentTrueDetections = retrieveCurrentNewTrueDetections();
+		this.currentCumulativeTrueDetections = newCumulativeTrueDetections;
 
 		// Also save the persistence data for the BP
 		behaviorPolicy.saveTo(epd);
@@ -611,6 +661,10 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		System.out.println("Loading EPD.currentCumulativeReward: " + epd.currentCumulativeReward);
 		this.currentCumulativeReward = epd.currentCumulativeReward;
 		this.currentEpisodeReward = 0.0;
+
+		/* Loading Total occurrences recorder */
+		System.out.println("Reading EPD.currentCumulativeTrueDetections: " + epd.currentCumulativeTrueDetections);
+		this.currentCumulativeTrueDetections = epd.currentCumulativeTrueDetections;
 
 		// Now, also load persistence for the BP
 		behaviorPolicy.loadFrom(epd);
