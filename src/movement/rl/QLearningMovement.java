@@ -7,10 +7,7 @@ import movement.rl.behavior.BehaviorPolicy;
 import movement.rl.persistence.EpisodicPersistable;
 import movement.rl.persistence.EpisodicPersistenceData;
 import movement.rl.persistence.EpisodicPersistenceManager;
-import report.QTableReporting;
-import report.RewardReporting;
-import report.SearchingAgentReporting;
-import report.TrajectoryFrequencyReporting;
+import report.*;
 
 import java.util.*;
 
@@ -29,7 +26,7 @@ import java.util.*;
  * @author narwa
  *
  */
-public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting, RewardReporting, SearchingAgentReporting, EpisodicPersistable {
+public class QLearningMovement extends MovementModel implements TrajectoryFrequencyReporting, QTableReporting, RewardReporting, SearchingAgentReporting, SearchingOccurrencesReporting, EpisodicPersistable {
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
 

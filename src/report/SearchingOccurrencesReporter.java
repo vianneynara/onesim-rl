@@ -26,14 +26,14 @@ public class SearchingOccurrencesReporter extends Report {
 		);
 
 		/* Retrieves all implementing nodes' movement */
-		final List<SearchingAgentReporting> searchingAgents = SimScenario.getInstance()
+		final List<SearchingOccurrencesReporting> searchingAgents = SimScenario.getInstance()
 			.getHosts()
 			.stream()
-			.filter(host -> host.getMovement() instanceof SearchingAgentReporting)
-			.map(host -> (SearchingAgentReporting) host.getMovement())
+			.filter(host -> host.getMovement() instanceof SearchingOccurrencesReporting)
+			.map(host -> (SearchingOccurrencesReporting) host.getMovement())
 			.toList();
 		/* Helper representative node */
-		SearchingAgentReporting representative = searchingAgents.getFirst();
+		SearchingOccurrencesReporting representative = searchingAgents.getFirst();
 
 		assert representative != null : "No searching agents found in the scenario.";
 
