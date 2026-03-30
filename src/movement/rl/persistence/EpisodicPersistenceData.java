@@ -24,14 +24,15 @@ public class EpisodicPersistenceData {
 	// [ TrajectoryFrequencyReporting ]
 	public Map<String, Integer> trajectoryFrequencies = new HashMap<>();
 
-	// [ SearchingAgentReporting ]
-	public int totalDiscovered;
-	public int totalUndiscovered;
-
 	// [ RewardReporting addon ]
 	public double previousCumulativeReward;
 	public double currentCumulativeReward;
 	public double currentEpisodeReward;
+
+	// [ SearchingAgentReporting ]
+	public int previousCumulativeTrueDetections;
+	public int currentCumulativeTrueDetections;
+	public int currentTrueDetections;
 
 	// [ Episodic bookkeeping ]
 	public int episodeNumber;
