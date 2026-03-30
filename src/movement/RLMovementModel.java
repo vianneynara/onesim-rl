@@ -15,6 +15,7 @@ public class RLMovementModel extends MovementModel {
     private int prevAction;
     private int currentState;
 
+    /* 🔥 now starts from 1 */
     private int stepCounter;
 
     private Coord lastWaypoint;
@@ -31,11 +32,13 @@ public class RLMovementModel extends MovementModel {
 
         this.agent = new RLAgent(settings);
 
-        this.prevState = 0;
+        /* 🔥 FIXED: start from 1 */
+        this.prevState = 1;
         this.prevAction = -1;
-        this.currentState = 0;
+        this.currentState = 1;
 
-        this.stepCounter = 0;
+        this.stepCounter = 1;
+
         this.direction = rng.nextDouble() * 2 * Math.PI;
 
         this.objectiveFound = new HashMap<>();
@@ -46,11 +49,13 @@ public class RLMovementModel extends MovementModel {
 
         this.agent = new RLAgent(new Settings(RLAgent.RLAGENT_NS));
 
-        this.prevState = 0;
+        /* 🔥 FIXED: start from 1 */
+        this.prevState = 1;
         this.prevAction = -1;
-        this.currentState = 0;
+        this.currentState = 1;
 
-        this.stepCounter = 0;
+        this.stepCounter = 1;
+
         this.direction = rng.nextDouble() * 2 * Math.PI;
 
         this.objectiveFound = new HashMap<>();
@@ -81,16 +86,15 @@ public class RLMovementModel extends MovementModel {
             objectiveFound.compute(other, (node, info) -> {
 
                 if (info == null) {
-
                     info = DetectionInfo.of(
                             Double.NEGATIVE_INFINITY,
                             Double.NEGATIVE_INFINITY,
                             agent.getTargetCooldown(),
-                            agent.isDestructiveTarget() // 🔥 IMPORTANT
+                            agent.isDestructiveTarget()
                     );
                 }
 
-                /* 🔥 detection event */
+                /* 🔥 register detection event */
                 info.update(now);
 
                 other.setColor(RED);
@@ -113,7 +117,10 @@ public class RLMovementModel extends MovementModel {
         agent.learn(prevState, prevAction, reward, currentState);
     }
 
-    /* 🔥 FIXED REWARD */
+    /* =====================================
+       REWARD FUNCTION (FIXED)
+       ===================================== */
+
     private double computeReward() {
 
         double reward = -agent.getStepPenalty();
@@ -133,24 +140,46 @@ public class RLMovementModel extends MovementModel {
         return reward;
     }
 
+    /* =====================================
+       STATE UPDATE (🔥 CORE FIX)
+       ===================================== */
+
     private void updateState() {
 
+        /* first step */
         if (prevAction == -1) {
-            stepCounter = 0;
+            stepCounter = 1;
+            currentState = 1;
             return;
         }
 
-        if (prevAction == 0) stepCounter++;
-        else stepCounter = 0;
+        /* action 0 = straight → increase */
+        if (prevAction == 0) {
+            stepCounter++;
+        }
+        /* action 1 = turn → reset */
+        else {
+            stepCounter = 1;
+        }
 
         currentState = stepCounter;
     }
 
+    /* =====================================
+       APPLY ACTION
+       ===================================== */
+
     private void applyAction(int action) {
+
+        /* turn */
         if (action == 1) {
             direction = rng.nextDouble() * 2 * Math.PI;
         }
     }
+
+    /* =====================================
+       PATH GENERATION
+       ===================================== */
 
     private Path generatePath() {
 
@@ -158,8 +187,11 @@ public class RLMovementModel extends MovementModel {
 
         p.addWaypoint(lastWaypoint);
 
-        double nextX = lastWaypoint.getX() + agent.getSpeed() * Math.cos(direction);
-        double nextY = lastWaypoint.getY() + agent.getSpeed() * Math.sin(direction);
+        double nextX = lastWaypoint.getX() +
+                agent.getSpeed() * Math.cos(direction);
+
+        double nextY = lastWaypoint.getY() +
+                agent.getSpeed() * Math.sin(direction);
 
         nextX = Math.max(0, Math.min(getMaxX(), nextX));
         nextY = Math.max(0, Math.min(getMaxY(), nextY));
@@ -172,30 +204,44 @@ public class RLMovementModel extends MovementModel {
         return p;
     }
 
+    /* =====================================
+       MAIN RL LOOP
+       ===================================== */
+
     @Override
     public Path getPath() {
 
+        /* learn from previous step */
         if (prevAction != -1) {
             double reward = computeReward();
             learn(reward);
         }
 
+        /* update state */
         updateState();
 
+        /* choose action */
         int action = selectAction(currentState);
 
+        /* 🔥 force turn if target detected */
         if (targetDetectedThisStep) {
             action = 1;
             targetDetectedThisStep = false;
         }
 
+        /* store transition */
         prevState = currentState;
         prevAction = action;
 
+        /* execute */
         applyAction(action);
 
         return generatePath();
     }
+
+    /* =====================================
+       INITIAL POSITION
+       ===================================== */
 
     @Override
     public Coord getInitialLocation() {
@@ -211,6 +257,10 @@ public class RLMovementModel extends MovementModel {
 
         return c;
     }
+
+    /* =====================================
+       GETTERS
+       ===================================== */
 
     public RLAgent getAgent() {
         return agent;
