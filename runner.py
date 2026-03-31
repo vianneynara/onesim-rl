@@ -1,24 +1,28 @@
 import subprocess
 import winsound  # Built-in Windows library for sound
 
-NUM_EPISODES = 1
+NUM_EPISODES = 500
 BASE_CONFIG = "settings/RLTest.cfg"
+
+# SAVE_PREFIX = "QL-NR-1_ep"
+# EPISODE_PREFIX = "EPS-QL-NR-1_ep"
+# BASE_FOLDER = "QL-NR-1"
 
 # SAVE_PREFIX = "MC-FV-2_ep"
 # EPISODE_PREFIX = "EPS-MC-FV-2_ep"
 # BASE_FOLDER = "MC-FV-2"
 
-# SAVE_PREFIX = "MC-EV-2_ep"
-# EPISODE_PREFIX = "EPS-MC-EV-2_ep"
-# BASE_FOLDER = "MC-EV-2_1"
+SAVE_PREFIX = "D-QL-1_ep"
+EPISODE_PREFIX = "EPS-D-QL-1_ep"
+BASE_FOLDER = "D-QL-1"
 
 # SAVE_PREFIX = "MC-EV-NR_ep"
 # EPISODE_PREFIX = "EPS-MC-EV-NR_ep"
 # BASE_FOLDER = "MC-EV-NR_1"
 
-SAVE_PREFIX = "test-cd-1_ep"
-EPISODE_PREFIX = "t-cd-1_ep"
-BASE_FOLDER = "test-cd-1"
+# SAVE_PREFIX = "test-cd-1_ep"
+# EPISODE_PREFIX = "t-cd-1_ep"
+# BASE_FOLDER = "test-cd-1"
 
 def alert_success():
     """Plays a loud, attention-grabbing 'Mission Complete' sound."""
@@ -65,12 +69,12 @@ def run_simulation():
             BASE_CONFIG
         ]
 
-        #         cmd = [
-        #             r".\one.bat",
-        #             "1",
-        #             "-d", overrides,
-        #             BASE_CONFIG
-        #         ]
+#         cmd = [
+#             r".\one.bat",
+#             "1",
+#             "-d", overrides,
+#             BASE_CONFIG
+#         ]
 
         try:
             subprocess.run(cmd, check=True, shell=True)
