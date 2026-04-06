@@ -42,18 +42,18 @@ public class RLSaveReport extends Report {
                        MONTE CARLO CHECK
                        ===================================== */
                     if (model instanceof MonteCarloModel) {
-                        System.out.println("===================================================");
-                        System.out.println("BEFORE UPDATE");
-                        System.out.println("===================================================");
-                        agent.getQTable().printTable();
+//                        System.out.println("===================================================");
+//                        System.out.println("BEFORE UPDATE");
+//                        System.out.println("===================================================");
+//                        agent.getQTable().printTable();
 
                         System.out.println("Monte Carlo detected → running episode update");
                         ((MonteCarloModel) model).updateEpisode(agent.getEpisodeSteps());
 
-                        System.out.println("===================================================");
-                        System.out.println("AFTER UPDATE");
-                        System.out.println("===================================================");
-                        agent.getQTable().printTable();
+//                        System.out.println("===================================================");
+//                        System.out.println("AFTER UPDATE");
+//                        System.out.println("===================================================");
+//                        agent.getQTable().printTable();
                     }
 
                     /* =====================================
