@@ -80,7 +80,6 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	@Override
 	public void update(int stateId, Integer actionIndex, double reward) {
 		/* ε_t+1 = max(ε, ε • decay rate) */
-//		System.out.println("==========================Current epsilon: " + epsilon);
 		epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
 	}
 

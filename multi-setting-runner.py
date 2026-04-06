@@ -8,26 +8,28 @@ import subprocess
 label_placeholder = "NUM"
 
 scripts = [
-    ".\\one.bat -b 1 -d Report.reportDir=reports/skripsi/bm/run/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-bm.cfg",
-    ".\\one.bat -b 1 -d Report.reportDir=reports/skripsi/rw/run/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-rw.cfg",
-    ".\\one.bat -b 4 -d Report.reportDir=reports/skripsi/levy/run/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-lf.cfg",
+    ".\\one.bat -b 1 -d Report.reportDir=reports/skripsi/bm/run-id/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-bm.cfg",
+    ".\\one.bat -b 1 -d Report.reportDir=reports/skripsi/rw/run-id/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-rw.cfg",
+    ".\\one.bat -b 4 -d Report.reportDir=reports/skripsi/levy/run-id/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-lf.cfg",
 ]
 
 # Episodic Q-Learning: each "run" is one episode; the persistence file carries
 # Q-table and epsilon forward. Episode number is injected via -d so it appears
 # in both the scenario name and the report file names.
 default_qlearn_config = ".\\settings\\skripsi\\randomsearch-qlearn.cfg"
+
 qlearn_template = (
     ".\\one.bat -b 1 "
-    "-d Report.reportDir=reports/skripsi/qlearn/run/NUM/ep/EP"
+    "-d Report.reportDir=reports/skripsi/qlearn/run-id/NUM/ep/EP"
+    "@@EpisodicPersistenceManager.persistencePath=reports/skripsi/qlearn/run-id/NUM/_persistence.json"
     "@@EpisodicPersistenceManager.episodeNumber=EP "
     f"{default_qlearn_config}"
 )
-
 default_lfe_config = ".\\settings\\skripsi\\randomsearch-lf-episodic.cfg"
 lfepisodic_template = (
     ".\\one.bat -b 1 "
-    "-d Report.reportDir=reports/skripsi/lf-episodic/run/NUM/ep/EP"
+    "-d Report.reportDir=reports/skripsi/lf-episodic/run-id/NUM/ep/EP"
+    "-d Report.persistencePath=reports/skripsi/lf-episodic/run-id/NUM/_persistence.json"
     "@@EpisodicPersistenceManager.episodeNumber=EP "
     f"{default_lfe_config}"
 )
