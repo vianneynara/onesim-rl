@@ -344,6 +344,10 @@ public class QTable {
         return loadedEpisode;
     }
 
+    public int getNrofAction() {
+        return nrofAction;
+    }
+
     public void printTable() {
 
         System.out.println("========== Q TABLE ==========");
