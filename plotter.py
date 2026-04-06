@@ -12,7 +12,7 @@ import numpy as np
 plt.style.use('seaborn-v0_8-muted')
 sns.set_context("notebook", font_scale=1.2)
 
-BASE_FOLDER = "D-QL-1"
+BASE_FOLDER = "D-MC-FV-1"
 QTABLE_DIR = f"data/qtable/{BASE_FOLDER}"
 REPORT_DIR = f"reports/{BASE_FOLDER}"
 PLOT_DIR = f"data/plotter/{BASE_FOLDER}"

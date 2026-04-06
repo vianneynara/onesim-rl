@@ -4,6 +4,11 @@ import winsound  # Built-in Windows library for sound
 NUM_EPISODES = 500
 BASE_CONFIG = "settings/RLTest.cfg"
 
+START_NUM_EP = 8
+
+# belum di pakai
+SCENARIO_NAME = "MC-UCB"
+
 # SAVE_PREFIX = "QL-NR-1_ep"
 # EPISODE_PREFIX = "EPS-QL-NR-1_ep"
 # BASE_FOLDER = "QL-NR-1"
@@ -12,9 +17,9 @@ BASE_CONFIG = "settings/RLTest.cfg"
 # EPISODE_PREFIX = "EPS-MC-FV-2_ep"
 # BASE_FOLDER = "MC-FV-2"
 
-SAVE_PREFIX = "D-QL-1_ep"
-EPISODE_PREFIX = "EPS-D-QL-1_ep"
-BASE_FOLDER = "D-QL-1"
+SAVE_PREFIX = "D-MC-UCB-1_ep"
+EPISODE_PREFIX = "EPS-D-MC-UCB-1_ep"
+BASE_FOLDER = "D-MC-UCB-1"
 
 # SAVE_PREFIX = "MC-EV-NR_ep"
 # EPISODE_PREFIX = "EPS-MC-EV-NR_ep"
@@ -42,7 +47,7 @@ def alert_error():
     winsound.Beep(200, 1000) # Long, low 200Hz drone
 
 def run_simulation():
-    for ep in range(1, NUM_EPISODES + 1):
+    for ep in range(START_NUM_EP, NUM_EPISODES + 1):
         print(f"\n🚀 Starting Episode {ep}")
 
         overrides = f"Scenario.name=RL_Test_Ep_{ep}"
