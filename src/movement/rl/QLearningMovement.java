@@ -171,15 +171,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 	@Override
 	public void changedConnection(Connection con) {
-//		System.out.println("A connection is approached");
 		if (con.isUp()) {
-//			System.out.println("Connected to a host at time " + SimClock.getTime());
 			// The host
 			DTNHost otherNode = con.getOtherNode(getHost());
 			if (otherNode != null && !otherNode.getGroupId().equals(getHost().getGroupId())) {
 				// Check if the other node matches target prefix
 				if (otherNode.getGroupId().startsWith(targetPrefix)) {
-//					System.out.println("Detected target node " + otherNode.getName() + " at time " + SimClock.getTime());
 					// Update the last found time for this target
 					double now = SimClock.getTime();
 					objectiveFound.compute(otherNode, (node, existsInfo) -> {
@@ -320,14 +317,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 			if (availableRewards > 0) {
 				// if there's an available reward, multiply it with the foundReward
-//				System.out.println("WOOHOO! Found " + availableRewards + " new target since last reward at time " + now);
 				reward = foundReward * availableRewards;
 
 				// increment the reward tracker variable
 				currentEpisodeReward += reward;
 			}
 
-//			System.out.printf("Updating with (s_t, a_t, reward, s_tp1, availableActions): %s, %s, %s, %s, %s\n",
 //				s_t, a_t, reward, s_tp1, availableActions);
 			update(s_t, a_t, reward, s_tp1, availableActions);
 		}
@@ -353,7 +348,6 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		//============================================================================================ TRANSITION PHASE
 		/* Transition of the action and state from the previous time ({t} -> {t+1}) */
-//		System.out.println("Transition: s=" + prevState + " -> " + currentState + ", a=" + prevAction + " -> " + nextAction);
 		prevState = currentState;
 		prevAction = nextAction;
 		currentAction = nextAction;
