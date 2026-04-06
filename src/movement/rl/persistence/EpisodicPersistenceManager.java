@@ -16,17 +16,23 @@ import java.nio.file.StandardOpenOption;
  * The implementation supports and is used for {@link movement.rl.QLearningMovement}.
  *
  * @author narwa
- * */
+ *
+ */
 public class EpisodicPersistenceManager {
 	// [ Configuration - Namespace and keys ]
 	public static final String EPISODIC_NS = "EpisodicPersistenceManager";
 	public static final String PERSISTENCE_PATH_S = "persistencePath";
 	public static final String EPISODE_NUMBER_S = "episodeNumber";
+	public static final String SAVE_EPISODICALLY_S = "saveEpisodically";
 
 	// [ Persistence Metadata ]
 	private static String persistencePath = null;
 	private static int episodeNumber = 1;
+	private static boolean saveEpisodically = false;
 	private static boolean initialized = false;
+
+	// [ Default Directory Label ]
+	private static String episodeDirLabel = "ep";
 
 	/* Register this to ONE SIM to be initialized. */
 	static {
@@ -50,7 +56,10 @@ public class EpisodicPersistenceManager {
 		}
 
 		/* Episode number, injected from -d command (in multi batch runner) */
-        episodeNumber = s.getInt(EPISODE_NUMBER_S, 1);
+		episodeNumber = s.getInt(EPISODE_NUMBER_S, 1);
+
+		/* Whether to save each episode persistence file */
+		saveEpisodically = s.getBoolean(SAVE_EPISODICALLY_S, false);
 
 		initialized = true;
 	}
@@ -67,18 +76,19 @@ public class EpisodicPersistenceManager {
 
 	/**
 	 * Deserializing JSON file into {@link EpisodicPersistenceData} object.
-     *
-     * @throws EpisodicPersistenceException on I/O or JSON parse errors
-	 * */
+	 *
+	 * @throws EpisodicPersistenceException on I/O or JSON parse errors
+	 *
+	 */
 	public static EpisodicPersistenceData loadIfExists() {
 		init();
 		if (persistencePath == null) return null;
 
 		Path path = Paths.get(persistencePath);
 		if (!Files.exists(path)) {
-            System.out.println("[EpisodicPersistenceManager] No persistence file found at '" + persistencePath + "', starting fresh (episode 1).");
-            return null;
-        }
+			System.out.println("[EpisodicPersistenceManager] No persistence file found at '" + persistencePath + "', starting fresh (episode 1).");
+			return null;
+		}
 
 		try {
 			String json = Files.readString(path);
@@ -92,9 +102,10 @@ public class EpisodicPersistenceManager {
 
 	/**
 	 * Serializing {@link EpisodicPersistenceData} into a JSON file in {@link EpisodicPersistenceManager#persistencePath}.
-     *
-     * @throws EpisodicPersistenceException on I/O
-	 * */
+	 *
+	 * @throws EpisodicPersistenceException on I/O
+	 *
+	 */
 	public static void save(EpisodicPersistenceData data) {
 		init();
 		if (persistencePath == null) return;
@@ -105,6 +116,8 @@ public class EpisodicPersistenceManager {
 
 		try {
 			Path path = Paths.get(persistencePath);
+
+			System.out.println("current path: " + persistencePath);
 			// Ensure parent directories exist
 			if (path.getParent() != null) {
 				Files.createDirectories(path.getParent());
@@ -112,19 +125,31 @@ public class EpisodicPersistenceManager {
 			String json = JSON.toJSONString(data, SerializerFeature.PrettyFormat, SerializerFeature.SortField);
 			Files.writeString(path, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 			System.out.println("[EpisodicPersistenceManager] Saved episode " + episodeNumber + "data . At " + persistencePath);
+
+			if (saveEpisodically) {
+				// Use the path's directories and rename the file
+				Path episodicPersistencePath = Paths.get(path.getParent().toFile().getPath(), episodeDirLabel, String.valueOf(episodeNumber), "Persistence-Episode@" + episodeNumber + ".json");
+				// Ensure parent directories exist
+				if (episodicPersistencePath.getParent() != null) {
+					Files.createDirectories(episodicPersistencePath.getParent());
+				}
+				Files.writeString(episodicPersistencePath, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+				System.out.println("[EpisodicPersistenceManager] Wrote episodic persistence save at: " + episodicPersistencePath);
+			}
 		} catch (IOException e) {
 			throw new EpisodicPersistenceException(
-				"[EpisodicPersistenceException] Failed to write persistence file at: " + persistencePath, e
+				"[EpisodicPersistenceException] Failed to write a persistence file at: " + persistencePath, e
 			);
 		}
 	}
 
 	/**
 	 * This is called by DTNSim.
-	 * */
-    public static void reset() {
-        persistencePath = null;
-        episodeNumber = 1;
-        initialized = false;
-    }
+	 *
+	 */
+	public static void reset() {
+		persistencePath = null;
+		episodeNumber = 1;
+		initialized = false;
+	}
 }

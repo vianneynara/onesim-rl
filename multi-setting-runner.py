@@ -5,12 +5,12 @@ import subprocess
 # This python file is used to run one.bat scripts sequentially and label the runs.
 # For episodic Q-Learning runs, use run_episodes() instead of run_scripts().
 
-label_placeholder = "NUM"
+label_placeholder = "IDENTIFIER"
 
 scripts = [
-    ".\\one.bat -b 1 -d Report.reportDir=reports/skripsi/bm/run-id/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-bm.cfg",
-    ".\\one.bat -b 1 -d Report.reportDir=reports/skripsi/rw/run-id/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-rw.cfg",
-    ".\\one.bat -b 4 -d Report.reportDir=reports/skripsi/levy/run-id/NUM@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-lf.cfg",
+    ".\\one.bat -b 1 -d Report.reportDir=reports/skripsi/bm/run-id/IDENTIFIER@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-bm.cfg",
+    ".\\one.bat -b 1 -d Report.reportDir=reports/skripsi/rw/run-id/IDENTIFIER@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-rw.cfg",
+    ".\\one.bat -b 4 -d Report.reportDir=reports/skripsi/levy/run-id/IDENTIFIER@@MovementModel.rngSeed=0 .\\settings\\skripsi\\randomsearch-lf.cfg",
 ]
 
 # Episodic Q-Learning: each "run" is one episode; the persistence file carries
@@ -20,16 +20,16 @@ default_qlearn_config = ".\\settings\\skripsi\\randomsearch-qlearn.cfg"
 
 qlearn_template = (
     ".\\one.bat -b 1 "
-    "-d Report.reportDir=reports/skripsi/qlearn/run-id/NUM/ep/EP"
-    "@@EpisodicPersistenceManager.persistencePath=reports/skripsi/qlearn/run-id/NUM/_persistence.json"
+    "-d Report.reportDir=reports/skripsi/qlearn/run-id/IDENTIFIER/ep/EP"
+    "@@EpisodicPersistenceManager.persistencePath=reports/skripsi/qlearn/run-id/IDENTIFIER/_persistence.json"
     "@@EpisodicPersistenceManager.episodeNumber=EP "
     f"{default_qlearn_config}"
 )
 default_lfe_config = ".\\settings\\skripsi\\randomsearch-lf-episodic.cfg"
 lfepisodic_template = (
     ".\\one.bat -b 1 "
-    "-d Report.reportDir=reports/skripsi/lf-episodic/run-id/NUM/ep/EP"
-    "-d Report.persistencePath=reports/skripsi/lf-episodic/run-id/NUM/_persistence.json"
+    "-d Report.reportDir=reports/skripsi/lf-episodic/run-id/IDENTIFIER/ep/EP"
+    "-d Report.persistencePath=reports/skripsi/lf-episodic/run-id/IDENTIFIER/_persistence.json"
     "@@EpisodicPersistenceManager.episodeNumber=EP "
     f"{default_lfe_config}"
 )
