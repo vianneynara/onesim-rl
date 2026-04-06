@@ -6,7 +6,12 @@ package movement;
 
 import java.util.Random;
 
-import core.*;
+import core.Coord;
+import core.DTNSim;
+import core.ModuleCommunicationBus;
+import core.Settings;
+import core.SimClock;
+import core.SimError;
 
 /**
  * <P>Superclass for all movement models. All subclasses must contain at least a 
