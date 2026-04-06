@@ -2,6 +2,10 @@ package movement;
 
 import core.Coord;
 import core.Settings;
+import movement.rl.QLearningMovement;
+import movement.rl.persistence.EpisodicPersistable;
+import movement.rl.persistence.EpisodicPersistenceData;
+import movement.rl.persistence.EpisodicPersistenceManager;
 import report.TrajectoryFrequencyReporting;
 
 import java.util.HashMap;
@@ -14,9 +18,8 @@ import java.util.Map;
  * @see <a href="https://en.wikipedia.org/wiki/L%C3%A9vy_flight">Lévy flight</a>
  * @see <a href="https://ieeexplore.ieee.org/document/5750071">On the Levy-Walk Nature of Human Mobility</a>
  */
-public class LevyFlight extends MovementModel implements TrajectoryFrequencyReporting {
+public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequencyReporting, EpisodicPersistable {
 	// [ REPORTING VARIABLES ]
-
 	private final Map<Integer, Integer> trajectoryFrequencies;
 
 	/**
@@ -36,16 +39,22 @@ public class LevyFlight extends MovementModel implements TrajectoryFrequencyRepo
 
 	private double xm, alpha;
 
-	public LevyFlight(Settings settings) {
+	public LevyFlightEpisodic(Settings settings) {
 		super(settings);
 
 		this.trajectoryFrequencies = new HashMap<>();
 
 		this.alpha = settings.contains(ALPHA) ? settings.getDouble(ALPHA) : DEFAULT_ALPHA;
 		this.xm = settings.contains(XM) ? settings.getDouble(XM) : DEFAULT_XM;
+		
+		// Re/Initializes episodic persistence
+		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
+		if (epd != null) {
+			loadFrom(epd);
+		}
 	}
 
-	public LevyFlight(LevyFlight lf) {
+	public LevyFlightEpisodic(LevyFlightEpisodic lf) {
 		super(lf);
 
 		this.trajectoryFrequencies = lf.trajectoryFrequencies;
@@ -72,9 +81,9 @@ public class LevyFlight extends MovementModel implements TrajectoryFrequencyRepo
 		Path p = new Path(generateSpeed());
 		p.addWaypoint(lastWaypoint.clone());
 
-		Coord c = levyFlight();
-		int trajLength = (int) lastWaypoint.distance(c);
-		recordFinishedTrajectory(trajLength);
+		Coord c = LevyFlightEpisodic();
+//		int trajLength = (int) lastWaypoint.distance(c);
+//		recordFinishedTrajectory(trajLength);
 		p.addWaypoint(c);
 
 		this.lastWaypoint = c;
@@ -82,8 +91,8 @@ public class LevyFlight extends MovementModel implements TrajectoryFrequencyRepo
 	}
 
 	@Override
-	public LevyFlight replicate() {
-		return new LevyFlight(this);
+	public LevyFlightEpisodic replicate() {
+		return new LevyFlightEpisodic(this);
 	}
 
 	/**
@@ -99,7 +108,7 @@ public class LevyFlight extends MovementModel implements TrajectoryFrequencyRepo
 	/**
 	 * Performs a Lévy Flight step to determine the next coordinate.
 	 */
-	protected Coord levyFlight() {
+	protected Coord LevyFlightEpisodic() {
 		double next_X, next_Y;
 
 		do {
@@ -127,7 +136,7 @@ public class LevyFlight extends MovementModel implements TrajectoryFrequencyRepo
 	// [ REPORTING METHODS ]
 
 	/**
-	 * Records a length value to {@link LevyFlight#trajectoryFrequencies}.
+	 * Records a length value to {@link LevyFlightEpisodic#trajectoryFrequencies}.
 	 */
 	private void recordFinishedTrajectory(int length) {
 		if (length <= 0) return;
@@ -139,4 +148,37 @@ public class LevyFlight extends MovementModel implements TrajectoryFrequencyRepo
 		return trajectoryFrequencies;
 	}
 
+	/**
+	 * Minimizes the process of saving an episode.
+	 */
+	@Override
+	public void saveCurrentEpisode() {
+		EpisodicPersistenceData epd = new EpisodicPersistenceData();
+		saveTo(epd);
+		EpisodicPersistenceManager.save(epd);
+	}
+
+	@Override
+	public void saveTo(EpisodicPersistenceData epd) {
+		System.out.printf("<%s> Saving persistence data...%n", QLearningMovement.class.getName());
+
+		/* Saving trajectory recorder */
+		epd.trajectoryFrequencies = new HashMap<>();
+		for (var entry : trajectoryFrequencies.entrySet()) {
+			epd.trajectoryFrequencies.put(String.valueOf(entry.getKey()), entry.getValue());
+		}
+	}
+
+	@Override
+	public void loadFrom(EpisodicPersistenceData epd) {
+		System.out.printf("<%s> Loading persistence data...%n", QLearningMovement.class.getName());
+
+		/* Loading trajectory recorder */
+		trajectoryFrequencies.clear();
+		if (epd.trajectoryFrequencies != null) {
+			for (var entry : epd.trajectoryFrequencies.entrySet()) {
+				this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+			}
+		}
+	}
 }

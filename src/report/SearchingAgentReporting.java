@@ -9,6 +9,7 @@ public interface SearchingAgentReporting {
 	 * Retrieves the time of the first searchable node discovery.
 	 * */
 	double getInitialDiscovery();
+
 	/**
 	 * Retrieves all the discovered searchable nodes.
 	 * */

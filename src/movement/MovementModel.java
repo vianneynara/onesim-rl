@@ -56,6 +56,10 @@ public abstract class MovementModel {
 	private int maxY;
 	
 	protected ModuleCommunicationBus comBus;
+    /**
+     * Host where this movement belongs to. (added by narwa)
+	 */
+    private DTNHost host;
 
 	// static initialization of all movement models' random number generator
 	static {
@@ -127,6 +131,17 @@ public abstract class MovementModel {
 		this.maxY = worldSize[1];
 
 		settings.restoreNameSpace();
+	}
+
+	/**
+	 * Initializes the movement model, added to provide the host implementing the movement model.
+	 * @param host The host where this movement model belongs to.
+	 * @param comBus The module communication bus toset for this movement model.
+	 * @author narwa
+	 * */
+	public void init(DTNHost host, ModuleCommunicationBus comBus) {
+		this.host = host;
+		setComBus(comBus);
 	}
 	
 	/**
@@ -235,6 +250,26 @@ public abstract class MovementModel {
 	public ModuleCommunicationBus getComBus() {
 		return this.comBus;		
 	}
+
+	/**
+	 * Returns the host where this movement model belongs to.
+	 * @author narwa
+	 * */
+	public DTNHost getHost() {
+		return this.host;
+	}
+
+	/**
+     * Informs the movement model about change in connections state.
+	 * This is called in {@link DTNHost#connectionUp(Connection)}.
+	 * It is optional for the child movement to implement this method.
+     *
+     * @param con The connection that changed
+	 * @author narwa
+     */
+    public void changedConnection(Connection con) {
+
+	}
 	
 	/**
 	 * Returns simply the name of the movement model class
@@ -263,5 +298,13 @@ public abstract class MovementModel {
 			rng = new Random();
 		}
 	}
-	
+
+	/**
+	 * Ensure RNG dependant operations outside MovementModel are reproducible by using the same RNG instance.
+	 * @return The RNG instance used by MovementModel
+	 * @author narwa
+	 * */
+	public static Random getRandom() {
+		return rng;
+	}
 }
