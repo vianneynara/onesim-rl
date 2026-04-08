@@ -160,7 +160,7 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 
 	@Override
 	public void saveTo(EpisodicPersistenceData epd) {
-		System.out.printf("<%s> Saving persistence data...%n", QLearningMovement.class.getName());
+		System.out.printf("[%s] Saving persistence data...%n", LevyFlightEpisodic.class.getName());
 
 		/* Saving trajectory recorder */
 		epd.trajectoryFrequencies = new HashMap<>();
@@ -171,7 +171,7 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 
 	@Override
 	public void loadFrom(EpisodicPersistenceData epd) {
-		System.out.printf("<%s> Loading persistence data...%n", QLearningMovement.class.getName());
+		System.out.printf("[%s] Loading persistence data...%n", LevyFlightEpisodic.class.getName());
 
 		/* Loading trajectory recorder */
 		trajectoryFrequencies.clear();
