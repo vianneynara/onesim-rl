@@ -31,22 +31,30 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 	/**
 	 * Controls how heavy the distribution tail is
 	 */
-	public static final String ALPHA = "levyAlpha";
+	public static final String ALPHA_S = "levyAlpha";
+	public static final String XM_S = "xm";
+	public static final String TARGET_PREFIX_S = "targetPrefix";
+
 	public static final double DEFAULT_ALPHA = 1.5;
-
-	public static final String XM = "xm";
 	public static final double DEFAULT_XM = 1;
+	public static final String DEFAULT_TARGET_PREFIX = "T";
 
-	private double xm, alpha;
+	private final double xm;
+	private final double alpha;
+	/**
+	 * The target's prefix
+	 */
+	private String targetPrefix;
 
-	public LevyFlightEpisodic(Settings settings) {
-		super(settings);
+	public LevyFlightEpisodic(Settings s) {
+		super(s);
 
 		this.trajectoryFrequencies = new HashMap<>();
 
-		this.alpha = settings.contains(ALPHA) ? settings.getDouble(ALPHA) : DEFAULT_ALPHA;
-		this.xm = settings.contains(XM) ? settings.getDouble(XM) : DEFAULT_XM;
-		
+		this.targetPrefix = s.getSetting(TARGET_PREFIX_S, DEFAULT_TARGET_PREFIX);
+		this.alpha = s.getDouble(ALPHA_S, DEFAULT_ALPHA);
+		this.xm = s.getDouble(XM_S, DEFAULT_XM);
+
 		// Re/Initializes episodic persistence
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
 		if (epd != null) {
@@ -61,6 +69,7 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 
 		this.xm = lf.xm;
 		this.alpha = lf.alpha;
+		this.targetPrefix = lf.targetPrefix;
 	}
 
 	/**
