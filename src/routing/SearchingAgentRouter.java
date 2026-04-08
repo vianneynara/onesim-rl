@@ -96,7 +96,7 @@ public class SearchingAgentRouter implements RoutingDecisionEngine, SearchingAge
 			return;
 		}
 		if (targetMovement != null && targetMovement.getClass().isInstance(peer.getMovement())) {
-			System.out.println("FOUND HOST MOV: " + peer.getName());
+//			System.out.println("FOUND HOST MOV: " + peer.getName());
 			if (initialDiscovery == 0) {
 				initialDiscovery = SimClock.getTime();
 			}
@@ -110,7 +110,7 @@ public class SearchingAgentRouter implements RoutingDecisionEngine, SearchingAge
 //            encounteredSearchables.add(peer);
 //        }
 		else if (peer.getName().startsWith(targetPrefix)) {
-			System.out.println("FOUND HOST PRE: " + peer.getName());
+//			System.out.println("FOUND HOST PRE: " + peer.getName());
 			if (initialDiscovery == 0) {
 				initialDiscovery = SimClock.getTime();
 			}

@@ -1,11 +1,13 @@
 package movement;
 
+import core.Connection;
 import core.Coord;
+import core.DTNHost;
 import core.Settings;
-import movement.rl.QLearningMovement;
 import movement.rl.persistence.EpisodicPersistable;
 import movement.rl.persistence.EpisodicPersistenceData;
 import movement.rl.persistence.EpisodicPersistenceManager;
+import report.SearchingOccurrencesReporting;
 import report.TrajectoryFrequencyReporting;
 
 import java.util.HashMap;
@@ -18,9 +20,12 @@ import java.util.Map;
  * @see <a href="https://en.wikipedia.org/wiki/L%C3%A9vy_flight">Lévy flight</a>
  * @see <a href="https://ieeexplore.ieee.org/document/5750071">On the Levy-Walk Nature of Human Mobility</a>
  */
-public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequencyReporting, EpisodicPersistable {
+public class LevyFlightEpisodic extends MovementModel implements EpisodicPersistable, TrajectoryFrequencyReporting, SearchingOccurrencesReporting {
 	// [ REPORTING VARIABLES ]
 	private final Map<Integer, Integer> trajectoryFrequencies;
+
+	private int currentCumulativeTrueDetections;
+	private int currentTrueDetections;
 
 	/**
 	 * Number of waypoints per path
@@ -31,22 +36,32 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 	/**
 	 * Controls how heavy the distribution tail is
 	 */
-	public static final String ALPHA = "levyAlpha";
+	public static final String ALPHA_S = "levyAlpha";
+	public static final String XM_S = "xm";
+	public static final String TARGET_PREFIX_S = "targetPrefix";
+
 	public static final double DEFAULT_ALPHA = 1.5;
-
-	public static final String XM = "xm";
 	public static final double DEFAULT_XM = 1;
+	public static final String DEFAULT_TARGET_PREFIX = "T";
 
-	private double xm, alpha;
+	private final double xm;
+	private final double alpha;
+	/**
+	 * The target's prefix
+	 */
+	private String targetPrefix;
 
-	public LevyFlightEpisodic(Settings settings) {
-		super(settings);
+	public LevyFlightEpisodic(Settings s) {
+		super(s);
 
 		this.trajectoryFrequencies = new HashMap<>();
+		currentCumulativeTrueDetections = 0;
+		currentTrueDetections = 0;
 
-		this.alpha = settings.contains(ALPHA) ? settings.getDouble(ALPHA) : DEFAULT_ALPHA;
-		this.xm = settings.contains(XM) ? settings.getDouble(XM) : DEFAULT_XM;
-		
+		this.targetPrefix = s.getSetting(TARGET_PREFIX_S, DEFAULT_TARGET_PREFIX);
+		this.alpha = s.getDouble(ALPHA_S, DEFAULT_ALPHA);
+		this.xm = s.getDouble(XM_S, DEFAULT_XM);
+
 		// Re/Initializes episodic persistence
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
 		if (epd != null) {
@@ -58,9 +73,27 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 		super(lf);
 
 		this.trajectoryFrequencies = lf.trajectoryFrequencies;
+		this.currentCumulativeTrueDetections = lf.currentCumulativeTrueDetections;
+		this.currentTrueDetections = lf.currentTrueDetections;
 
 		this.xm = lf.xm;
 		this.alpha = lf.alpha;
+		this.targetPrefix = lf.targetPrefix;
+	}
+
+	@Override
+	public void changedConnection(Connection con) {
+		if (con.isUp()) {
+			// The host
+			DTNHost otherNode = con.getOtherNode(getHost());
+			if (otherNode != null && !otherNode.getGroupId().equals(getHost().getGroupId())) {
+				// Check if the other node matches target prefix
+				if (otherNode.getGroupId().startsWith(targetPrefix)) {
+					// Increment the cumulative detection
+					currentTrueDetections++;
+				}
+			}
+		}
 	}
 
 	/**
@@ -148,6 +181,11 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 		return trajectoryFrequencies;
 	}
 
+	@Override
+	public int retrieveTrueDetections() {
+		return currentTrueDetections;
+	}
+
 	/**
 	 * Minimizes the process of saving an episode.
 	 */
@@ -160,18 +198,23 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 
 	@Override
 	public void saveTo(EpisodicPersistenceData epd) {
-		System.out.printf("<%s> Saving persistence data...%n", QLearningMovement.class.getName());
+		System.out.printf("[%s] Saving persistence data...%n", LevyFlightEpisodic.class.getName());
 
 		/* Saving trajectory recorder */
 		epd.trajectoryFrequencies = new HashMap<>();
 		for (var entry : trajectoryFrequencies.entrySet()) {
 			epd.trajectoryFrequencies.put(String.valueOf(entry.getKey()), entry.getValue());
 		}
+
+		/* Saving Total occurrences recorder */
+		epd.previousCumulativeTrueDetections = this.currentCumulativeTrueDetections;
+		epd.currentCumulativeTrueDetections = this.currentCumulativeTrueDetections + currentTrueDetections;
+		epd.currentTrueDetections = currentTrueDetections;
 	}
 
 	@Override
 	public void loadFrom(EpisodicPersistenceData epd) {
-		System.out.printf("<%s> Loading persistence data...%n", QLearningMovement.class.getName());
+		System.out.printf("[%s] Loading persistence data...%n", this.getClass().getName());
 
 		/* Loading trajectory recorder */
 		trajectoryFrequencies.clear();
@@ -180,5 +223,9 @@ public class LevyFlightEpisodic extends MovementModel implements TrajectoryFrequ
 				this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
 			}
 		}
+
+		/* Loading Total occurrences recorder */
+		System.out.printf("[%s] Reading EPD.currentCumulativeTrueDetections: " + epd.currentCumulativeTrueDetections, this.getClass().getName());
+		this.currentCumulativeTrueDetections = epd.currentCumulativeTrueDetections;
 	}
 }
