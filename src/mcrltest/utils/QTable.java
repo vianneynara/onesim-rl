@@ -21,6 +21,7 @@ public class QTable {
     /* ===== Stored metadata ===== */
     private double loadedEpsilon = 0;
     private double loadedTotalReward = 0;
+    private double loadedEpisodeReward = 0; // 🔥 NEW
     private int loadedEpisode = 0;
 
     public QTable(Settings s) {
@@ -77,6 +78,7 @@ public class QTable {
     public void saveToCSV(String filename,
                           double epsilon,
                           double totalReward,
+                          double episodeReward, // 🔥 NEW
                           int episode) {
 
         try {
@@ -87,8 +89,8 @@ public class QTable {
             PrintWriter pw = new PrintWriter(new FileWriter(file));
 
             /* ===== METADATA ===== */
-            pw.println("epsilon,totalTrainingReward,episode");
-            pw.println(epsilon + "," + totalReward + "," + episode);
+            pw.println("epsilon,totalTrainingReward,episodeReward,episode");
+            pw.println(epsilon + "," + totalReward + "," + episodeReward + "," + episode);
             pw.println();
 
             /* ===== HEADER ===== */
@@ -133,7 +135,7 @@ public class QTable {
     }
 
     /* =========================
-       LOAD CSV
+        LOAD CSV
     ========================= */
 
     public void loadFromCSV(String filename) {
@@ -149,20 +151,37 @@ public class QTable {
 
             BufferedReader br = new BufferedReader(new FileReader(file));
 
-            br.readLine(); // header
+            /* ===== READ HEADER ===== */
+            String header = br.readLine(); // epsilon,totalTrainingReward,episodeReward,episode
 
             String[] meta = br.readLine().split(",");
 
-            loadedEpsilon = Double.parseDouble(meta[0]);
-            loadedTotalReward = Double.parseDouble(meta[1]);
-            loadedEpisode = Integer.parseInt(meta[2]);
+            /* ===== SAFE PARSING (supports old + new format) ===== */
 
-            br.readLine(); // empty
+            if (meta.length == 4) {
+                // 🔥 NEW FORMAT
+                loadedEpsilon = Double.parseDouble(meta[0]);
+                loadedTotalReward = Double.parseDouble(meta[1]);
+                loadedEpisodeReward = Double.parseDouble(meta[2]);
+                loadedEpisode = Integer.parseInt(meta[3]);
+
+            } else if (meta.length == 3) {
+                // ⚠️ OLD FORMAT (no episodeReward)
+                loadedEpsilon = Double.parseDouble(meta[0]);
+                loadedTotalReward = Double.parseDouble(meta[1]);
+                loadedEpisode = Integer.parseInt(meta[2]);
+
+                loadedEpisodeReward = 0; // default fallback
+            }
+
+            br.readLine(); // empty line
             br.readLine(); // table header
 
             String line;
 
             while ((line = br.readLine()) != null) {
+
+                if (line.trim().isEmpty()) continue;
 
                 String[] parts = line.split(",");
 
@@ -198,6 +217,7 @@ public class QTable {
     public void saveToJSON(String filename,
                            double epsilon,
                            double totalReward,
+                           double episodeReward, // 🔥 NEW
                            int episode) {
 
         try {
@@ -210,6 +230,7 @@ public class QTable {
             pw.println("{");
             pw.println("\"epsilon\": " + epsilon + ",");
             pw.println("\"totalReward\": " + totalReward + ",");
+            pw.println("\"episodeReward\": " + episodeReward + ","); // 🔥 NEW
             pw.println("\"episode\": " + episode + ",");
             pw.println("\"states\": [");
 
@@ -291,6 +312,10 @@ public class QTable {
                     loadedTotalReward = Double.parseDouble(line.split(":")[1].replace(",", "").trim());
                 }
 
+                if (line.startsWith("\"episodeReward\"")) { // 🔥 NEW
+                    loadedEpisodeReward = Double.parseDouble(line.split(":")[1].replace(",", "").trim());
+                }
+
                 if (line.startsWith("\"episode\"")) {
                     loadedEpisode = Integer.parseInt(line.split(":")[1].replace(",", "").trim());
                 }
@@ -332,12 +357,20 @@ public class QTable {
         }
     }
 
+    /* =========================
+       GETTERS
+    ========================= */
+
     public double getLoadedEpsilon() {
         return loadedEpsilon;
     }
 
     public double getLoadedTotalReward() {
         return loadedTotalReward;
+    }
+
+    public double getLoadedEpisodeReward() { // 🔥 NEW
+        return loadedEpisodeReward;
     }
 
     public int getLoadedEpisode() {

@@ -33,11 +33,9 @@ public class RLAgent {
     public static final String TARGET_COOLDOWN_S = "targetCooldown";
     public static final String DESTRUCTIVE_TARGET_S = "destructiveTarget";
 
-    /* 🔥 NEW */
     public static final String BASE_FOLDER_S = "baseFolder";
     public static final String CURRENT_EPISODE_S = "currentEpisode";
 
-    /* persistence */
     public static final String ENABLE_PERSISTENCE = "enablePersistence";
     public static final String FILE_FORMAT = "fileFormat";
 
@@ -60,7 +58,6 @@ public class RLAgent {
     private final RLModel rlModel;
     private final Random random;
 
-    /* persistence */
     private final boolean enablePersistence;
     private final String fileFormat;
     private int episode;
@@ -69,18 +66,19 @@ public class RLAgent {
     private final String loadFileName;
     private final String episodeFileName;
 
-    /* 🔥 NEW */
     private final String baseFolder;
 
     private static boolean globalLoaded = false;
 
     private final List<EpisodeStep> episodeSteps;
 
+    /* 🔥 NEW: per-episode reward */
+    private double currentEpisodeReward = 0;
+
     public RLAgent(Settings s) {
 
         Settings rlSettings = new Settings(RLAGENT_NS);
 
-        /* 🔥 NEW */
         this.baseFolder = rlSettings.getSetting(BASE_FOLDER_S, "default");
         this.episode = rlSettings.getInt(CURRENT_EPISODE_S, 1);
 
@@ -140,6 +138,9 @@ public class RLAgent {
 
         episodeSteps.add(new EpisodeStep(state, action, reward));
 
+        /* 🔥 NEW: accumulate per-episode reward */
+        currentEpisodeReward += reward;
+
         rlModel.update(state, action, reward, nextState);
         policy.update(state, action, reward, random);
     }
@@ -161,7 +162,6 @@ public class RLAgent {
 
             QTable qTable = rlModel.getQTable();
 
-            /* 🔥 FIXED PATH */
             String path = "data/qtable/" + baseFolder + "/" + loadFileName;
 
             if (fileFormat.equalsIgnoreCase("csv")) {
@@ -175,22 +175,14 @@ public class RLAgent {
             System.out.println("RLAgent: QTable loaded from " + path);
 
         } catch (Exception e) {
-
             System.out.println("RLAgent: No previous QTable found.");
         }
     }
-
-    /* ===============================
-       SYNC FROM QTABLE
-       =============================== */
 
     private void syncFromQTable(QTable qTable) {
 
         double epsilon = qTable.getLoadedEpsilon();
         double reward = qTable.getLoadedTotalReward();
-
-        /* 🔥 IMPORTANT: DO NOT override episode anymore */
-        // this.episode = qTable.getLoadedEpisode() + 1;
 
         if (policy instanceof EpsilonGreedyPolicy) {
             ((EpsilonGreedyPolicy) policy).setEpsilon(epsilon);
@@ -224,6 +216,7 @@ public class RLAgent {
                         path + ".csv",
                         getEpsilon(),
                         rlModel.getTotalTrainingReward(),
+                        currentEpisodeReward,   // 🔥 NEW
                         episode
                 );
 
@@ -233,6 +226,7 @@ public class RLAgent {
                         path + ".json",
                         getEpsilon(),
                         rlModel.getTotalTrainingReward(),
+                        currentEpisodeReward,   // 🔥 NEW
                         episode
                 );
             }
@@ -240,7 +234,6 @@ public class RLAgent {
             System.out.println("RLAgent: QTable saved → " + path);
 
         } catch (Exception e) {
-
             System.out.println("RLAgent: Failed to save QTable.");
             e.printStackTrace();
         }
@@ -278,8 +271,17 @@ public class RLAgent {
         }
     }
 
-    public void resetEpisodeSteps() {
+    /* ===============================
+       RESET EPISODE
+       =============================== */
+
+    public void resetEpisode() {
         episodeSteps.clear();
+
+        /* 🔥 IMPORTANT */
+        currentEpisodeReward = 0;
+
+        episode++;
     }
 
     /* ===============================
@@ -295,6 +297,14 @@ public class RLAgent {
 
     public double getTotalTrainingReward() {
         return rlModel.getTotalTrainingReward();
+    }
+
+    public double getCurrentEpisodeReward() {
+        return currentEpisodeReward;
+    }
+
+    public int getEpisode() {
+        return episode;
     }
 
     public double getStepPenalty() { return stepPenalty; }
