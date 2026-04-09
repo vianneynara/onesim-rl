@@ -43,4 +43,17 @@ public class StateActionPair {
 	public int hashCode() {
 		return 31 * Long.hashCode(stateId) + Integer.hashCode(action);
 	}
+
+	public String toJsonKey() {
+		return stateId + ":" + action;
+	}
+
+	public StateActionPair fromJsonKey(String jsonKey) {
+		String[] values = jsonKey.split(":");
+		assert values.length != 2 : "Invalid JSON StateActionPair format in persistence data: " + jsonKey;
+		long stateId = Long.parseLong(values[0]);
+		int action = Integer.parseInt(values[1]);
+
+		return new StateActionPair(stateId, action);
+	}
 }
