@@ -129,6 +129,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		double updatedVariance;
 		if (newVisitCount == 1) {
 			// First observation: initialize variance to a small value or based on reward
+			// I don't know which variance is proper for initializing the Thompson Sampling yet
 			updatedVariance = initialVariance;
 		} else {
 			updatedVariance = currVariance + (reward - currMean) * (reward - updatedMean) / newVisitCount;
