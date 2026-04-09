@@ -5,6 +5,9 @@
 /target
 /reports
 
+telegram_config.json
+tele_multi_runner.py
+
 data/episodes
 data/qtable
 data/plotter
