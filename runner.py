@@ -4,30 +4,61 @@ import winsound  # Built-in Windows library for sound
 NUM_EPISODES = 500
 BASE_CONFIG = "settings/RLTest.cfg"
 
-START_NUM_EP = 8
+# 1
+START_NUM_EP = 1
 
 # belum di pakai
-SCENARIO_NAME = "MC-UCB"
+# SCENARIO_NAME = "QL-UCB"
 
-# SAVE_PREFIX = "QL-NR-1_ep"
-# EPISODE_PREFIX = "EPS-QL-NR-1_ep"
-# BASE_FOLDER = "QL-NR-1"
+# SAVE_PREFIX = "D-MC-EPS-EV-1_ep"
+# EPISODE_PREFIX = "EPS-D-MC-EPS-EV-1_ep"
+# BASE_FOLDER = "D-MC-EPS-EV-1"
 
-# SAVE_PREFIX = "MC-FV-2_ep"
-# EPISODE_PREFIX = "EPS-MC-FV-2_ep"
-# BASE_FOLDER = "MC-FV-2"
-
-SAVE_PREFIX = "D-MC-UCB-1_ep"
-EPISODE_PREFIX = "EPS-D-MC-UCB-1_ep"
-BASE_FOLDER = "D-MC-UCB-1"
-
-# SAVE_PREFIX = "MC-EV-NR_ep"
-# EPISODE_PREFIX = "EPS-MC-EV-NR_ep"
-# BASE_FOLDER = "MC-EV-NR_1"
-
-# SAVE_PREFIX = "test-cd-1_ep"
-# EPISODE_PREFIX = "t-cd-1_ep"
-# BASE_FOLDER = "test-cd-1"
+# SAVE_PREFIX = "D-MC-EPS-FV-1_ep"
+# EPISODE_PREFIX = "EPS-D-MC-EPS-FV-1_ep"
+# BASE_FOLDER = "D-MC-EPS-FV-1"
+#
+# SAVE_PREFIX = "D-MC-THS-EV-1_ep"
+# EPISODE_PREFIX = "EPS-D-MC-THS-EV-1_ep"
+# BASE_FOLDER = "D-MC-THS-EV-1"
+#
+# SAVE_PREFIX = "D-MC-THS-FV-1_ep"
+# EPISODE_PREFIX = "EPS-D-MC-THS-FV-1_ep"
+# BASE_FOLDER = "D-MC-THS-FV-1"
+#
+SAVE_PREFIX = "D-MC-UCB.C1-EV-1_ep"
+EPISODE_PREFIX = "EPS-D-MC-UCB.C1-EV-1_ep"
+BASE_FOLDER = "D-MC-UCB.C1-EV-1"
+#
+# SAVE_PREFIX = "D-MC-UCB.C1-FV-1_ep"
+# EPISODE_PREFIX = "EPS-D-MC-UCB.C1-FV-1_ep"
+# BASE_FOLDER = "D-MC-UCB.C1-FV-1"
+#
+# SAVE_PREFIX = "D-MC-UCB.C2-EV-1_ep"
+# EPISODE_PREFIX = "EPS-D-MC-UCB.C2-EV-1_ep"
+# BASE_FOLDER = "D-MC-UCB.C2-EV-1"
+#
+# SAVE_PREFIX = "D-MC-UCB.C2-FV-1_ep"
+# EPISODE_PREFIX = "EPS-D-MC-UCB.C2-FV-1_ep"
+# BASE_FOLDER = "D-MC-UCB.C2-FV-1"
+#
+# # QL
+#
+# SAVE_PREFIX = "D-QL-EPS-1_ep"
+# EPISODE_PREFIX = "EPS-D-QL-EPS-1_ep"
+# BASE_FOLDER = "D-QL-EPS-1"
+#
+# SAVE_PREFIX = "D-QL-THS-1_ep"
+# EPISODE_PREFIX = "EPS-D-QL-THS-1_ep"
+# BASE_FOLDER = "D-QL-THS-1"
+#
+# SAVE_PREFIX = "D-QL-UCB.C1-1_ep"
+# EPISODE_PREFIX = "EPS-D-QL-UCB.C1-1_ep"
+# BASE_FOLDER = "D-QL-UCB.C1-1"
+#
+# SAVE_PREFIX = "D-QL-UCB.C2-1_ep"
+# EPISODE_PREFIX = "EPS-D-QL-UCB.C2-1_ep"
+# BASE_FOLDER = "D-QL-UCB.C2-1"
 
 def alert_success():
     """Plays a loud, attention-grabbing 'Mission Complete' sound."""
@@ -50,7 +81,7 @@ def run_simulation():
     for ep in range(START_NUM_EP, NUM_EPISODES + 1):
         print(f"\n🚀 Starting Episode {ep}")
 
-        overrides = f"Scenario.name=RL_Test_Ep_{ep}"
+        overrides = f"Scenario.name=RL_{BASE_FOLDER}_Ep_{ep}"
 
         # 🔁 Load previous QTable
         if ep > 1:

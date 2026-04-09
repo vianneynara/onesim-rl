@@ -12,7 +12,7 @@ import numpy as np
 plt.style.use('seaborn-v0_8-muted')
 sns.set_context("notebook", font_scale=1.2)
 
-BASE_FOLDER = "D-MC-FV-1"
+BASE_FOLDER = "D-MC-THS-FV-1"
 QTABLE_DIR = f"data/qtable/{BASE_FOLDER}"
 REPORT_DIR = f"reports/{BASE_FOLDER}"
 PLOT_DIR = f"data/plotter/{BASE_FOLDER}"
@@ -45,21 +45,75 @@ def plot_total_reward():
     df['Rolling_Avg'] = df['Reward'].rolling(window=min(len(df), 10), min_periods=1).mean()
 
     plt.figure(figsize=(12, 6))
-    plt.plot(df['Episode'], df['Reward'], alpha=0.3, color='royalblue', label='Raw Reward')
-    plt.plot(df['Episode'], df['Rolling_Avg'], color='darkblue', linewidth=2.5, label='Trend (SMA 10)')
+    plt.plot(df['Episode'], df['Reward'], alpha=0.3, label='Raw Reward')
+    plt.plot(df['Episode'], df['Rolling_Avg'], linewidth=2.5, label='Trend (SMA 10)')
 
-    plt.title("Agent Learning Progress: Total Reward", fontsize=16, pad=20)
+    plt.title("Agent Learning Progress: Total Reward")
     plt.xlabel("Episode")
     plt.ylabel("Total Reward")
-    plt.legend(frameon=True, loc='upper left')
+    plt.legend()
     plt.grid(True, linestyle='--', alpha=0.6)
+
     save_plot("total_reward_refined.png")
 
 # =========================
-# 2. TOTAL VISITS PER EPISODE (NEW)
+# 1B. EPISODE REWARD (NEW)
+# =========================
+def plot_episode_reward():
+    episode_map = {}
+    if not os.path.exists(QTABLE_DIR): return
+
+    for file in os.listdir(QTABLE_DIR):
+        if file.endswith(".json"):
+            with open(os.path.join(QTABLE_DIR, file), "r") as f:
+                data = json.load(f)
+
+            ep = int(data.get("episode", 0))
+            ep_reward = data.get("episodeReward", 0)
+
+            episode_map[ep] = ep_reward
+
+    if not episode_map: return
+
+    df = pd.DataFrame(
+        list(episode_map.items()),
+        columns=['Episode', 'EpisodeReward']
+    ).sort_values('Episode')
+
+    # smoothing (optional but useful)
+    df['Rolling_Avg'] = df['EpisodeReward'].rolling(
+        window=min(len(df), 10),
+        min_periods=1
+    ).mean()
+
+    plt.figure(figsize=(12, 6))
+
+    plt.plot(
+        df['Episode'],
+        df['EpisodeReward'],
+        alpha=0.3,
+        label='Raw Episode Reward'
+    )
+
+    plt.plot(
+        df['Episode'],
+        df['Rolling_Avg'],
+        linewidth=2.5,
+        label='Trend (SMA 10)'
+    )
+
+    plt.title("Episode Reward (Per Episode Performance)")
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    save_plot("episode_reward.png")
+
+# =========================
+# 2. TOTAL VISITS PER EPISODE
 # =========================
 def plot_total_visits_per_episode():
-    """Parses T-ID,Count lines (e.g. T71,2) to show total cumulative activity."""
     episode_map = {}
     if not os.path.exists(REPORT_DIR): return
 
@@ -72,7 +126,6 @@ def plot_total_visits_per_episode():
                 total_visits = 0
                 with open(os.path.join(folder_path, file), "r") as f:
                     for line in f:
-                        # Regex matches T followed by numbers, a comma, and captures the count
                         match = re.search(r'T\d+,(\d+)', line)
                         if match:
                             total_visits += int(match.group(1))
@@ -84,13 +137,14 @@ def plot_total_visits_per_episode():
     df = pd.DataFrame(list(episode_map.items()), columns=['Episode', 'Visits']).sort_values('Episode')
 
     plt.figure(figsize=(12, 6))
-    plt.fill_between(df['Episode'], df['Visits'], color="orchid", alpha=0.3)
-    plt.plot(df['Episode'], df['Visits'], color="darkmagenta", linewidth=2, marker='o', markersize=3)
+    plt.fill_between(df['Episode'], df['Visits'], alpha=0.3)
+    plt.plot(df['Episode'], df['Visits'], linewidth=2, marker='o', markersize=3)
 
-    plt.title("Exploration Intensity: Total Target Visits per Episode", fontsize=16)
+    plt.title("Exploration Intensity: Total Target Visits per Episode")
     plt.xlabel("Episode")
-    plt.ylabel("Cumulative Visits (All Targets)")
+    plt.ylabel("Cumulative Visits")
     plt.grid(True, linestyle='--', alpha=0.5)
+
     save_plot("total_visits_per_episode.png")
 
 # =========================
@@ -103,6 +157,7 @@ def plot_total_target_found():
     for ep_folder in os.listdir(REPORT_DIR):
         if not ep_folder.isdigit(): continue
         folder_path = os.path.join(REPORT_DIR, ep_folder)
+
         for file in os.listdir(folder_path):
             if "TargetDetectionReport" in file:
                 with open(os.path.join(folder_path, file), "r") as f:
@@ -116,17 +171,18 @@ def plot_total_target_found():
     df = pd.DataFrame(list(episode_map.items()), columns=['Episode', 'Targets']).sort_values('Episode')
 
     plt.figure(figsize=(14, 6))
-    plt.fill_between(df['Episode'], df['Targets'], color="seagreen", alpha=0.1)
-    plt.plot(df['Episode'], df['Targets'], color="seagreen", marker='o', markersize=4, linewidth=1.5)
+    plt.fill_between(df['Episode'], df['Targets'], alpha=0.1)
+    plt.plot(df['Episode'], df['Targets'], marker='o', markersize=4, linewidth=1.5)
 
-    plt.title("Success Rate: Targets Found per Episode", fontsize=16)
+    plt.title("Success Rate: Targets Found per Episode")
     plt.xlabel("Episode")
     plt.ylabel("Targets Found")
     plt.grid(axis='y', linestyle=':', alpha=0.8)
+
     save_plot("total_target_found_refined.png")
 
 # =========================
-# 4. STATE VISIT (FIXED COLORBAR)
+# 4. STATE VISIT
 # =========================
 def plot_state_visit_cumulative():
     state_visit_map = {}
@@ -137,7 +193,8 @@ def plot_state_visit_cumulative():
             with open(os.path.join(QTABLE_DIR, file), "r") as f:
                 data = json.load(f)
             for s in data.get("states", []):
-                sid, visits = s.get("state"), sum(s.get("visitCounts", []))
+                sid = s.get("state")
+                visits = sum(s.get("visitCounts", []))
                 state_visit_map[sid] = state_visit_map.get(sid, 0) + visits
 
     if not state_visit_map: return
@@ -145,57 +202,88 @@ def plot_state_visit_cumulative():
     states = sorted(state_visit_map.keys())
     visits = [state_visit_map[s] for s in states]
 
-    fig, ax = plt.subplots(figsize=(12, 7))
-    max_v = max(visits) if visits else 1
-    norm = plt.Normalize(0, max_v)
-    colors = plt.cm.plasma(norm(visits))
+    # BAR
+    plt.figure(figsize=(12, 7))
+    plt.bar(states, visits)
+    plt.title("State Exploration Distribution (Bar)")
+    plt.xlabel("State")
+    plt.ylabel("Visits")
+    save_plot("state_visit_bar.png")
 
-    ax.bar(states, visits, color=colors, edgecolor='black', alpha=0.85)
-
-    sm = plt.cm.ScalarMappable(norm=norm, cmap='plasma')
-    fig.colorbar(sm, ax=ax, label='Visit Density')
-
-    ax.set_title("State Exploration Distribution", fontsize=16)
-    ax.set_xlabel("State Identifier")
-    ax.set_ylabel("Cumulative Visits")
-    save_plot("state_visit_refined.png")
+    # LINE
+    plt.figure(figsize=(12, 7))
+    plt.plot(states, visits, marker='o')
+    plt.title("State Exploration Distribution (Line)")
+    plt.xlabel("State")
+    plt.ylabel("Visits")
+    plt.grid(True)
+    save_plot("state_visit_line.png")
 
 # =========================
-# 5. TRAJECTORY FREQUENCY (PROBABILITY DENSITY)
+# 5. TRAJECTORY (FIXED!!)
 # =========================
 def plot_trajectory_cumulative():
     trajectory_map = {}
     if not os.path.exists(REPORT_DIR): return
 
     for ep_folder in os.listdir(REPORT_DIR):
-        folder_path = os.path.join(REPORT_DIR, ep_folder)
         if not ep_folder.isdigit(): continue
+        folder_path = os.path.join(REPORT_DIR, ep_folder)
+
         for file in os.listdir(folder_path):
             if "TrajectoryFrequencyReport" in file:
                 path = os.path.join(folder_path, file)
+
                 try:
-                    df = pd.read_csv(path)
+                    # 🔥 FIX HERE
+                    df = pd.read_csv(path, header=None)
+
+                    # force correct format
+                    if df.shape[1] >= 2:
+                        df = df.iloc[:, :2]
+                        df.columns = ["Length", "Count"]
+                    else:
+                        continue
+
                     for _, row in df.iterrows():
-                        length, freq = row.iloc[0], row.iloc[1]
+                        length = int(row["Length"])
+                        freq = int(row["Count"])
                         trajectory_map[length] = trajectory_map.get(length, 0) + freq
-                except Exception: continue
+
+                except Exception as e:
+                    print(f"Error reading {path}: {e}")
+                    continue
 
     if not trajectory_map: return
 
-    df_traj = pd.DataFrame(list(trajectory_map.items()), columns=['Length', 'Count']).sort_values('Length')
+    # ensure 1 exists
+    if 1 not in trajectory_map:
+        trajectory_map[1] = 0
 
-    # Calculate Probability Density
+    df_traj = pd.DataFrame(
+        list(trajectory_map.items()),
+        columns=['Length', 'Count']
+    ).sort_values('Length')
+
     total_count = df_traj['Count'].sum()
     df_traj['Density'] = df_traj['Count'] / total_count
 
+    # BAR
     plt.figure(figsize=(10, 6))
-    sns.barplot(data=df_traj, x='Length', y='Density', hue='Length', palette="magma", legend=False)
+    plt.bar(df_traj['Length'], df_traj['Density'])
+    plt.title("Trajectory Density (Bar)")
+    plt.xlabel("Length")
+    plt.ylabel("Density")
+    save_plot("trajectory_bar.png")
 
-    plt.title("Trajectory Length Probability Density", fontsize=16)
-    plt.xlabel("Trajectory Length (Steps)")
-    plt.ylabel("Probability Density")
-    plt.grid(axis='y', linestyle='--', alpha=0.4)
-    save_plot("trajectory_refined.png")
+    # LINE
+    plt.figure(figsize=(10, 6))
+    plt.plot(df_traj['Length'], df_traj['Density'], marker='o')
+    plt.title("Trajectory Density (Line)")
+    plt.xlabel("Length")
+    plt.ylabel("Density")
+    plt.grid(True)
+    save_plot("trajectory_line.png")
 
 # =========================
 # EXECUTION
@@ -203,6 +291,7 @@ def plot_trajectory_cumulative():
 if __name__ == "__main__":
     print("🚀 Starting visualization...")
     plot_total_reward()
+    plot_episode_reward()   # 🔥 NEW
     plot_total_visits_per_episode()
     plot_total_target_found()
     plot_state_visit_cumulative()
