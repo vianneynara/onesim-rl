@@ -120,37 +120,8 @@ key_abbreviations = {
 
 S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 
-LIST_OF_CONFIGS = [
-    {
-        "alg": "ql",
-        "runs": 5,
-        "bp": "epsilon",
-        "id": "ql5-bp=epsilon",
-        "overrides": {
-            "eg_ip": 1.0,
-            "eg_ed": 0.999999,
-            "eg_me": 0.1,
-        }
-    },
-    {
-        "alg": "ql",
-        "runs": 5,
-        "bp": "ucb",
-        "id": "ql5-bp=ucb",
-        "overrides": {
-            "ucb_ec": 2.0,
-        }
-    },
-    {
-        "alg": "ql",
-        "runs": 5,
-        "bp": "ts",
-        "id": "ql5-bp=ts",
-        "overrides": {
-            "ts_iv": 1.0,
-        }
-    }
-]
+# Import the configs
+from batch_configs import LIST_OF_CONFIGS
 
 
 def parse_overrides(overrides_dict: dict[str]) -> str:
