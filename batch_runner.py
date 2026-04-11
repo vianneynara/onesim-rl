@@ -6,11 +6,13 @@ The second version of batch runner, will provide better and more flexible runs.
 # IMPORTS
 # ------------------------------------------------------------------------------------------------------------------- #
 
+import os
 import re
 import sys
 import argparse
 import subprocess
 import datetime as dt
+import json
 
 from datetime import datetime
 
@@ -138,10 +140,26 @@ S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 # Import the configs
 from batch_configs import LIST_OF_CONFIGS
 
-def create_config_setting_json(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None):
+def create_config_setting_json(alg: str, runs: int, bp: str, result_dir_id: str = None, overrides_list: list[str] = None):
     config_setting_json = {
-        ""
+        "runner_episodes:" : runs,
+        "runner_id": result_dir_id,
+
+        "amm": alg_abbreviations[alg],
+        "qlm_bp": behavior_packages[bp],
     }
+
+    for entry in overrides_list:
+        key, value = entry.split("=")
+        config_setting_json[key] = value
+
+    # Create the direcetory first
+    dir_path = f"reports/skripsi/{alg}/run-id/{result_dir_id}"
+    os.makedirs(dir_path, exist_ok=True)
+
+    # Save the JSON to the report directory
+    with open(f"reports/skripsi/{alg}/run-id/{result_dir_id}/config_setting.json", "w") as json_file:
+        json.dump(config_setting_json, json_file, indent=4)
 
 
 def parse_overrides(overrides_dict: dict[str]) -> str:
@@ -243,6 +261,9 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     print(f"[INFO] Run ID: {run_id}, Number of episodes: {runs}")
     print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
     print(f"{'=' * 70}\n")
+
+    # Create a JSON to log the current running simulation configuration
+    create_config_setting_json(alg, runs, bp, result_id_dir, full_overrides)
 
     # Execute episodes
     succeeds = 0
