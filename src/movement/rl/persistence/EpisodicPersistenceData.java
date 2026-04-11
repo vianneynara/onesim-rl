@@ -7,6 +7,14 @@ public class EpisodicPersistenceData {
 	// [ BehaviorPolicy.EpsilonGreedyBehavior ]
 	public double epsilon;
 
+	// [ BehaviorPolicy.UCBBehavior ]
+	public double ucbExplorationConstant;
+	public Map<String, Integer> ucbStateActionFrequencies = new HashMap<>();
+	public Map<String, Integer> ucbStateFrequencies = new HashMap<>();
+
+	// [ BehaviorPolicy.ThompsonSamplingBehavior ]
+	public Map<String, String> tsProperties = new HashMap<>();
+
 	// [ QLearningMovement core ]
 	/**
 	 * Stores the value, but uses String keys because fastjson cannot use complex objects as keys.

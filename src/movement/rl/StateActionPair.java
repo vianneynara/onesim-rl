@@ -25,6 +25,19 @@ public class StateActionPair {
 		this.action = action;
 	}
 
+	public static StateActionPair fromJsonKey(String jsonKey) {
+		String[] values = jsonKey.split(":");
+		assert values.length != 2 : "Invalid JSON StateActionPair format in persistence data: " + jsonKey;
+		long stateId = Long.parseLong(values[0]);
+		int action = Integer.parseInt(values[1]);
+
+		return new StateActionPair(stateId, action);
+	}
+
+	public String toJsonKey() {
+		return stateId + ":" + action;
+	}
+
 	/**
 	 * A specific implementation o avoid the same pair's key-value values being considered as the same.
 	 * For example, if we have two pairs (stateId=1, action=0) and (stateId=1, action=1),
