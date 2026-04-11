@@ -200,10 +200,6 @@ def build_result_id_dir(alg: str, runs: int, bp: str = None, overrides: list[str
 
 
 def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
-    _current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    print(f"[{_current_time}] Running episode {str(ep)} for algorithm {algo}.")
-    print(f"[{_current_time}] ============================================================")
-
     script = [
         r".\one.bat",
         "-b", "1",
@@ -216,13 +212,29 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     # Add config file path
     script.append(alg_base_settings[algo])
 
+    _start_time = None
+
     try:
-        print(f"[{_current_time}] Running command: {' '.join(script)}")
+        _start_time = datetime.now()
+
+        print(f"{'-' * 70}")
+        print(f"[{_start_time.strftime("%H:%M:%S")}] Running episode {str(ep)} for algorithm {algo}.")
+        print(f"{'-' * 70}\n")
+
+        print(f"[{_start_time.strftime("%H:%M:%S")}] Running command: {' '.join(script)}")
         subprocess.run(script, check=True, shell=True)
         return True
     except subprocess.CalledProcessError:
-        print(f"[{_current_time}] Error running episode {ep} for algorithm {algo}.")
+        _end_time = datetime.now()
+
+        print(f"[{_end_time.strftime("%H:%M:%S")}] Error running episode {ep} for algorithm {algo}.")
         return False
+    finally:
+        _end_time = datetime.now()
+
+        print(f"{'-' * 70}")
+        print(f"[{_end_time.strftime("%H:%M:%S")}] Done running episode {str(ep)} for algorithm {algo}. Took {format_timedelta(_end_time - _start_time)}.")
+        print(f"{'-' * 70}\n")
 
 
 def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None) -> bool:
@@ -285,8 +297,7 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
 
     # Print summary
     print(f"\n{'=' * 70}")
-    print(
-        f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}")
+    print(f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}")
     print(f"[INFO] Total episodes: {runs} (Success: {succeeds}, Fails: {failed})")
     print(f"{'=' * 70}\n")
 
