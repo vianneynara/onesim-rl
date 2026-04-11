@@ -59,6 +59,14 @@ def validate_run_id(run_id: str) -> None:
         )
 
 
+def format_timedelta(td):
+    # Calculate total components
+    total_seconds = int(td.total_seconds())
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+
 # ------------------------------------------------------------------------------------------------------------------- #
 # BATCH RUNNER CONFIGURATION
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -270,14 +278,6 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     print(f"{'=' * 70}\n")
 
     return failed == 0
-
-
-def format_timedelta(td):
-    # Calculate total components
-    total_seconds = int(td.total_seconds())
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 
 if __name__ == "__main__":
