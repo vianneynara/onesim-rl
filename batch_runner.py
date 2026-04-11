@@ -201,7 +201,7 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
 
     # Build the base overrides
     if overrides_list:
-        abr_overrides, full_overrides  = parse_overrides(overrides_list)
+        abr_overrides, full_overrides = parse_overrides(overrides_list)
 
     result_id_dir = build_result_id_dir(alg, runs, bp, abr_overrides)
     validate_run_id(result_id_dir)
@@ -244,7 +244,8 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
 
     # Print summary
     print(f"\n{'=' * 70}")
-    print(f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {format_timedelta(end_time-start_time)}")
+    print(
+        f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}")
     print(f"[INFO] Total episodes: {runs} (Success: {succeeds}, Fails: {failed})")
     print(f"{'=' * 70}\n")
 
@@ -256,7 +257,7 @@ if __name__ == "__main__":
         description="ONE Simulator multi-run/episodic launcher (version 2), simpler"
     )
     parser.add_argument(
-        "-c", "--config", type=int, help="Config index to run", required=False
+        "-c", "--config", type=str, help="Config index to run", required=False
     )
 
     parser.add_argument(
@@ -266,10 +267,10 @@ if __name__ == "__main__":
     # Parse arguments
     args = parser.parse_args()
 
-    success = False
+    successes = 0
+    failures = 0
+
     if args.all:
-        successes = 0
-        failures = 0
 
         for config in LIST_OF_CONFIGS:
             alg = config["alg"]
@@ -286,26 +287,44 @@ if __name__ == "__main__":
                 run_id=id,
                 overrides_list=overrides
             )
+
+            if success:
+                successes += 1
+            else:
+                failures += 1
     else:
-        config_idx = args.config
-        if config_idx < 0 or config_idx >= len(LIST_OF_CONFIGS):
-            raise ValueError(
-                f"Config index {config_idx} out of range [0, {len(LIST_OF_CONFIGS) - 1}]"
+        config_num = args.config
+
+        # Separated by comma
+        configs_to_run: list[int] = [int(config) for config in config_num.split(",")]
+
+        for config_num in configs_to_run:
+            # Validate whether config num is in range
+            if config_num < 1 or config_num > len(LIST_OF_CONFIGS):
+                print(f"Config index {config_num} out of range [1, {len(LIST_OF_CONFIGS)}]")
+                continue
+
+            config = LIST_OF_CONFIGS[config_num - 1]
+            alg = config["alg"]
+            runs = config["runs"]
+            bp = config["bp"]
+            id = config["id"]
+            overrides = config["overrides"] if "overrides" in config else args.d
+
+            # Execute simulation
+            success = run_simulation(
+                alg=alg,
+                runs=runs,
+                bp=bp,
+                run_id=id,
+                overrides_list=overrides
             )
-        config = LIST_OF_CONFIGS[config_idx]
-        alg = config["alg"]
-        runs = config["runs"]
-        bp = config["bp"]
-        id = config["id"]
-        overrides = config["overrides"] if "overrides" in config else args.d
 
-        # Execute simulation
-        success = run_simulation(
-            alg=alg,
-            runs=runs,
-            bp=bp,
-            run_id=id,
-            overrides_list=overrides
-        )
+            if success:
+                successes += 1
+            else:
+                failures += 1
 
-    sys.exit(0 if success else 1)
+    print(f"\n{'=' * 70}")
+    print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
+    print(f"{'=' * 70}\n")
