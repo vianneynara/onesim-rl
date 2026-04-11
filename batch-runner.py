@@ -3,6 +3,18 @@ The second version of batch runner, will provide better and more flexible runs.
 """
 
 # ------------------------------------------------------------------------------------------------------------------- #
+# IMPORTS
+# ------------------------------------------------------------------------------------------------------------------- #
+
+import re
+import sys
+import argparse
+import subprocess
+import datetime as dt
+
+from datetime import datetime
+
+# ------------------------------------------------------------------------------------------------------------------- #
 # PATH VALIDATOR
 # ------------------------------------------------------------------------------------------------------------------- #
 
@@ -48,12 +60,9 @@ def validate_run_id(run_id: str) -> None:
 
 
 # ------------------------------------------------------------------------------------------------------------------- #
-# BATCH RUNNER
+# BATCH RUNNER CONFIGURATION
 # ------------------------------------------------------------------------------------------------------------------- #
 
-import re
-import sys
-import subprocess
 
 ID_LABEL = "ID_LABEL"
 ALG_LABEL = "ALG_LABEL"
@@ -71,6 +80,9 @@ behavior_packages = {
 }
 
 key_abbreviations = {
+    # [ Report settings ]
+    "r_dir": "Report.reportDir",
+
     # [ QLearningMovement settings ]
     "qlm_bp": "QLearningMovement.behaviorPolicy",
     "qlm_lr": "QLearningMovement.learningRate",
@@ -102,42 +114,196 @@ S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 
 LIST_OF_CONFIGS = [
     {
-        ""
+        "alg": "ql",
+        "runs": 5,
+        "bp": "epsilon",
+        "id": "ql5&bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.999999,
+            "eg_me": 0.1,
+        }
+    },
+    {
+        "alg": "ql",
+        "runs": 5,
+        "bp": "ucb",
+        "id": "ql5&bp=ucb",
+        "overrides": {
+            "ucb_ec": 2.0,
+        }
+    },
+    {
+        "alg": "ql",
+        "runs": 5,
+        "bp": "ts",
+        "id": "ql5&bp=ts",
+        "overrides": {
+            "ts_iv": 1.0,
+        }
     }
 ]
 
-def run_script(algo: str, overrides: str = None, ep: int = -1) -> bool:
+
+def parse_overrides(overrides_dict: dict[str]) -> str:
+    # convert the override dictionary into a list of key-value
+    abr_overrides_list = []
+    full_overrides_list = []
+    for key, value in overrides_dict.items():
+
+        # Check if key is an abbreviation
+        if key in key_abbreviations:
+            full_key = key_abbreviations[key]
+        else:
+            # Use the key as-is (assuming the real setting full key)
+            full_key = key
+
+        abr_overrides_list.append(f"{key}={value}")
+        full_overrides_list.append(f"{full_key}={value}")
+
+    return abr_overrides_list, full_overrides_list
+
+
+def expand_algorithm(alg: str) -> str:
+    if alg not in alg_base_settings:
+        raise ValueError(
+            f"Unknown algorithm '{alg}'. Valid options: {', '.join(alg_base_settings.keys())}"
+        )
+    return alg_base_settings[alg]
+
+
+def build_result_id_dir(alg: str, runs: int, bp: str = None, overrides: list[str] = None) -> str:
+    # Initial first part  of algorithm and runs
+    result_id_dir = f"{alg}{runs}&qlm_bp={bp}&"
+
+    # Adds overrides if exist
+    result_id_dir += "&".join(overrides) if overrides else ""
+
+    return result_id_dir
+
+
+def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     _current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    print(f"[{_current_time}] Running episode {ep} for algorithm {algo}.")
+    print(f"[{_current_time}] Running episode {str(ep)} for algorithm {algo}.")
     print(f"[{_current_time}] ============================================================")
 
     script = [
         r".\one.bat",
         "-b", "1",
-        "-d", overrides,
-        alg_base_settings[algo]
     ]
 
+    # Add overrides only if provided
+    if overrides_string:
+        script.extend(["-d", overrides_string])
+
+    # Add config file path
+    script.append(alg_base_settings[algo])
+
     try:
+        print(f"[{_current_time}] Running command: {' '.join(script)}")
         subprocess.run(script, check=True, shell=True)
         return True
     except subprocess.CalledProcessError:
         print(f"[{_current_time}] Error running episode {ep} for algorithm {algo}.")
         return False
 
+
+def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None) -> bool:
+    # Validate algorithm
+    settings_file = expand_algorithm(alg)
+
+    # Validate behavior policy
+    if bp not in behavior_packages:
+        raise ValueError(
+            f"Unknown behavior policy '{bp}'. Valid options: {', '.join(behavior_packages.keys())}"
+        )
+
+    result_id_dir = build_result_id_dir(alg, runs, bp, overrides_list)
+    validate_run_id(result_id_dir)
+    full_report_dir = f"reports/skripsi/{alg}/run-id/{result_id_dir}"
+
+    # Build the base overrides
+    bp_override = f"QLearningMovement.behaviorPolicy={behavior_packages[bp]}"
+    persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
+
+    abr_overrides, full_overrides = [], []
+    if overrides_list:
+        abr_overrides, full_overrides  = parse_overrides(overrides_list)
+        if full_overrides:
+            full_overrides.append(bp_override)
+            full_overrides.append(persistence_override)
+
+    overrides_string = "@@".join(full_overrides)
+
+    # Print run information
+    print(f"\n{'=' * 70}")
+    print(f"[INFO] Starting episodic simulation batch...")
+    print(f"[INFO] Algorithm: {alg} ({settings_file}), Behavior Policy: {bp}")
+    print(f"[INFO] Run ID: {run_id}, Number of episodes: {runs}")
+    print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
+    print(f"{'=' * 70}\n")
+
+    # Execute episodes
+    successes = 0
+    failures = 0
+    start_time = datetime.now().second
+
+    for ep in range(1, runs + 1):
+        running_overrides_string = (
+                overrides_string
+                + f"@@Report.reportDir={full_report_dir}/ep/{str(ep)}"
+                + f"@@EpisodicPersistenceManager.episodeNumber={str(ep)}"
+        )
+        if run_script(alg, running_overrides_string, ep):
+            successes += 1
+        else:
+            failures += 1
+
+    end_time = datetime.now().second
+
+    # Print summary
+    print(f"\n{'=' * 70}")
+    print(f"[INFO] Episodic simulation batch completed at {str(dt.timedelta(end_time))}, time taken: {str(dt.timedelta(end_time - start_time))}")
+    print(f"[INFO] Total episodes: {runs}")
+    print(f"[INFO] Successful: {successes}")
+    print(f"[INFO] Failed: {failures}")
+    print(f"{'=' * 70}\n")
+
+    return failures == 0
+
+
 if __name__ == "__main__":
-    import argoarse
-
     parser = argparse.ArgumentParser(
-        description="ONE Simulator multi-run/episodic launcher (version 2)"
+        description="ONE Simulator multi-run/episodic launcher (version 2), simpler"
     )
-    subparsers = parser.add_subparsers(dest="mode", required=True)
+    parser.add_argument(
+        "-c", "--config", type=int, help="Config index to run", required=True
+    )
 
-    # [ baseline runners, we skip this rn ]
-    p_baseline = subparsers.add_parser("baseline", help="Run baseline algorithms")
+    # Parse arguments
+    args = parser.parse_args()
 
-    # [ episodic runners ]
-    p_episodes = subparsers.add_parser("episodic", help="Run episodic simulations")
-    p_episodes.add_argument("config_index", type=int, help="index of the config to run (from 0)")
-    p_episodes.add_argument("run_id", type=str, help="Run identifier (used in paths), generated if empty")
-    p_episodes.add_argument("episodes", type=int, help="Number of episodes")
+    # Dispatch to appropriate handler
+    # try:
+    config_idx = args.config
+    if config_idx < 0 or config_idx >= len(LIST_OF_CONFIGS):
+        raise ValueError(
+            f"Config index {config_idx} out of range [0, {len(LIST_OF_CONFIGS) - 1}]"
+        )
+    config = LIST_OF_CONFIGS[config_idx]
+    alg = config["alg"]
+    runs = config["runs"]
+    bp = config["bp"]
+    id = config["id"]
+    overrides = config["overrides"] if "overrides" in config else args.d
+
+    # Execute simulation
+    success = run_simulation(
+        alg=alg,
+        runs=runs,
+        bp=bp,
+        run_id=id,
+        overrides_list=overrides
+    )
+
+    sys.exit(0 if success else 1)
