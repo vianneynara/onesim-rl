@@ -81,6 +81,12 @@ alg_base_settings = {
     "lf": "settings/skripsi/randomsearch-lf.cfg"
 }
 
+alg_abbreviations = {
+    "ql": "QLearningMovement",
+    "lfe": "LevyFlightEpisodic",
+    "lf": "LevyFlight"
+}
+
 behavior_packages = {
     "epsilon": "movement.rl.behavior.EpsilonGreedyBehavior",
     "ucb": "movement.rl.behavior.UCBBehavior",
@@ -88,6 +94,10 @@ behavior_packages = {
 }
 
 key_abbreviations = {
+    # [ Agent movement settings ]
+    "amm": "Group1.movementModel",
+    "tmm": "Group2.movementModel",
+
     # [ Report settings ]
     "r_dir": "Report.reportDir",
 
@@ -115,13 +125,23 @@ key_abbreviations = {
     # [ EpisodicPersistenceManager settings ]
     "epm_ep": "EpisodicPersistenceManager.episodeNumber",
     "epm_path": "EpisodicPersistenceManager.persistencePath",
-    "epm_saves": "EpisodicPersistenceManager.saveEpisodically"
+    "epm_saves": "EpisodicPersistenceManager.saveEpisodically",
+
+    # [ Movement model settings ]
+    "m_seed": "MovementModel.seed",
+    "m_ws": "MovementModel.worldSize",
+
 }
 
 S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 
 # Import the configs
 from batch_configs import LIST_OF_CONFIGS
+
+def create_config_setting_json(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None):
+    config_setting_json = {
+        ""
+    }
 
 
 def parse_overrides(overrides_dict: dict[str]) -> str:
