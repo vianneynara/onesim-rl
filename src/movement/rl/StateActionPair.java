@@ -27,7 +27,6 @@ public class StateActionPair {
 
 	public static StateActionPair fromJsonKey(String jsonKey) {
 		String[] values = jsonKey.split(":");
-		assert values.length != 2 : "Invalid JSON StateActionPair format in persistence data: " + jsonKey;
 		long stateId = Long.parseLong(values[0]);
 		int action = Integer.parseInt(values[1]);
 

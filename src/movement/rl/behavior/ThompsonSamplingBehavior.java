@@ -242,7 +242,6 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		 */
 		public static TSProperty fromJsonValue(String jsonValue) {
 			String[] valueParts = jsonValue.split(",");
-			assert valueParts.length == 3 : "Invalid Thompson Sampling property value in persistence data: " + jsonValue;
 
 			double mu = Double.parseDouble(valueParts[0]);
 			double sigma2 = Double.parseDouble(valueParts[1]);

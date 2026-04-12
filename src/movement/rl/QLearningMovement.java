@@ -635,7 +635,6 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		if (epd.qTable != null) {
 			for (var entry : epd.qTable.entrySet()) {
 				String[] values = entry.getKey().split(":");
-				assert values.length != 2 : "Invalid Q-Table key format in persistence data: " + entry.getKey();
 				qTable.put(
 					StateActionPair.of(Integer.parseInt(values[0]), Integer.parseInt(values[1])),
 					entry.getValue()
