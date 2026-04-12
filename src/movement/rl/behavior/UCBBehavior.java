@@ -24,8 +24,8 @@ import java.util.*;
 public class UCBBehavior implements BehaviorPolicy {
 
 	private double explorationConstant;
-	private Map<StateActionPair, Integer> stateActionFrequencies;
-	private Map<Integer, Integer> stateFrequencies;
+	private final Map<StateActionPair, Integer> stateActionFrequencies;
+	private final Map<Integer, Integer> stateFrequencies;
 	private Random random;
 
 	public static final String BEHAVIOR_NS = "BehaviorPolicy.UCB";
