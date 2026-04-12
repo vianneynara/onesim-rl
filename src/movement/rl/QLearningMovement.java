@@ -343,7 +343,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		currentState = currentTrajectorySteps;
 
 		/* Selecting action of this state */
-		int stateForAction = -currentState; // to make sure consistency of data
+		int stateForAction = currentState; // to make sure consistency of data
 		int nextAction = selectAction(stateForAction, availableActions);
 
 		//============================================================================================ TRANSITION PHASE
