@@ -304,26 +304,6 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     return failed == 0
 
 
-def check_runs(args_runs: int, config: dict[str, str] = None) -> int:
-    _runs = 0
-    if args_runs:
-        if args_runs <= 0:
-            print(f"Invalid number of runs: {args_runs}")
-            sys.exit(1)
-        _runs = args_runs
-    else:
-        if not config["runs"]:
-            print(f"No number of runs specified in config: {config['id']}")
-            sys.exit(1)
-        if config["runs"] and config["runs"] <= 0:
-            print(f"Invalid number of runs in config: {config['runs']}")
-            sys.exit(1)
-        else:
-            _runs = config["runs"]
-
-    return _runs
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="ONE Simulator multi-run/episodic launcher (version 2), simpler"
@@ -350,9 +330,7 @@ if __name__ == "__main__":
 
         for config in LIST_OF_CONFIGS:
             alg = config["alg"]
-
-            runs = check_runs(args.runs, config)
-
+            runs = config["runs"] if args.runs is None and args.runs <= 0 else args.runs
             bp = config["bp"]
             id = config["id"]
             overrides = config["overrides"] if "overrides" in config else args.d
@@ -384,9 +362,7 @@ if __name__ == "__main__":
 
             config = LIST_OF_CONFIGS[config_num - 1]
             alg = config["alg"]
-
-            runs = check_runs(args.runs, config)
-
+            runs = config["runs"] if args.runs is None and args.runs <= 0 else args.runs
             bp = config["bp"]
             id = config["id"]
             overrides = config["overrides"] if "overrides" in config else args.d
