@@ -308,12 +308,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="ONE Simulator multi-run/episodic launcher (version 2), simpler"
     )
+
     parser.add_argument(
         "-c", "--config", type=str, help="Config index to run", required=False
     )
 
     parser.add_argument(
         "-a", "--all", action="store_true", help="Run all configs"
+    )
+    parser.add_argument(
+        "-r", "--runs", type=int, help="Number of runs for the simulation (overrides the existing configs)", required=False
     )
 
     # Parse arguments
@@ -326,7 +330,7 @@ if __name__ == "__main__":
 
         for config in LIST_OF_CONFIGS:
             alg = config["alg"]
-            runs = config["runs"]
+            runs = config["runs"] if args.runs is None and args.runs <= 0 else args.runs
             bp = config["bp"]
             id = config["id"]
             overrides = config["overrides"] if "overrides" in config else args.d
@@ -358,7 +362,7 @@ if __name__ == "__main__":
 
             config = LIST_OF_CONFIGS[config_num - 1]
             alg = config["alg"]
-            runs = config["runs"]
+            runs = config["runs"] if args.runs is None and args.runs <= 0 else args.runs
             bp = config["bp"]
             id = config["id"]
             overrides = config["overrides"] if "overrides" in config else args.d
