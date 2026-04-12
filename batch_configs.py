@@ -25,6 +25,27 @@ LIST_OF_CONFIGS = [
             "eg_me": 0.1,
         }
     },
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.99999999,
+            "eg_me": 0.1,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.999999999,
+            "eg_me": 0.1,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.9999999999,
+            "eg_me": 0.1,
+        }
+    },
 
     # [ Q-Learning with UCB ]
     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
