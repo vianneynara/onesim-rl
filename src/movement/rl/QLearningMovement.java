@@ -201,7 +201,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 */
 	public QLearningMovement(QLearningMovement proto) {
 		super(proto);
-		this.trajectoryFrequencies = proto.trajectoryFrequencies;
+		this.trajectoryFrequencies = new HashMap<>(proto.trajectoryFrequencies);
 		this.currentCumulativeReward = proto.currentCumulativeReward;
 		this.currentEpisodeReward = proto.currentEpisodeReward;
 		this.currentCumulativeTrueDetections = proto.currentCumulativeTrueDetections;
@@ -214,15 +214,15 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.stepPenalty = proto.stepPenalty;
 		this.foundReward = proto.foundReward;
 		this.targetPrefix = proto.targetPrefix;
-		this.objectiveFound = new HashMap<>();
-		this.qTable = new HashMap<>();
-		this.prevAction = -1;
-		this.prevState = 0;
-		this.currentAction = -1;
-		this.currentState = 0;
-		this.currentTrajectorySteps = 0;
+		this.objectiveFound = new HashMap<>(proto.objectiveFound);
+		this.qTable = new HashMap<>(proto.qTable);
+		this.prevAction = proto.prevAction;
+		this.prevState = proto.prevState;
+		this.currentAction = proto.currentAction;
+		this.currentState = proto.currentState;
+		this.currentTrajectorySteps = proto.currentTrajectorySteps;
 		this.direction = proto.direction;
-		this.lastWaypoint = null;
+		this.lastWaypoint = proto.lastWaypoint;
 	}
 
 	protected int selectAction(int state, Set<Integer> availableActions) {
