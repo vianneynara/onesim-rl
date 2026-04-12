@@ -24,8 +24,8 @@ import java.util.*;
 public class UCBBehavior implements BehaviorPolicy {
 
 	private double explorationConstant;
-	private Map<StateActionPair, Integer> stateActionFrequencies;
-	private Map<Integer, Integer> stateFrequencies;
+	private final Map<StateActionPair, Integer> stateActionFrequencies;
+	private final Map<Integer, Integer> stateFrequencies;
 	private Random random;
 
 	public static final String BEHAVIOR_NS = "BehaviorPolicy.UCB";
@@ -51,11 +51,11 @@ public class UCBBehavior implements BehaviorPolicy {
 		}
 	}
 
-	public UCBBehavior(double explorationConstant, Random random) {
-		this.explorationConstant = explorationConstant;
-		this.random = random;
-		this.stateActionFrequencies = new HashMap<>();
-		this.stateFrequencies = new HashMap<>();
+	public UCBBehavior(UCBBehavior proto) {
+		this.explorationConstant = proto.explorationConstant;
+		this.random = proto.random;
+		this.stateActionFrequencies = new HashMap<>(proto.stateActionFrequencies);
+		this.stateFrequencies = new HashMap<>(proto.stateFrequencies);
 	}
 
 	/**
@@ -148,7 +148,7 @@ public class UCBBehavior implements BehaviorPolicy {
 
 	@Override
 	public BehaviorPolicy replicate() {
-		return new UCBBehavior(explorationConstant, random);
+		return new UCBBehavior(this);
 	}
 
 	@Override

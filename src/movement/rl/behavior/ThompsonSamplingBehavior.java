@@ -45,10 +45,10 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		this.tsProperties = new HashMap<>();
 	}
 
-	public ThompsonSamplingBehavior(Random random, double initialVariance, Map<StateActionPair, TSProperty> tsProperties) {
-		this.random = random;
-		this.initialVariance = initialVariance;
-		this.tsProperties = tsProperties;
+	public ThompsonSamplingBehavior(ThompsonSamplingBehavior proto) {
+		this.random = proto.random;
+		this.initialVariance = proto.initialVariance;
+		this.tsProperties = new HashMap<>(proto.tsProperties);
 	}
 
 	/**
@@ -147,7 +147,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	@Override
 	public BehaviorPolicy replicate() {
-		return new ThompsonSamplingBehavior(random, initialVariance, tsProperties);
+		return new ThompsonSamplingBehavior(this);
 	}
 
 	@Override
@@ -242,7 +242,6 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		 */
 		public static TSProperty fromJsonValue(String jsonValue) {
 			String[] valueParts = jsonValue.split(",");
-			assert valueParts.length == 3 : "Invalid Thompson Sampling property value in persistence data: " + jsonValue;
 
 			double mu = Double.parseDouble(valueParts[0]);
 			double sigma2 = Double.parseDouble(valueParts[1]);
