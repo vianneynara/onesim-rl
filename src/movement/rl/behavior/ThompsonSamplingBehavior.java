@@ -45,10 +45,10 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		this.tsProperties = new HashMap<>();
 	}
 
-	public ThompsonSamplingBehavior(Random random, double initialVariance, Map<StateActionPair, TSProperty> tsProperties) {
-		this.random = random;
-		this.initialVariance = initialVariance;
-		this.tsProperties = tsProperties;
+	public ThompsonSamplingBehavior(ThompsonSamplingBehavior proto) {
+		this.random = proto.random;
+		this.initialVariance = proto.initialVariance;
+		this.tsProperties = new HashMap<>(proto.tsProperties);
 	}
 
 	/**
@@ -147,7 +147,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	@Override
 	public BehaviorPolicy replicate() {
-		return new ThompsonSamplingBehavior(random, initialVariance, tsProperties);
+		return new ThompsonSamplingBehavior(this);
 	}
 
 	@Override
