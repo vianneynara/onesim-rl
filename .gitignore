@@ -11,3 +11,5 @@
 build
 
 /Skripsi/
+/.venv/
+__pycache__/
