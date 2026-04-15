@@ -318,11 +318,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 			if (availableRewards > 0) {
 				// if there's an available reward, multiply it with the foundReward
 				reward = foundReward * availableRewards;
-
-				// increment the reward tracker variable
-				currentEpisodeReward += reward;
 			}
 
+			// increment the reward tracker variable
+			currentEpisodeReward += reward;
+
+//			if (now % 1000 == 1 || reward > 1) System.out.printf("Current Cumulative Reward: %s%n", currentEpisodeReward);
 //				s_t, a_t, reward, s_tp1, availableActions);
 			update(s_t, a_t, reward, s_tp1, availableActions);
 		}
