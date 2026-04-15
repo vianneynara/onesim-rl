@@ -99,8 +99,8 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
 def process_reports(_run_id_dir):
     """
     Common DF includes:
-    episodeNumber, currentEpisodeReward, currentCumulativeReward, previousCumulativeRewards, currentTrueDetections, currentCumulativeTrueDetections, previousCumulativeTrueDetections
-
+    episodeNumber, currentEpisodeReward, currentCumulativeReward, previousCumulativeRewards, currentTrueDetections,
+    currentCumulativeTrueDetections, previousCumulativeTrueDetections
 
     """
     episode_jsons_dir = retrieve_episode_json_dirs(_run_id_dir)
@@ -118,16 +118,6 @@ def process_reports(_run_id_dir):
         # Add the complete row to the dataframe
         common_df = pd.concat([common_df, pd.DataFrame([row_data])], ignore_index=True)
 
-        # episodic_rewards = sequence_of_currentEpisodeReward(json_data)
-        #
-        # # Creating the plot, X axis is the episode number, Y axis is the episodic reward
-        # plt.plot(episodic_rewards)
-        # plt.xlabel("Episode")
-        # plt.ylabel("Episodic Reward")
-        # plt.title(f"Episodic Reward for Episode {episode_json_dir.split('/')[-2]}")
-        # plt.savefig(os.path.join(PLOT_RESULTS_DIR, f"episodic_reward_{episode_json_dir.split('/')[-2]}.png"))
-        # plt.show()
-
     common_df_path = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"common_data.csv")
 
     # make sure path exists
@@ -135,6 +125,7 @@ def process_reports(_run_id_dir):
 
     common_df.to_csv(common_df_path, index=False, sep=";", header=True)
 
+    # currentEpisodeReward
     pp_currentEpisodeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentEpisodeReward.png")
     plot_by_episode(
         common_df,
@@ -143,6 +134,17 @@ def process_reports(_run_id_dir):
         "Episode",
         "Reward",
         pp_currentEpisodeReward
+    )
+
+    # currentTrueDetections
+    pp_currentTrueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentTrueDetections.png")
+    plot_by_episode(
+        common_df,
+        "currentTrueDetections",
+        "Current True Detections",
+        "Episode",
+        "Detection",
+        pp_currentTrueDetections
     )
 
 
