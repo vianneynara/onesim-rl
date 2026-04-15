@@ -22,8 +22,6 @@ public class UCBPolicy implements BehaviorPolicy {
 
     public UCBPolicy(Settings s) {
         Settings set = new Settings(UCB_NS);
-
-        // base exploration strength
         this.c = set.getDouble(EXPLORATION_C, 2.0);
     }
 
@@ -32,7 +30,7 @@ public class UCBPolicy implements BehaviorPolicy {
     }
 
     /* ===============================
-       ACTION SELECTION
+       ACTION SELECTION (FIXED)
        =============================== */
 
     @Override
@@ -42,34 +40,33 @@ public class UCBPolicy implements BehaviorPolicy {
 
         double totalVisits = 0;
 
-        // 🔥 total visits for this state
         for (int a = 0; a < nActions; a++) {
             totalVisits += qTable.getVisitCount(state, a);
         }
 
-        // 🔥 FORCE exploration if any action never tried
-        for (int a = 0; a < nActions; a++) {
-            if (qTable.getVisitCount(state, a) == 0) {
-                return a;
-            }
-        }
-
-        // 🔥 dynamic exploration coefficient (KEY IMPROVEMENT)
-        double dynamicC = c / Math.sqrt(totalVisits + 1);
+        double logTerm = Math.log(totalVisits + 1);
 
         double bestValue = Double.NEGATIVE_INFINITY;
-        int bestAction = 0;
+
+        int bestAction = random.nextInt(nActions);
 
         for (int a = 0; a < nActions; a++) {
 
             double q = qTable.getQValue(state, a);
             double n_sa = qTable.getVisitCount(state, a);
 
-            double exploration = dynamicC * Math.sqrt(Math.log(totalVisits + 1) / n_sa);
+            double ucb;
 
-            double ucb = q + exploration;
+            if (n_sa == 0) {
+                ucb = Double.POSITIVE_INFINITY;
+            } else {
+                double exploration = c * Math.sqrt(logTerm / n_sa);
+                ucb = q + exploration;
+            }
 
-            if (ucb > bestValue) {
+            if (ucb > bestValue ||
+                    (ucb == bestValue && random.nextBoolean())) {
+
                 bestValue = ucb;
                 bestAction = a;
             }
@@ -79,12 +76,12 @@ public class UCBPolicy implements BehaviorPolicy {
     }
 
     /* ===============================
-       UPDATE (NOT USED IN UCB)
+       UPDATE
        =============================== */
 
     @Override
     public void update(int state, int action, double reward, Random random) {
-        // UCB is stateless → no update needed
+
     }
 
     /* ===============================
@@ -102,6 +99,6 @@ public class UCBPolicy implements BehaviorPolicy {
 
     @Override
     public String getName() {
-        return "DynamicUCB(c=" + c + ")";
+        return "UCB(c=" + c + ")";
     }
 }

@@ -63,6 +63,7 @@ public class MonteCarloModel extends RLModel {
             double reward = step.getReward();
 
             /* ===== Efficient return ===== */
+            // Gt ← Rt+1 + γRt+2 +···+ γT−1RT //
             G = gamma * G + reward;
 
             String key = state + "_" + action;
@@ -85,6 +86,7 @@ public class MonteCarloModel extends RLModel {
             double oldQ = getQ(state, action);
             double alpha = 1.0 / count;
 
+            // Q(s,a) ← Q(s,a) + 1/N(s,a) * (Gt −Q(s,a)) //
             double newQ = oldQ + alpha * (G - oldQ);
 
             setQ(state, action, newQ);
