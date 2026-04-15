@@ -94,7 +94,6 @@ public class RLMovementModel extends MovementModel {
                     );
                 }
 
-                /* 🔥 register detection event */
                 info.update(now);
 
                 other.setColor(RED);
@@ -141,7 +140,7 @@ public class RLMovementModel extends MovementModel {
     }
 
     /* =====================================
-       STATE UPDATE (🔥 CORE FIX)
+       STATE UPDATE
        ===================================== */
 
     private void updateState() {

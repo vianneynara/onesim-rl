@@ -72,7 +72,6 @@ public class RLAgent {
 
     private final List<EpisodeStep> episodeSteps;
 
-    /* 🔥 NEW: per-episode reward */
     private double currentEpisodeReward = 0;
 
     public RLAgent(Settings s) {
@@ -137,8 +136,6 @@ public class RLAgent {
     public void learn(int state, int action, double reward, int nextState) {
 
         episodeSteps.add(new EpisodeStep(state, action, reward));
-
-        /* 🔥 NEW: accumulate per-episode reward */
         currentEpisodeReward += reward;
 
         rlModel.update(state, action, reward, nextState);
@@ -216,7 +213,7 @@ public class RLAgent {
                         path + ".csv",
                         getEpsilon(),
                         rlModel.getTotalTrainingReward(),
-                        currentEpisodeReward,   // 🔥 NEW
+                        currentEpisodeReward,
                         episode
                 );
 
@@ -226,7 +223,7 @@ public class RLAgent {
                         path + ".json",
                         getEpsilon(),
                         rlModel.getTotalTrainingReward(),
-                        currentEpisodeReward,   // 🔥 NEW
+                        currentEpisodeReward,
                         episode
                 );
             }
@@ -269,19 +266,6 @@ public class RLAgent {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    /* ===============================
-       RESET EPISODE
-       =============================== */
-
-    public void resetEpisode() {
-        episodeSteps.clear();
-
-        /* 🔥 IMPORTANT */
-        currentEpisodeReward = 0;
-
-        episode++;
     }
 
     /* ===============================
