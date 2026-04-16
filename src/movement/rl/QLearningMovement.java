@@ -686,7 +686,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentTrajectorySteps = epd.currentTrajectorySteps;
 		this.direction = epd.direction;
 		this.currentPosition = epd.currentPosition;
-		System.out.println("Loading EPD.currentPosition: " + epd.currentPosition);
+//		System.out.println("Loading EPD.currentPosition: " + epd.currentPosition);
 
 		/* Loading Q-Table */
 		qTable.clear();
@@ -709,12 +709,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		}
 
 		/* Loading reward recorder */
-		System.out.println("Loading EPD.currentCumulativeReward: " + epd.currentCumulativeReward);
+//		System.out.println("Loading EPD.currentCumulativeReward: " + epd.currentCumulativeReward);
 		this.currentCumulativeReward = epd.currentCumulativeReward;
 		this.currentEpisodeReward = 0.0;
 
 		/* Loading Total occurrences recorder */
-		System.out.println("Reading EPD.currentCumulativeTrueDetections: " + epd.currentCumulativeTrueDetections);
+//		System.out.println("Reading EPD.currentCumulativeTrueDetections: " + epd.currentCumulativeTrueDetections);
 		this.currentCumulativeTrueDetections = epd.currentCumulativeTrueDetections;
 
 		// Now, also load persistence for the BP
