@@ -11,7 +11,13 @@ package core;
 public class Coord implements Cloneable, Comparable<Coord> {
 	private double x;
 	private double y;
-	
+
+	/** No argument constructor, used for fastjson to properly deserialize. */
+	public Coord() {
+		this(0, 0);
+	}
+
+
 	/**
 	 * Constructor.
 	 * @param x Initial X-coordinate
