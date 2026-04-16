@@ -26,7 +26,7 @@ public class EpisodicManagerReport extends Report {
 
 		/* This just prints an announcement */
 		int currentEpisode = (new Settings(EpisodicPersistenceManager.EPISODIC_NS)).getInt(EpisodicPersistenceManager.EPISODE_NUMBER_S, 1);
-		System.out.printf("### SAVING EPISODE %d PERSISTENCE DATA ###%n", currentEpisode);
+		System.out.printf("[EpisodicManagerReport] ### SAVING EPISODE %d PERSISTENCE DATA ###%n", currentEpisode);
 
 		/* Grabbing the movement of the host that implements EpisodicPersistable and executes episode saving. */
 		SimScenario.getInstance()

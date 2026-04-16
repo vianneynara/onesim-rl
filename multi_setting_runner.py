@@ -29,7 +29,7 @@ default_lfe_config = ".\\settings\\skripsi\\randomsearch-lf-episodic.cfg"
 lfepisodic_template = (
     ".\\one.bat -b 1 "
     "-d Report.reportDir=reports/skripsi/lf-episodic/run-id/IDENTIFIER/ep/EP"
-    "-d Report.persistencePath=reports/skripsi/lf-episodic/run-id/IDENTIFIER/_persistence.json"
+    "@@EpisodicPersistenceManager.persistencePath=reports/skripsi/lf-episodic/run-id/IDENTIFIER/_persistence.json"
     "@@EpisodicPersistenceManager.episodeNumber=EP "
     f"{default_lfe_config}"
 )

@@ -46,11 +46,11 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 		}
 	}
 
-	public EpsilonGreedyBehavior(double epsilon, double decay, double minEpsilon, Random random) {
-		this.epsilon = epsilon;
-		this.epsilonDecay = decay;
-		this.minEpsilon = minEpsilon;
-		this.random = random;
+	public EpsilonGreedyBehavior(EpsilonGreedyBehavior proto) {
+		this.epsilon = proto.epsilon;
+		this.epsilonDecay = proto.epsilonDecay;
+		this.minEpsilon = proto.minEpsilon;
+		this.random = proto.random;
 	}
 
 	/**
@@ -131,12 +131,17 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 
 	@Override
 	public BehaviorPolicy replicate() {
-		return new EpsilonGreedyBehavior(epsilon, epsilonDecay, minEpsilon, random);
+		return new EpsilonGreedyBehavior(this);
 	}
 
 	@Override
 	public String getName() {
 		return "EpsilonGreedyBehavior(ε=" + String.format("%.3f", epsilon) + ")";
+	}
+
+	@Override
+	public void setRandom(Random random) {
+		this.random = random;
 	}
 
 	@Override
