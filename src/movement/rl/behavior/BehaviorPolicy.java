@@ -5,6 +5,7 @@ import movement.rl.persistence.EpisodicPersistable;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 /**
@@ -45,4 +46,9 @@ public interface BehaviorPolicy extends EpisodicPersistable, Serializable, Clone
      * Get policy name for logging/debugging
      */
     String getName();
+
+	/**
+	 * Sets the Random instance for the current behavioral policy for learning (exploration) decisions.
+	 * */
+	void setRandom(Random random);
 }

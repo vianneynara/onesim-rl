@@ -140,6 +140,11 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	}
 
 	@Override
+	public void setRandom(Random random) {
+		this.random = random;
+	}
+
+	@Override
 	public void saveTo(EpisodicPersistenceData epd) {
 		epd.epsilon = this.epsilon;
 		System.out.println("[EpsilonGreedyBehavior] Saved epsilon of: " + epd.epsilon);
