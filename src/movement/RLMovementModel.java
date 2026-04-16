@@ -4,6 +4,7 @@ import core.*;
 import mcrltest.agent.RLAgent;
 import mcrltest.utils.DetectionInfo;
 
+import java.sql.SQLOutput;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,7 +16,6 @@ public class RLMovementModel extends MovementModel {
     private int prevAction;
     private int currentState;
 
-    /* 🔥 now starts from 1 */
     private int stepCounter;
 
     private Coord lastWaypoint;
@@ -32,7 +32,6 @@ public class RLMovementModel extends MovementModel {
 
         this.agent = new RLAgent(settings);
 
-        /* 🔥 FIXED: start from 1 */
         this.prevState = 1;
         this.prevAction = -1;
         this.currentState = 1;
@@ -49,7 +48,6 @@ public class RLMovementModel extends MovementModel {
 
         this.agent = new RLAgent(new Settings(RLAgent.RLAGENT_NS));
 
-        /* 🔥 FIXED: start from 1 */
         this.prevState = 1;
         this.prevAction = -1;
         this.currentState = 1;
@@ -76,7 +74,6 @@ public class RLMovementModel extends MovementModel {
         if (!con.isUp()) return;
 
         DTNHost other = con.getOtherNode(getHost());
-
         if (other == null || other == getHost()) return;
 
         if (other.getGroupId().startsWith(agent.getTargetPrefix())) {
@@ -117,7 +114,7 @@ public class RLMovementModel extends MovementModel {
     }
 
     /* =====================================
-       REWARD FUNCTION (FIXED)
+       REWARD
        ===================================== */
 
     private double computeReward() {
@@ -126,7 +123,6 @@ public class RLMovementModel extends MovementModel {
         int foundTargets = 0;
 
         for (DetectionInfo info : objectiveFound.values()) {
-
             if (info.consumeDetectionReward()) {
                 foundTargets++;
             }
@@ -145,20 +141,16 @@ public class RLMovementModel extends MovementModel {
 
     private void updateState() {
 
-        /* first step */
         if (prevAction == -1) {
             stepCounter = 1;
             currentState = 1;
             return;
         }
 
-        /* action 0 = straight → increase */
         if (prevAction == 0) {
-            stepCounter++;
-        }
-        /* action 1 = turn → reset */
-        else {
-            stepCounter = 1;
+            stepCounter++;   // go straight → continue
+        } else {
+            stepCounter = 1; // turn → reset
         }
 
         currentState = stepCounter;
@@ -170,10 +162,11 @@ public class RLMovementModel extends MovementModel {
 
     private void applyAction(int action) {
 
-        /* turn */
+        // 🔥 ONLY change direction if TURN
         if (action == 1) {
             direction = rng.nextDouble() * 2 * Math.PI;
         }
+        // action == 0 → KEEP SAME DIRECTION
     }
 
     /* =====================================
@@ -186,11 +179,11 @@ public class RLMovementModel extends MovementModel {
 
         p.addWaypoint(lastWaypoint);
 
-        double nextX = lastWaypoint.getX() +
-                agent.getSpeed() * Math.cos(direction);
+        double nextX = lastWaypoint.getX()
+                + agent.getSpeed() * Math.cos(direction);
 
-        double nextY = lastWaypoint.getY() +
-                agent.getSpeed() * Math.sin(direction);
+        double nextY = lastWaypoint.getY()
+                + agent.getSpeed() * Math.sin(direction);
 
         nextX = Math.max(0, Math.min(getMaxX(), nextX));
         nextY = Math.max(0, Math.min(getMaxY(), nextY));
@@ -204,42 +197,46 @@ public class RLMovementModel extends MovementModel {
     }
 
     /* =====================================
-       MAIN RL LOOP
+       MAIN LOOP
        ===================================== */
 
     @Override
     public Path getPath() {
 
-        /* learn from previous step */
         if (prevAction != -1) {
             double reward = computeReward();
             learn(reward);
         }
 
-        /* update state */
         updateState();
 
-        /* choose action */
         int action = selectAction(currentState);
 
-        /* 🔥 force turn if target detected */
         if (targetDetectedThisStep) {
             action = 1;
             targetDetectedThisStep = false;
         }
 
-        /* store transition */
         prevState = currentState;
         prevAction = action;
 
-        /* execute */
         applyAction(action);
+
+        /* 🔥 SAVE CURRENT STATE (PERSISTENCE) */
+        Map<String, Object> state = new HashMap<>();
+        state.put("x", lastWaypoint.getX());
+        state.put("y", lastWaypoint.getY());
+        state.put("direction", direction);
+        state.put("state", currentState);
+        state.put("step", stepCounter);
+
+        agent.setAgentState(state);
 
         return generatePath();
     }
 
     /* =====================================
-       INITIAL POSITION
+       INITIAL POSITION (🔥 KEY FIX)
        ===================================== */
 
     @Override
@@ -247,12 +244,37 @@ public class RLMovementModel extends MovementModel {
 
         agent.tryLoad();
 
+        Map<String, Object> state = agent.getAgentState();
+
+        /* ✅ LOAD FROM FILE */
+        if (state != null && state.containsKey("x")) {
+
+            double x = ((Number) state.get("x")).doubleValue();
+            double y = ((Number) state.get("y")).doubleValue();
+
+            this.direction = ((Number) state.getOrDefault("direction", 0.0)).doubleValue();
+            this.currentState = ((Number) state.getOrDefault("state", 1)).intValue();
+            this.prevState = currentState;
+            this.stepCounter = ((Number) state.getOrDefault("step", 1)).intValue();
+
+            Coord c = new Coord(x, y);
+            lastWaypoint = c;
+
+            System.out.println("📍 Loaded Position → (" + x + ", " + y + ")");
+            System.out.println("➡️ Direction: " + direction + ", State: " + currentState);
+
+            return c;
+        }
+
+        /* ✅ FIRST RUN (NO SAVE) */
         Coord c = new Coord(
                 rng.nextDouble() * getMaxX(),
                 rng.nextDouble() * getMaxY()
         );
 
         lastWaypoint = c;
+
+        System.out.println("🎲 Random Start Position");
 
         return c;
     }
