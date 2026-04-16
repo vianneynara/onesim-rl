@@ -67,6 +67,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	public static final String FOUND_REWARD_S = "foundReward";
 	public static final String SPEED_S = "agentSpeed";
 	public static final String TARGET_COOLDOWN_S = "targetCooldown";
+	public static final String LEARNING_SEED_S = "learningSeed";
 
 	// [Configuration - Fixed parameters]
 	private final double agentSpeed;
@@ -122,9 +123,32 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 */
 	private double direction;
 
+	/**
+	 * An addition to separate learning RNG (used in behavior policy), to create differentiation between
+	 * RNG used to initialize locations of the target nodes and the learning behavior. Especially when
+	 * we need the same locations of the targets per episode instead of position re-initialization per episode.
+	 *
+	 */
+	private final Random learningRNG;
+
 	public QLearningMovement(Settings settings) {
 		super(settings);
 		Settings s = new Settings(QLEARNING_NS);
+
+		/* Initialize seed if not 0, initialize random seed if 0, inherit if not specified. */
+		if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) != 0) {
+			this.learningRNG = new Random(s.getInt(LEARNING_SEED_S));
+		} else if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) == 0) {
+			this.learningRNG = new Random();
+		} else {
+			// Inherit the seed from MovementModel
+			Settings movementSettings = new Settings(MOVEMENT_MODEL_NS);
+			if (movementSettings.contains(RNG_SEED) && movementSettings.getInt(RNG_SEED) != 0) {
+				this.learningRNG = new Random(movementSettings.getInt(RNG_SEED));
+			} else {
+				this.learningRNG = new Random();  // truly random if not set
+			}
+		}
 
 		this.trajectoryFrequencies = new HashMap<>();
 		this.currentCumulativeReward = 0.0;
@@ -201,6 +225,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 */
 	public QLearningMovement(QLearningMovement proto) {
 		super(proto);
+		this.learningRNG = proto.learningRNG;
+
 		this.trajectoryFrequencies = new HashMap<>(proto.trajectoryFrequencies);
 		this.currentCumulativeReward = proto.currentCumulativeReward;
 		this.currentEpisodeReward = proto.currentEpisodeReward;
