@@ -67,6 +67,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	public static final String FOUND_REWARD_S = "foundReward";
 	public static final String SPEED_S = "agentSpeed";
 	public static final String TARGET_COOLDOWN_S = "targetCooldown";
+	public static final String LEARNING_SEED_S = "learningSeed";
 
 	// [Configuration - Fixed parameters]
 	private final double agentSpeed;
@@ -116,11 +117,25 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	/**
 	 * Stores the previous Coordinate of the agent
 	 */
-	private Coord lastWaypoint;
+	private Coord currentPosition;
 	/**
 	 * A radian value representing the direction of movement, used for reward calculation. Range: [0, 2*PI].
 	 */
 	private double direction;
+
+	/**
+	 * An addition to separate learning RNG (used in behavior policy), to create differentiation between
+	 * RNG used to initialize locations of the target nodes and the learning behavior. Especially when
+	 * we need the same locations of the targets per episode instead of position re-initialization per episode.
+	 *
+	 */
+	public static Random learningRNG;
+
+	// static initialization of all movement models' random number generator
+	static {
+		DTNSim.registerForReset(QLearningMovement.class.getCanonicalName());
+		reset();
+	}
 
 	public QLearningMovement(Settings settings) {
 		super(settings);
@@ -141,10 +156,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.foundReward = s.getDouble(FOUND_REWARD_S, 10.0);
 
 		// Load the behavior policy & target prefix
-		System.out.println("before loading BP");
+//		System.out.println("before loading BP");
 		String behaviorClassName = s.getSetting(BEHAVIOR_POLICY_S, "movement.rl.behavior.EpsilonGreedyBehavior");
-		System.out.println("is it loading this");
+//		System.out.println("is it loading this");
 		this.behaviorPolicy = (BehaviorPolicy) s.createIntializedObject(behaviorClassName);
+		this.behaviorPolicy.setRandom(learningRNG);
+
 		this.targetPrefix = s.getSetting(TARGET_PREFIX_S, "T");
 		this.agentSpeed = s.getDouble(SPEED_S, 1.0);
 		this.targetCooldown = s.getDouble(TARGET_COOLDOWN_S, 0.0);
@@ -160,7 +177,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		// Initialize direction randomly
 		this.direction = rng.nextDouble() * 2 * Math.PI;
-		this.lastWaypoint = null; // will be initialized on first getPath()
+		this.currentPosition = null; // will be initialized on first getPath()
 
 		// Re/Initializes episodic persistence
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
@@ -222,7 +239,38 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentState = proto.currentState;
 		this.currentTrajectorySteps = proto.currentTrajectorySteps;
 		this.direction = proto.direction;
-		this.lastWaypoint = proto.lastWaypoint;
+
+		if (proto.currentPosition != null) {
+			this.currentPosition = new Coord(proto.currentPosition.getX(), proto.currentPosition.getY());
+		} else {
+			this.currentPosition = null;
+		}
+
+	}
+
+	/**
+	 * Resets all static fields to default values
+	 */
+	public static void reset() {
+		Settings s = new Settings(QLEARNING_NS);
+
+		/* Initialize seed if not 0, initialize random seed if 0, inherit if not specified. */
+		if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) != 0) {
+			System.out.printf("[%s] Using %s.%s of: %s %n", QLearningMovement.class.getName(), QLEARNING_NS, LEARNING_SEED_S, s.getInt(LEARNING_SEED_S));
+			learningRNG = new Random(s.getInt(LEARNING_SEED_S));
+		} else if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) == 0) {
+			System.out.printf("[%s] Using a random learning RNG seed.", QLearningMovement.class.getName());
+			learningRNG = new Random();
+		} else {
+			// Inherit the seed from MovementModel
+			System.out.printf("[%s] Using a random learning RNG seed inherited from MovementModel.", QLearningMovement.class.getName());
+			Settings movementSettings = new Settings(MOVEMENT_MODEL_NS);
+			if (movementSettings.contains(RNG_SEED) && movementSettings.getInt(RNG_SEED) != 0) {
+				learningRNG = new Random(movementSettings.getInt(RNG_SEED));
+			} else {
+				learningRNG = new Random();  // truly random if not set
+			}
+		}
 	}
 
 	protected int selectAction(int state, Set<Integer> availableActions) {
@@ -368,14 +416,14 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		/* Generate path for this action. */
 		Path p = new Path(agentSpeed);
-		p.addWaypoint(lastWaypoint);
+		p.addWaypoint(currentPosition);
 
-		double nextX = lastWaypoint.getX() + agentSpeed * Math.cos(direction);
-		double nextY = lastWaypoint.getY() + agentSpeed * Math.sin(direction);
+		double nextX = currentPosition.getX() + agentSpeed * Math.cos(direction);
+		double nextY = currentPosition.getY() + agentSpeed * Math.sin(direction);
 
 		// If the straight step would exit the world bounds, bounce off the wall instead.
 		if (nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0) {
-			double[] bounced = bounce(lastWaypoint.getX(), lastWaypoint.getY(), nextX, nextY);
+			double[] bounced = bounce(currentPosition.getX(), currentPosition.getY(), nextX, nextY);
 			double bounceX = bounced[0];
 			double bounceY = bounced[1];
 			direction = bounced[2]; // reflected direction
@@ -396,7 +444,9 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		Coord nextWaypoint = new Coord(nextX, nextY);
 		p.addWaypoint(nextWaypoint);
-		lastWaypoint = nextWaypoint;
+		currentPosition = nextWaypoint;
+
+//		if (SimClock.getTime() % 1000 == 1) System.out.println("CURRENT POSITION: " + currentPosition);
 
 		return p;
 	}
@@ -482,10 +532,14 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 */
 	@Override
 	public Coord getInitialLocation() {
-		assert rng != null : "MovementModel not initialized!";
-		Coord c = new Coord(rng.nextDouble() * getMaxX(), rng.nextDouble() * getMaxY());
-		this.lastWaypoint = c;
-		return c;
+		if (currentPosition != null) {
+			return currentPosition;
+		} else {
+			assert rng != null : "MovementModel not initialized!";
+			Coord c = new Coord(rng.nextDouble() * getMaxX(), rng.nextDouble() * getMaxY());
+			this.currentPosition = c;
+			return c;
+		}
 	}
 
 	@Override
@@ -587,6 +641,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		epd.currentState = this.currentState;
 		epd.currentTrajectorySteps = this.currentTrajectorySteps;
 		epd.direction = this.direction;
+		epd.currentPosition = this.currentPosition;
 
 		/* Saving Q-Table */
 		epd.qTable = new HashMap<>();
@@ -630,6 +685,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentState = epd.currentState;
 		this.currentTrajectorySteps = epd.currentTrajectorySteps;
 		this.direction = epd.direction;
+		this.currentPosition = epd.currentPosition;
+		System.out.println("Loading EPD.currentPosition: " + epd.currentPosition);
 
 		/* Loading Q-Table */
 		qTable.clear();

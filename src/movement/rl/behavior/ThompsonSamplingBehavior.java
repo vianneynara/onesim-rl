@@ -156,6 +156,11 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	}
 
 	@Override
+	public void setRandom(Random random) {
+		this.random = random;
+	}
+
+	@Override
 	public void saveTo(EpisodicPersistenceData epd) {
 		// Save Thompson Sampling state variables to persistence data
 		if (epd.tsProperties == null) {

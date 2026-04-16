@@ -157,6 +157,11 @@ public class UCBBehavior implements BehaviorPolicy {
 	}
 
 	@Override
+	public void setRandom(Random random) {
+		this.random = random;
+	}
+
+	@Override
 	public void saveTo(EpisodicPersistenceData epd) {
 		/* Save exploration constant */
 		epd.ucbExplorationConstant = this.explorationConstant;
