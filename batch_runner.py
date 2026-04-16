@@ -202,7 +202,8 @@ def build_result_id_dir(alg: str, runs: int, bp: str = None, overrides: list[str
 def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     script = [
         r".\one.bat",
-        "-b", "1",
+        "-b",
+        "1",
     ]
 
     # Add overrides only if provided
