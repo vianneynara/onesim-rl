@@ -218,8 +218,6 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 */
 	public QLearningMovement(QLearningMovement proto) {
 		super(proto);
-		this.learningRNG = proto.learningRNG;
-
 		this.trajectoryFrequencies = new HashMap<>(proto.trajectoryFrequencies);
 		this.currentCumulativeReward = proto.currentCumulativeReward;
 		this.currentEpisodeReward = proto.currentEpisodeReward;
