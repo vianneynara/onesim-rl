@@ -13,7 +13,6 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy, Polic
     private double epsilon;
     private final double minEpsilon;
     private final double decayRate;
-    private Random random;
 
     public static final String BEHAVIOR_NS = "BehaviorPolicy.EpsilonGreedy";
     public static final String EPSILON_S = "epsilon";
@@ -28,24 +27,14 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy, Polic
         this.minEpsilon = behaviorSettings.getDouble(MIN_EPSILON_S, 0.01);
 
         System.out.println("==============================================================" + epsilon);
-
-        // Use MovementModel RNG for reproducibility
-        this.random = MovementModel.getRandom();
-
-        if (this.random == null) {
-            System.out.println("Warning: MovementModel random not initialized, using new Random()");
-            this.random = new Random();
-        }
     }
 
     public EpsilonGreedyPolicy(double epsilon,
                                double minEpsilon,
-                               double decayRate,
-                               Random random) {
+                               double decayRate) {
         this.epsilon = epsilon;
         this.minEpsilon = minEpsilon;
         this.decayRate = decayRate;
-        this.random = random;
     }
 
     /**
@@ -54,7 +43,7 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy, Polic
     @Override
     public Integer selectAction(int state, QTable qTable, Random random) {
 
-        Random rng = (random != null) ? random : this.random;
+        Random rng = random;
 
         if (rng.nextDouble() < epsilon) {
             // Explore
@@ -95,8 +84,7 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy, Polic
         return new EpsilonGreedyPolicy(
                 epsilon,
                 minEpsilon,
-                decayRate,
-                random
+                decayRate
         );
     }
 
@@ -128,8 +116,6 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy, Polic
     public Map<String, Object> exportState() {
         Map<String, Object> map = new HashMap<>();
         map.put("epsilon", epsilon);
-        map.put("minEpsilon", minEpsilon);
-        map.put("decayRate", decayRate);
         return map;
     }
 
