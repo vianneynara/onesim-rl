@@ -4,17 +4,26 @@
  */
 package core;
 
+import lombok.Setter;
+
 /**
  * Class to hold 2D coordinates and perform simple arithmetics and
  * transformations
  */
 public class Coord implements Cloneable, Comparable<Coord> {
+	@Setter
 	private double x;
+	@Setter
 	private double y;
 
 	/** No argument constructor, used for fastjson to properly deserialize. */
 	public Coord() {
 		this(0, 0);
+	}
+
+	/** Copy constructor. */
+	public Coord(Coord other) {
+		this(other.x, other.y);
 	}
 
 
