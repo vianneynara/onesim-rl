@@ -198,7 +198,7 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 
 	@Override
 	public void saveTo(EpisodicPersistenceData epd) {
-		System.out.printf("[%s] Saving persistence data...%n", LevyFlightEpisodic.class.getName());
+//		System.out.printf("[%s] Saving persistence data...%n", LevyFlightEpisodic.class.getName());
 
 		/* Saving trajectory recorder */
 		epd.trajectoryFrequencies = new HashMap<>();
@@ -214,7 +214,7 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 
 	@Override
 	public void loadFrom(EpisodicPersistenceData epd) {
-		System.out.printf("[%s] Loading persistence data...%n", this.getClass().getName());
+//		System.out.printf("[%s] Loading persistence data...%n", this.getClass().getName());
 
 		/* Loading trajectory recorder */
 		trajectoryFrequencies.clear();
@@ -225,7 +225,7 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		}
 
 		/* Loading Total occurrences recorder */
-		System.out.printf("[%s] Reading EPD.currentCumulativeTrueDetections: " + epd.currentCumulativeTrueDetections, this.getClass().getName());
+//		System.out.printf("[%s] Reading EPD.currentCumulativeTrueDetections: " + epd.currentCumulativeTrueDetections, this.getClass().getName());
 		this.currentCumulativeTrueDetections = epd.currentCumulativeTrueDetections;
 	}
 }

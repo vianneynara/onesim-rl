@@ -117,7 +117,7 @@ public class EpisodicPersistenceManager {
 		try {
 			Path path = Paths.get(persistencePath);
 
-			System.out.println("current path: " + persistencePath);
+			System.out.println("[EpisodicPersistenceManager] Current path: " + persistencePath);
 			// Ensure parent directories exist
 			if (path.getParent() != null) {
 				Files.createDirectories(path.getParent());

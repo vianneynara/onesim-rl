@@ -39,7 +39,7 @@ public class RewardReporter extends Report {
 
 		/* Retrieves the episode's total reward and the cumulative rewards (from previous episodes) */
 		double currentEpisodeReward = representative.retrieveCurrentReward();
-		System.out.println("Retrieved reward of " + currentEpisodeReward);
+//		System.out.println("Retrieved reward of " + currentEpisodeReward);
 
 		/* Load the EPD from the JSON file using the manager */
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
