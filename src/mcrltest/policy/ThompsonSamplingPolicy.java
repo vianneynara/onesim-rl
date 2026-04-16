@@ -3,7 +3,6 @@ package mcrltest.policy;
 import core.Settings;
 import mcrltest.utils.QTable;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -13,7 +12,6 @@ public class ThompsonSamplingPolicy implements BehaviorPolicy, PolicyPersistence
     public static final String TS_NS = "BehaviorPolicy.Thompson";
 
     private final double initialVariance;
-
     private final Map<String, TSProperty> tsMap = new HashMap<>();
 
     public ThompsonSamplingPolicy(Settings s) {
@@ -27,7 +25,7 @@ public class ThompsonSamplingPolicy implements BehaviorPolicy, PolicyPersistence
 
     /* ===============================
        SELECT ACTION
-       =============================== */
+    =============================== */
 
     @Override
     public Integer selectAction(int state, QTable qTable, Random random) {
@@ -58,7 +56,7 @@ public class ThompsonSamplingPolicy implements BehaviorPolicy, PolicyPersistence
 
     /* ===============================
        UPDATE
-       =============================== */
+    =============================== */
 
     @Override
     public void update(int state, int action, double reward, Random random) {
@@ -91,29 +89,8 @@ public class ThompsonSamplingPolicy implements BehaviorPolicy, PolicyPersistence
     }
 
     /* ===============================
-       EXPORT / IMPORT (hanya untuk I/O)
-       =============================== */
-
-    /**
-     * Dipanggil RLAgent saat save — mengembalikan snapshot tsMap.
-     * QTable tidak ikut campur sama sekali.
-     */
-    public Map<String, TSProperty> exportTsMap() {
-        return Collections.unmodifiableMap(tsMap);
-    }
-
-    /**
-     * Dipanggil RLAgent setelah load — menerima tsMap dari LoadResult,
-     * bukan dari QTable.
-     */
-    public void importTsMap(Map<String, TSProperty> loaded) {
-        tsMap.clear();
-        tsMap.putAll(loaded);
-    }
-
-    /* ===============================
        UTIL
-       =============================== */
+    =============================== */
 
     private String key(int state, int action) {
         return state + "_" + action;
@@ -121,7 +98,7 @@ public class ThompsonSamplingPolicy implements BehaviorPolicy, PolicyPersistence
 
     /* ===============================
        REPLICATE
-       =============================== */
+    =============================== */
 
     @Override
     public BehaviorPolicy replicate() {
@@ -134,8 +111,8 @@ public class ThompsonSamplingPolicy implements BehaviorPolicy, PolicyPersistence
     }
 
     /* ===============================
-       POLICY PERSISTENCE
-       =============================== */
+       POLICY PERSISTENCE (FIXED)
+    =============================== */
 
     @Override
     public String getPolicyType() {
@@ -144,40 +121,151 @@ public class ThompsonSamplingPolicy implements BehaviorPolicy, PolicyPersistence
 
     @Override
     public Map<String, Object> exportState() {
-        Map<String, Object> map = new HashMap<>();
-        map.put("tsMap", tsMap);
-        return map;
+
+        Map<String, Object> root = new HashMap<>();
+        Map<String, Object> serializedTS = new HashMap<>();
+
+        for (Map.Entry<String, TSProperty> entry : tsMap.entrySet()) {
+
+            TSProperty p = entry.getValue();
+
+            Map<String, Object> obj = new HashMap<>();
+            obj.put("mean", p.mean);
+            obj.put("variance", p.variance);
+            obj.put("count", p.count);
+
+            serializedTS.put(entry.getKey(), obj);
+        }
+
+        root.put("tsMap", serializedTS);
+        return root;
     }
+
+    /* ===============================
+       🔥 SAFE IMPORT (FIXED)
+    =============================== */
 
     @Override
     public void importState(Map<String, Object> data) {
-        if (data.containsKey("tsMap")) {
-            tsMap.clear();
-            tsMap.putAll((Map<String, TSProperty>) data.get("tsMap"));
+
+        if (!data.containsKey("tsMap")) return;
+
+        tsMap.clear();
+
+        Object tsObj = data.get("tsMap");
+
+        Map<String, Object> serializedTS;
+
+        /* ✅ CASE 1: NORMAL MAP */
+        if (tsObj instanceof Map) {
+            serializedTS = (Map<String, Object>) tsObj;
+        }
+
+        /* ⚠️ CASE 2: STRING (your parser problem) */
+        else if (tsObj instanceof String) {
+
+            serializedTS = new HashMap<>();
+
+            String str = ((String) tsObj)
+                    .replace("{", "")
+                    .replace("}", "")
+                    .replace("\"", "");
+
+            String[] pairs = str.split(",");
+
+            for (String p : pairs) {
+
+                if (!p.contains("=")) continue;
+
+                String[] kv = p.split("=");
+
+                String key = kv[0].trim();
+                String val = kv[1].trim();
+
+                // val format: mean=..., variance=..., count=...
+                TSProperty prop = parseTSProperty(val);
+                serializedTS.put(key, prop);
+            }
+        }
+
+        else {
+            return;
+        }
+
+        /* 🔥 FINAL LOAD */
+        for (Map.Entry<String, Object> entry : serializedTS.entrySet()) {
+
+            Object obj = entry.getValue();
+
+            if (obj instanceof TSProperty) {
+                tsMap.put(entry.getKey(), (TSProperty) obj);
+                continue;
+            }
+
+            if (!(obj instanceof Map)) continue;
+
+            Map<String, Object> map = (Map<String, Object>) obj;
+
+            double mean     = getDouble(map.get("mean"), 0.0);
+            double variance = getDouble(map.get("variance"), initialVariance);
+            int count       = getInt(map.get("count"), 0);
+
+            tsMap.put(entry.getKey(), new TSProperty(mean, variance, count));
         }
     }
 
     /* ===============================
-       TS PROPERTY CLASS
-       =============================== */
+       🔥 HELPERS
+    =============================== */
+
+    private TSProperty parseTSProperty(String str) {
+
+        double mean = 0.0;
+        double variance = initialVariance;
+        int count = 0;
+
+        String[] parts = str.split(",");
+
+        for (String part : parts) {
+
+            if (part.contains("mean"))
+                mean = Double.parseDouble(part.split("=")[1]);
+
+            if (part.contains("variance"))
+                variance = Double.parseDouble(part.split("=")[1]);
+
+            if (part.contains("count"))
+                count = Integer.parseInt(part.split("=")[1]);
+        }
+
+        return new TSProperty(mean, variance, count);
+    }
+
+    private double getDouble(Object o, double def) {
+        return (o instanceof Number) ? ((Number) o).doubleValue() : def;
+    }
+
+    private int getInt(Object o, int def) {
+        return (o instanceof Number) ? ((Number) o).intValue() : def;
+    }
+
+    /* ===============================
+       TS PROPERTY
+    =============================== */
 
     public static class TSProperty {
         public double mean;
         public double variance;
-        public int    count;
+        public int count;
 
         public TSProperty(double mean, double variance) {
             this(mean, variance, 0);
         }
 
         public TSProperty(double mean, double variance, int count) {
-            this.mean     = mean;
+            this.mean = mean;
             this.variance = variance;
-            this.count    = count;
+            this.count = count;
         }
-
-        public double getMean()     { return mean; }
-        public double getVariance() { return variance; }
-        public int    getCount()    { return count; }
     }
 }
