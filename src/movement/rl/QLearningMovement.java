@@ -239,7 +239,13 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentState = proto.currentState;
 		this.currentTrajectorySteps = proto.currentTrajectorySteps;
 		this.direction = proto.direction;
-		this.currentPosition = proto.currentPosition;
+
+		if (proto.currentPosition != null) {
+			this.currentPosition = new Coord(proto.currentPosition.getX(), proto.currentPosition.getY());
+		} else {
+			this.currentPosition = null;
+		}
+
 	}
 
 	/**
@@ -680,6 +686,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentTrajectorySteps = epd.currentTrajectorySteps;
 		this.direction = epd.direction;
 		this.currentPosition = epd.currentPosition;
+		System.out.println("Loading EPD.currentPosition: " + epd.currentPosition);
 
 		/* Loading Q-Table */
 		qTable.clear();
