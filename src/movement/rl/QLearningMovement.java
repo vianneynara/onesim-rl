@@ -250,11 +250,14 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		/* Initialize seed if not 0, initialize random seed if 0, inherit if not specified. */
 		if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) != 0) {
+			System.out.printf("[%s] Using %s.%s of: %s %n", QLearningMovement.class.getName(), QLEARNING_NS, LEARNING_SEED_S, s.getInt(LEARNING_SEED_S));
 			learningRNG = new Random(s.getInt(LEARNING_SEED_S));
 		} else if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) == 0) {
+			System.out.printf("[%s] Using a random learning RNG seed.", QLearningMovement.class.getName());
 			learningRNG = new Random();
 		} else {
 			// Inherit the seed from MovementModel
+			System.out.printf("[%s] Using a random learning RNG seed inherited from MovementModel.", QLearningMovement.class.getName());
 			Settings movementSettings = new Settings(MOVEMENT_MODEL_NS);
 			if (movementSettings.contains(RNG_SEED) && movementSettings.getInt(RNG_SEED) != 0) {
 				learningRNG = new Random(movementSettings.getInt(RNG_SEED));
