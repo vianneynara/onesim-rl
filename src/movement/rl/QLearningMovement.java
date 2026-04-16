@@ -129,26 +129,17 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 * we need the same locations of the targets per episode instead of position re-initialization per episode.
 	 *
 	 */
-	private final Random learningRNG;
+	public static Random learningRNG;
+
+	// static initialization of all movement models' random number generator
+	static {
+		DTNSim.registerForReset(QLearningMovement.class.getCanonicalName());
+		reset();
+	}
 
 	public QLearningMovement(Settings settings) {
 		super(settings);
 		Settings s = new Settings(QLEARNING_NS);
-
-		/* Initialize seed if not 0, initialize random seed if 0, inherit if not specified. */
-		if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) != 0) {
-			this.learningRNG = new Random(s.getInt(LEARNING_SEED_S));
-		} else if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) == 0) {
-			this.learningRNG = new Random();
-		} else {
-			// Inherit the seed from MovementModel
-			Settings movementSettings = new Settings(MOVEMENT_MODEL_NS);
-			if (movementSettings.contains(RNG_SEED) && movementSettings.getInt(RNG_SEED) != 0) {
-				this.learningRNG = new Random(movementSettings.getInt(RNG_SEED));
-			} else {
-				this.learningRNG = new Random();  // truly random if not set
-			}
-		}
 
 		this.trajectoryFrequencies = new HashMap<>();
 		this.currentCumulativeReward = 0.0;
@@ -249,6 +240,28 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentTrajectorySteps = proto.currentTrajectorySteps;
 		this.direction = proto.direction;
 		this.currentPosition = proto.currentPosition;
+	}
+
+	/**
+	 * Resets all static fields to default values
+	 */
+	public static void reset() {
+		Settings s = new Settings(QLEARNING_NS);
+
+		/* Initialize seed if not 0, initialize random seed if 0, inherit if not specified. */
+		if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) != 0) {
+			learningRNG = new Random(s.getInt(LEARNING_SEED_S));
+		} else if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) == 0) {
+			learningRNG = new Random();
+		} else {
+			// Inherit the seed from MovementModel
+			Settings movementSettings = new Settings(MOVEMENT_MODEL_NS);
+			if (movementSettings.contains(RNG_SEED) && movementSettings.getInt(RNG_SEED) != 0) {
+				learningRNG = new Random(movementSettings.getInt(RNG_SEED));
+			} else {
+				learningRNG = new Random();  // truly random if not set
+			}
+		}
 	}
 
 	protected int selectAction(int state, Set<Integer> availableActions) {
