@@ -1,5 +1,7 @@
 package movement.rl.persistence;
 
+import core.Coord;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +30,7 @@ public class EpisodicPersistenceData {
 	public int currentState;
 	public int currentTrajectorySteps;
 	public double direction;
+	public Coord currentPosition;
 
 	// [ TrajectoryFrequencyReporting ]
 	public Map<String, Integer> trajectoryFrequencies = new HashMap<>();
