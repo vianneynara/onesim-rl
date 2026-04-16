@@ -437,6 +437,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		p.addWaypoint(nextWaypoint);
 		currentPosition = nextWaypoint;
 
+//		if (SimClock.getTime() % 1000 == 1) System.out.println("CURRENT POSITION: " + currentPosition);
+
 		return p;
 	}
 
@@ -521,10 +523,14 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 */
 	@Override
 	public Coord getInitialLocation() {
-		assert rng != null : "MovementModel not initialized!";
-		Coord c = new Coord(rng.nextDouble() * getMaxX(), rng.nextDouble() * getMaxY());
-		this.currentPosition = c;
-		return c;
+		if (currentPosition != null) {
+			return currentPosition;
+		} else {
+			assert rng != null : "MovementModel not initialized!";
+			Coord c = new Coord(rng.nextDouble() * getMaxX(), rng.nextDouble() * getMaxY());
+			this.currentPosition = c;
+			return c;
+		}
 	}
 
 	@Override
@@ -626,6 +632,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		epd.currentState = this.currentState;
 		epd.currentTrajectorySteps = this.currentTrajectorySteps;
 		epd.direction = this.direction;
+		epd.currentPosition = this.currentPosition;
 
 		/* Saving Q-Table */
 		epd.qTable = new HashMap<>();
@@ -669,6 +676,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentState = epd.currentState;
 		this.currentTrajectorySteps = epd.currentTrajectorySteps;
 		this.direction = epd.direction;
+		this.currentPosition = epd.currentPosition;
 
 		/* Loading Q-Table */
 		qTable.clear();
