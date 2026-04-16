@@ -130,8 +130,6 @@ public class RLAgent {
         return agentState;
     }
 
-    /* 🔥 SAFE GETTERS */
-
     public double getStateDouble(String key, double def) {
         Object v = agentState.get(key);
         return (v instanceof Number) ? ((Number) v).doubleValue() : def;
