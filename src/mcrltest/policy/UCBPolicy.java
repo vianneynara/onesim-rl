@@ -3,9 +3,11 @@ package mcrltest.policy;
 import core.Settings;
 import mcrltest.utils.QTable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
-public class UCBPolicy implements BehaviorPolicy {
+public class UCBPolicy implements BehaviorPolicy, PolicyPersistence {
 
     public static final String UCB_NS = "BehaviorPolicy.UCB";
     public static final String EXPLORATION_C = "c";
@@ -100,5 +102,28 @@ public class UCBPolicy implements BehaviorPolicy {
     @Override
     public String getName() {
         return "UCB(c=" + c + ")";
+    }
+
+    /* ===============================
+       POLICY PERSISTENCE
+       =============================== */
+
+    @Override
+    public String getPolicyType() {
+        return "UCB";
+    }
+
+    @Override
+    public Map<String, Object> exportState() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("c", c);
+        return map;
+    }
+
+    @Override
+    public void importState(Map<String, Object> data) {
+        if (data.containsKey("c")) {
+            this.c = ((Number) data.get("c")).doubleValue();
+        }
     }
 }

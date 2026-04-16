@@ -4,9 +4,11 @@ import core.Settings;
 import mcrltest.utils.QTable;
 import movement.MovementModel;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
-public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
+public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy, PolicyPersistence {
 
     private double epsilon;
     private final double minEpsilon;
@@ -111,5 +113,30 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy {
     @Override
     public void setEpsilon(double epsilon) {
         this.epsilon = epsilon;
+    }
+
+    /* ===============================
+       POLICY PERSISTENCE
+       =============================== */
+
+    @Override
+    public String getPolicyType() {
+        return "EpsilonGreedy";
+    }
+
+    @Override
+    public Map<String, Object> exportState() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("epsilon", epsilon);
+        map.put("minEpsilon", minEpsilon);
+        map.put("decayRate", decayRate);
+        return map;
+    }
+
+    @Override
+    public void importState(Map<String, Object> data) {
+        if (data.containsKey("epsilon")) {
+            this.epsilon = ((Number) data.get("epsilon")).doubleValue();
+        }
     }
 }
