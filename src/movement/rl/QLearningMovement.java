@@ -116,7 +116,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	/**
 	 * Stores the previous Coordinate of the agent
 	 */
-	private Coord lastWaypoint;
+	private Coord currentPosition;
 	/**
 	 * A radian value representing the direction of movement, used for reward calculation. Range: [0, 2*PI].
 	 */
@@ -160,7 +160,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		// Initialize direction randomly
 		this.direction = rng.nextDouble() * 2 * Math.PI;
-		this.lastWaypoint = null; // will be initialized on first getPath()
+		this.currentPosition = null; // will be initialized on first getPath()
 
 		// Re/Initializes episodic persistence
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
@@ -222,7 +222,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentState = proto.currentState;
 		this.currentTrajectorySteps = proto.currentTrajectorySteps;
 		this.direction = proto.direction;
-		this.lastWaypoint = proto.lastWaypoint;
+		this.currentPosition = proto.currentPosition;
 	}
 
 	protected int selectAction(int state, Set<Integer> availableActions) {
@@ -368,14 +368,14 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		/* Generate path for this action. */
 		Path p = new Path(agentSpeed);
-		p.addWaypoint(lastWaypoint);
+		p.addWaypoint(currentPosition);
 
-		double nextX = lastWaypoint.getX() + agentSpeed * Math.cos(direction);
-		double nextY = lastWaypoint.getY() + agentSpeed * Math.sin(direction);
+		double nextX = currentPosition.getX() + agentSpeed * Math.cos(direction);
+		double nextY = currentPosition.getY() + agentSpeed * Math.sin(direction);
 
 		// If the straight step would exit the world bounds, bounce off the wall instead.
 		if (nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0) {
-			double[] bounced = bounce(lastWaypoint.getX(), lastWaypoint.getY(), nextX, nextY);
+			double[] bounced = bounce(currentPosition.getX(), currentPosition.getY(), nextX, nextY);
 			double bounceX = bounced[0];
 			double bounceY = bounced[1];
 			direction = bounced[2]; // reflected direction
@@ -396,7 +396,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		Coord nextWaypoint = new Coord(nextX, nextY);
 		p.addWaypoint(nextWaypoint);
-		lastWaypoint = nextWaypoint;
+		currentPosition = nextWaypoint;
 
 		return p;
 	}
@@ -484,7 +484,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	public Coord getInitialLocation() {
 		assert rng != null : "MovementModel not initialized!";
 		Coord c = new Coord(rng.nextDouble() * getMaxX(), rng.nextDouble() * getMaxY());
-		this.lastWaypoint = c;
+		this.currentPosition = c;
 		return c;
 	}
 
