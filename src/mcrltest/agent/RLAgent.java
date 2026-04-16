@@ -2,11 +2,12 @@ package mcrltest.agent;
 
 import core.Settings;
 import mcrltest.policy.BehaviorPolicy;
-import mcrltest.policy.EpsilonGreedyPolicy;
-import mcrltest.policy.EpsilonPolicy;
+import mcrltest.policy.PolicyPersistence;
 import mcrltest.qModel.RLModel;
 import mcrltest.utils.EpisodeStep;
 import mcrltest.utils.QTable;
+import mcrltest.utils.QTableSerializer;
+import mcrltest.utils.QTableSerializer.LoadResult;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -21,31 +22,27 @@ public class RLAgent {
 
     /* ===============================
        SETTINGS KEYS
-       =============================== */
+    =============================== */
 
-    public static final String BEHAVIOR_POLICY_S = "behaviorPolicy";
-    public static final String RL_MODEL_S = "rlModel";
-
-    public static final String TARGET_PREFIX_S = "targetPrefix";
-    public static final String STEP_PENALTY_S = "stepPenalty";
-    public static final String FOUND_REWARD_S = "foundReward";
-    public static final String SPEED_S = "agentSpeed";
-    public static final String TARGET_COOLDOWN_S = "targetCooldown";
+    public static final String BEHAVIOR_POLICY_S    = "behaviorPolicy";
+    public static final String RL_MODEL_S           = "rlModel";
+    public static final String TARGET_PREFIX_S      = "targetPrefix";
+    public static final String STEP_PENALTY_S       = "stepPenalty";
+    public static final String FOUND_REWARD_S       = "foundReward";
+    public static final String SPEED_S              = "agentSpeed";
+    public static final String TARGET_COOLDOWN_S    = "targetCooldown";
     public static final String DESTRUCTIVE_TARGET_S = "destructiveTarget";
-
-    public static final String BASE_FOLDER_S = "baseFolder";
-    public static final String CURRENT_EPISODE_S = "currentEpisode";
-
-    public static final String ENABLE_PERSISTENCE = "enablePersistence";
-    public static final String FILE_FORMAT = "fileFormat";
-
-    public static final String SAVE_FILE_NAME = "saveFileName";
-    public static final String LOAD_FILE_NAME = "loadFileName";
-    public static final String EPISODE_FILE_NAME = "episodeFileName";
+    public static final String BASE_FOLDER_S        = "baseFolder";
+    public static final String CURRENT_EPISODE_S    = "currentEpisode";
+    public static final String ENABLE_PERSISTENCE   = "enablePersistence";
+    public static final String FILE_FORMAT          = "fileFormat";
+    public static final String SAVE_FILE_NAME       = "saveFileName";
+    public static final String LOAD_FILE_NAME       = "loadFileName";
+    public static final String EPISODE_FILE_NAME    = "episodeFileName";
 
     /* ===============================
        PARAMETERS
-       =============================== */
+    =============================== */
 
     protected final String targetPrefix;
     protected final double stepPenalty;
@@ -65,13 +62,11 @@ public class RLAgent {
     private final String saveFileName;
     private final String loadFileName;
     private final String episodeFileName;
-
     private final String baseFolder;
 
     private static boolean globalLoaded = false;
 
     private final List<EpisodeStep> episodeSteps;
-
     private double currentEpisodeReward = 0;
 
     public RLAgent(Settings s) {
@@ -79,51 +74,36 @@ public class RLAgent {
         Settings rlSettings = new Settings(RLAGENT_NS);
 
         this.baseFolder = rlSettings.getSetting(BASE_FOLDER_S, "default");
-        this.episode = rlSettings.getInt(CURRENT_EPISODE_S, 1);
-
-        /* -------- POLICY -------- */
+        this.episode    = rlSettings.getInt(CURRENT_EPISODE_S, 1);
 
         String policyClass = rlSettings.getSetting(
-                BEHAVIOR_POLICY_S,
-                "mcrltest.policy.EpsilonGreedyPolicy"
-        );
-
+                BEHAVIOR_POLICY_S, "mcrltest.policy.EpsilonGreedyPolicy");
         this.policy = (BehaviorPolicy) s.createIntializedObject(policyClass);
 
-        /* -------- RL MODEL -------- */
-
         String modelClass = rlSettings.getSetting(
-                RL_MODEL_S,
-                "mcrltest.qModel.QLearningModel"
-        );
-
+                RL_MODEL_S, "mcrltest.qModel.QLearningModel");
         this.rlModel = (RLModel) s.createIntializedObject(modelClass);
 
-        /* -------- PARAMETERS -------- */
-
-        this.targetPrefix = rlSettings.getSetting(TARGET_PREFIX_S);
-        this.stepPenalty = rlSettings.getDouble(STEP_PENALTY_S, -0.01);
-        this.foundReward = rlSettings.getDouble(FOUND_REWARD_S, 10.0);
-        this.speed = rlSettings.getDouble(SPEED_S, 1.0);
-        this.targetCooldown = rlSettings.getDouble(TARGET_COOLDOWN_S, 0);
+        this.targetPrefix     = rlSettings.getSetting(TARGET_PREFIX_S);
+        this.stepPenalty      = rlSettings.getDouble(STEP_PENALTY_S, -0.01);
+        this.foundReward      = rlSettings.getDouble(FOUND_REWARD_S, 10.0);
+        this.speed            = rlSettings.getDouble(SPEED_S, 1.0);
+        this.targetCooldown   = rlSettings.getDouble(TARGET_COOLDOWN_S, 0);
         this.destructiveTarget = rlSettings.getBoolean(DESTRUCTIVE_TARGET_S, true);
 
-        /* -------- PERSISTENCE -------- */
-
         this.enablePersistence = rlSettings.getBoolean(ENABLE_PERSISTENCE, false);
-        this.fileFormat = rlSettings.getSetting(FILE_FORMAT, "csv");
+        this.fileFormat        = rlSettings.getSetting(FILE_FORMAT, "csv");
+        this.saveFileName      = rlSettings.getSetting(SAVE_FILE_NAME, "save_qtable_latest");
+        this.loadFileName      = rlSettings.getSetting(LOAD_FILE_NAME, null);
+        this.episodeFileName   = rlSettings.getSetting(EPISODE_FILE_NAME, "episode");
 
-        this.saveFileName = rlSettings.getSetting(SAVE_FILE_NAME, "save_qtable_latest");
-        this.loadFileName = rlSettings.getSetting(LOAD_FILE_NAME, null);
-        this.episodeFileName = rlSettings.getSetting(EPISODE_FILE_NAME, "episode");
-
-        this.random = new Random();
+        this.random       = new Random();
         this.episodeSteps = new ArrayList<>();
     }
 
     /* ===============================
        ACTION SELECTION
-       =============================== */
+    =============================== */
 
     public int selectAction(int state) {
         return policy.selectAction(state, rlModel.getQTable(), random);
@@ -131,70 +111,63 @@ public class RLAgent {
 
     /* ===============================
        LEARNING
-       =============================== */
+    =============================== */
 
     public void learn(int state, int action, double reward, int nextState) {
-
         episodeSteps.add(new EpisodeStep(state, action, reward));
         currentEpisodeReward += reward;
-
         rlModel.update(state, action, reward, nextState);
         policy.update(state, action, reward, random);
     }
 
     /* ===============================
-       LOAD QTABLE
-       =============================== */
+       LOAD
+    =============================== */
 
     public void tryLoad() {
 
         if (!enablePersistence || globalLoaded ||
-                loadFileName == null || loadFileName.isEmpty()) {
-            return;
-        }
+                loadFileName == null || loadFileName.isEmpty()) return;
 
         globalLoaded = true;
 
         try {
 
             QTable qTable = rlModel.getQTable();
+            String path   = "data/qtable/" + baseFolder + "/" + loadFileName;
 
-            String path = "data/qtable/" + baseFolder + "/" + loadFileName;
+            LoadResult result;
 
             if (fileFormat.equalsIgnoreCase("csv")) {
-                qTable.loadFromCSV(path + ".csv");
+                result = QTableSerializer.loadFromCSV(path + ".csv", qTable);
             } else {
-                qTable.loadFromJSON(path + ".json");
+                result = QTableSerializer.loadFromJSON(path + ".json", qTable);
             }
 
-            syncFromQTable(qTable);
+            if (result == null) return;
 
-            System.out.println("RLAgent: QTable loaded from " + path);
+            /* ===== POLICY SYNC ===== */
+            if (policy instanceof PolicyPersistence) {
+                ((PolicyPersistence) policy).importState(result.policyData);
+            }
+
+            /* ===== TRAINING SYNC ===== */
+            rlModel.setTotalTrainingReward(result.totalReward);
+
+            this.episode = result.episode;
+
+            System.out.println("RLAgent: Loaded → policy=" + result.policyType +
+                    ", reward=" + result.totalReward +
+                    ", episode=" + episode);
 
         } catch (Exception e) {
             System.out.println("RLAgent: No previous QTable found.");
         }
     }
 
-    private void syncFromQTable(QTable qTable) {
-
-        double epsilon = qTable.getLoadedEpsilon();
-        double reward = qTable.getLoadedTotalReward();
-
-        if (policy instanceof EpsilonGreedyPolicy) {
-            ((EpsilonGreedyPolicy) policy).setEpsilon(epsilon);
-        }
-
-        rlModel.setTotalTrainingReward(reward);
-
-        System.out.println("Synced → epsilon=" + epsilon +
-                ", reward=" + reward +
-                ", episode=" + this.episode);
-    }
-
     /* ===============================
-       SAVE QTABLE
-       =============================== */
+       SAVE
+    =============================== */
 
     public void trySave() {
 
@@ -208,20 +181,19 @@ public class RLAgent {
             String path = dirPath + "/" + saveFileName + "_" + episode;
 
             if (fileFormat.equalsIgnoreCase("csv")) {
-
-                rlModel.getQTable().saveToCSV(
+                QTableSerializer.saveToCSV(
                         path + ".csv",
-                        getEpsilon(),
+                        rlModel.getQTable(),
+                        policy,
                         rlModel.getTotalTrainingReward(),
                         currentEpisodeReward,
                         episode
                 );
-
             } else {
-
-                rlModel.getQTable().saveToJSON(
+                QTableSerializer.saveToJSON(
                         path + ".json",
-                        getEpsilon(),
+                        rlModel.getQTable(),
+                        policy,
                         rlModel.getTotalTrainingReward(),
                         currentEpisodeReward,
                         episode
@@ -238,21 +210,19 @@ public class RLAgent {
 
     /* ===============================
        EPISODE SAVE
-       =============================== */
+    =============================== */
 
     public void saveEpisodeSteps(double simTime) {
 
         try {
 
             String dirPath = "data/episodes/" + baseFolder;
-            File dir = new File(dirPath);
-            if (!dir.exists()) dir.mkdirs();
+            new File(dirPath).mkdirs();
 
             String filename = dirPath + "/" +
                     episodeFileName + "_" + episode + "_" + (int) simTime + ".csv";
 
             PrintWriter pw = new PrintWriter(new FileWriter(filename));
-
             pw.println("state,action,reward");
 
             for (EpisodeStep step : episodeSteps) {
@@ -270,35 +240,19 @@ public class RLAgent {
 
     /* ===============================
        GETTERS
-       =============================== */
+    =============================== */
 
-    public double getEpsilon() {
-        if (policy instanceof EpsilonPolicy) {
-            return ((EpsilonPolicy) policy).getEpsilon();
-        }
-        return 0;
-    }
-
-    public double getTotalTrainingReward() {
-        return rlModel.getTotalTrainingReward();
-    }
-
-    public double getCurrentEpisodeReward() {
-        return currentEpisodeReward;
-    }
-
-    public int getEpisode() {
-        return episode;
-    }
-
-    public double getStepPenalty() { return stepPenalty; }
-    public double getFoundReward() { return foundReward; }
-    public double getSpeed() { return speed; }
-    public double getTargetCooldown() { return targetCooldown; }
-    public String getTargetPrefix() { return targetPrefix; }
-    public Random getRandom() { return random; }
-    public QTable getQTable() { return rlModel.getQTable(); }
+    public double getTotalTrainingReward()   { return rlModel.getTotalTrainingReward(); }
+    public double getCurrentEpisodeReward()  { return currentEpisodeReward; }
+    public int    getEpisode()               { return episode; }
+    public double getStepPenalty()           { return stepPenalty; }
+    public double getFoundReward()           { return foundReward; }
+    public double getSpeed()                 { return speed; }
+    public double getTargetCooldown()        { return targetCooldown; }
+    public String getTargetPrefix()          { return targetPrefix; }
+    public Random getRandom()                { return random; }
+    public QTable getQTable()                { return rlModel.getQTable(); }
     public List<EpisodeStep> getEpisodeSteps() { return episodeSteps; }
-    public RLModel getRlModel() { return rlModel; }
-    public boolean isDestructiveTarget() { return destructiveTarget; }
+    public RLModel getRlModel()              { return rlModel; }
+    public boolean isDestructiveTarget()     { return destructiveTarget; }
 }

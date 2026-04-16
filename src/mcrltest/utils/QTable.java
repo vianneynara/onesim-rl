@@ -1,40 +1,40 @@
 package mcrltest.utils;
 
 import core.Settings;
+import mcrltest.policy.ThompsonSamplingPolicy.TSProperty;
 
-import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
+/**
+ * Struktur data murni untuk Q-values dan visit counts.
+ * Tidak tahu apapun tentang file I/O — itu urusan QTableSerializer.
+ */
 public class QTable {
 
-    public static final String QTABLE_NS = "QTable";
-    public static final String NROF_ACTION = "nrofAction";
+    public static final String QTABLE_NS   = "QTable";
+    public static final String NROF_ACTION   = "nrofAction";
     public static final String USE_VISITCOUNT = "useVisitCount";
 
     private final int nrofAction;
     private final boolean useVisitCount;
 
-    private Map<Integer, QValue> table;
-
-    /* ===== Stored metadata ===== */
-    private double loadedEpsilon = 0;
-    private double loadedTotalReward = 0;
-    private double loadedEpisodeReward = 0; // 🔥 NEW
-    private int loadedEpisode = 0;
+    private final Map<Integer, QValue> table = new HashMap<>();
 
     public QTable(Settings s) {
         Settings qSettings = new Settings(QTABLE_NS);
-
-        this.nrofAction = qSettings.getInt(NROF_ACTION);
+        this.nrofAction   = qSettings.getInt(NROF_ACTION);
         this.useVisitCount = qSettings.getBoolean(USE_VISITCOUNT, true);
-
-        table = new HashMap<>();
     }
 
+    /* =========================
+       INIT
+    ========================= */
+
     private void initializeState(int state) {
-        table.putIfAbsent(state, new QValue(nrofAction, useVisitCount));
+        table.computeIfAbsent(state, k -> new QValue(nrofAction, useVisitCount));
     }
 
     /* =========================
@@ -72,314 +72,20 @@ public class QTable {
     }
 
     /* =========================
-       SAVE CSV
+       METADATA
     ========================= */
 
-    public void saveToCSV(String filename,
-                          double epsilon,
-                          double totalReward,
-                          double episodeReward, // 🔥 NEW
-                          int episode) {
+    public int getNrofAction()    { return nrofAction; }
+    public boolean isUseVisitCount() { return useVisitCount; }
 
-        try {
-
-            File file = new File(filename);
-            file.getParentFile().mkdirs();
-
-            PrintWriter pw = new PrintWriter(new FileWriter(file));
-
-            /* ===== METADATA ===== */
-            pw.println("epsilon,totalTrainingReward,episodeReward,episode");
-            pw.println(epsilon + "," + totalReward + "," + episodeReward + "," + episode);
-            pw.println();
-
-            /* ===== HEADER ===== */
-            pw.print("state");
-
-            for (int a = 0; a < nrofAction; a++) {
-                pw.print(",q" + a);
-                if (useVisitCount) {
-                    pw.print(",count" + a);
-                }
-            }
-
-            pw.println();
-
-            /* ===== DATA ===== */
-            for (Map.Entry<Integer, QValue> entry : table.entrySet()) {
-
-                int state = entry.getKey();
-                QValue q = entry.getValue();
-
-                pw.print(state);
-
-                for (int a = 0; a < nrofAction; a++) {
-
-                    pw.print("," + q.getQ(a));
-
-                    if (useVisitCount) {
-                        pw.print("," + q.getCount(a));
-                    }
-                }
-
-                pw.println();
-            }
-
-            pw.close();
-
-            System.out.println("Saved CSV → " + filename);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    /** Untuk QTableSerializer — iterasi semua state yang sudah ada. */
+    public Set<Integer> getStates() {
+        return table.keySet();
     }
 
     /* =========================
-        LOAD CSV
+       DEBUG
     ========================= */
-
-    public void loadFromCSV(String filename) {
-
-        try {
-
-            File file = new File(filename);
-
-            if (!file.exists()) {
-                System.out.println("No CSV QTable found.");
-                return;
-            }
-
-            BufferedReader br = new BufferedReader(new FileReader(file));
-
-            /* ===== READ HEADER ===== */
-            String header = br.readLine(); // epsilon,totalTrainingReward,episodeReward,episode
-
-            String[] meta = br.readLine().split(",");
-
-            /* ===== SAFE PARSING (supports old + new format) ===== */
-
-            if (meta.length == 4) {
-                // 🔥 NEW FORMAT
-                loadedEpsilon = Double.parseDouble(meta[0]);
-                loadedTotalReward = Double.parseDouble(meta[1]);
-                loadedEpisodeReward = Double.parseDouble(meta[2]);
-                loadedEpisode = Integer.parseInt(meta[3]);
-
-            } else if (meta.length == 3) {
-                // ⚠️ OLD FORMAT (no episodeReward)
-                loadedEpsilon = Double.parseDouble(meta[0]);
-                loadedTotalReward = Double.parseDouble(meta[1]);
-                loadedEpisode = Integer.parseInt(meta[2]);
-
-                loadedEpisodeReward = 0; // default fallback
-            }
-
-            br.readLine(); // empty line
-            br.readLine(); // table header
-
-            String line;
-
-            while ((line = br.readLine()) != null) {
-
-                if (line.trim().isEmpty()) continue;
-
-                String[] parts = line.split(",");
-
-                int idx = 0;
-                int state = Integer.parseInt(parts[idx++]);
-
-                initializeState(state);
-                QValue q = table.get(state);
-
-                for (int a = 0; a < nrofAction; a++) {
-
-                    q.setQ(a, Double.parseDouble(parts[idx++]));
-
-                    if (useVisitCount) {
-                        q.setCount(a, Integer.parseInt(parts[idx++]));
-                    }
-                }
-            }
-
-            br.close();
-
-            System.out.println("CSV loaded.");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /* =========================
-       SAVE JSON
-    ========================= */
-
-    public void saveToJSON(String filename,
-                           double epsilon,
-                           double totalReward,
-                           double episodeReward, // 🔥 NEW
-                           int episode) {
-
-        try {
-
-            File file = new File(filename);
-            file.getParentFile().mkdirs();
-
-            PrintWriter pw = new PrintWriter(new FileWriter(file));
-
-            pw.println("{");
-            pw.println("\"epsilon\": " + epsilon + ",");
-            pw.println("\"totalReward\": " + totalReward + ",");
-            pw.println("\"episodeReward\": " + episodeReward + ","); // 🔥 NEW
-            pw.println("\"episode\": " + episode + ",");
-            pw.println("\"states\": [");
-
-            boolean first = true;
-
-            for (Map.Entry<Integer, QValue> entry : table.entrySet()) {
-
-                if (!first) pw.println(",");
-                first = false;
-
-                int state = entry.getKey();
-                QValue q = entry.getValue();
-
-                pw.println("{");
-                pw.println("\"state\": " + state + ",");
-
-                pw.print("\"qValues\": [");
-                for (int a = 0; a < nrofAction; a++) {
-                    pw.print(q.getQ(a));
-                    if (a < nrofAction - 1) pw.print(",");
-                }
-                pw.println("],");
-
-                if (useVisitCount) {
-                    pw.print("\"visitCounts\": [");
-                    for (int a = 0; a < nrofAction; a++) {
-                        pw.print(q.getCount(a));
-                        if (a < nrofAction - 1) pw.print(",");
-                    }
-                    pw.println("]");
-                }
-
-                pw.print("}");
-            }
-
-            pw.println();
-            pw.println("]");
-            pw.println("}");
-
-            pw.close();
-
-            System.out.println("Saved JSON → " + filename);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /* =========================
-       LOAD JSON
-    ========================= */
-
-    public void loadFromJSON(String filename) {
-
-        try {
-
-            File file = new File(filename);
-
-            if (!file.exists()) {
-                System.out.println("No JSON QTable found.");
-                return;
-            }
-
-            BufferedReader br = new BufferedReader(new FileReader(file));
-
-            String line;
-            int state = -1;
-            int actionIndex = 0;
-
-            while ((line = br.readLine()) != null) {
-
-                line = line.trim();
-
-                if (line.startsWith("\"epsilon\"")) {
-                    loadedEpsilon = Double.parseDouble(line.split(":")[1].replace(",", "").trim());
-                }
-
-                if (line.startsWith("\"totalReward\"")) {
-                    loadedTotalReward = Double.parseDouble(line.split(":")[1].replace(",", "").trim());
-                }
-
-                if (line.startsWith("\"episodeReward\"")) { // 🔥 NEW
-                    loadedEpisodeReward = Double.parseDouble(line.split(":")[1].replace(",", "").trim());
-                }
-
-                if (line.startsWith("\"episode\"")) {
-                    loadedEpisode = Integer.parseInt(line.split(":")[1].replace(",", "").trim());
-                }
-
-                if (line.startsWith("\"state\"")) {
-                    state = Integer.parseInt(line.split(":")[1].replace(",", "").trim());
-                    initializeState(state);
-                    actionIndex = 0;
-                }
-
-                if (line.startsWith("\"qValues\"")) {
-
-                    String values = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
-                    String[] qVals = values.split(",");
-
-                    for (String q : qVals) {
-                        table.get(state).setQ(actionIndex++, Double.parseDouble(q));
-                    }
-                }
-
-                if (line.startsWith("\"visitCounts\"")) {
-
-                    String values = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
-                    String[] counts = values.split(",");
-
-                    int idx = 0;
-                    for (String c : counts) {
-                        table.get(state).setCount(idx++, Integer.parseInt(c));
-                    }
-                }
-            }
-
-            br.close();
-
-            System.out.println("JSON loaded.");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /* =========================
-       GETTERS
-    ========================= */
-
-    public double getLoadedEpsilon() {
-        return loadedEpsilon;
-    }
-
-    public double getLoadedTotalReward() {
-        return loadedTotalReward;
-    }
-
-    public double getLoadedEpisodeReward() { // 🔥 NEW
-        return loadedEpisodeReward;
-    }
-
-    public int getLoadedEpisode() {
-        return loadedEpisode;
-    }
-
-    public int getNrofAction() {
-        return nrofAction;
-    }
 
     public void printTable() {
 
@@ -387,22 +93,15 @@ public class QTable {
 
         for (Map.Entry<Integer, QValue> entry : table.entrySet()) {
 
-            int state = entry.getKey();
-            QValue q = entry.getValue();
+            int state    = entry.getKey();
+            QValue q     = entry.getValue();
 
             System.out.print("State " + state + " → ");
 
             for (int a = 0; a < nrofAction; a++) {
-
                 System.out.print("A" + a + "=" + q.getQ(a));
-
-                if (useVisitCount) {
-                    System.out.print(" (n=" + q.getCount(a) + ")");
-                }
-
-                if (a < nrofAction - 1) {
-                    System.out.print(" | ");
-                }
+                if (useVisitCount) System.out.print(" (n=" + q.getCount(a) + ")");
+                if (a < nrofAction - 1) System.out.print(" | ");
             }
 
             System.out.println();
