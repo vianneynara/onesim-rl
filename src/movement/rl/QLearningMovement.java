@@ -256,14 +256,14 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		/* Initialize seed if not 0, initialize random seed if 0, inherit if not specified. */
 		if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) != 0) {
-			System.out.printf("[%s] Using %s.%s of: %s %n", QLearningMovement.class.getName(), QLEARNING_NS, LEARNING_SEED_S, s.getInt(LEARNING_SEED_S));
+			System.out.printf("[%s] Using %s.%s of: %s %n", QLearningMovement.class.getCanonicalName(), QLEARNING_NS, LEARNING_SEED_S, s.getInt(LEARNING_SEED_S));
 			learningRNG = new Random(s.getInt(LEARNING_SEED_S));
 		} else if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) == 0) {
-			System.out.printf("[%s] Using a random learning RNG seed.", QLearningMovement.class.getName());
+			System.out.printf("[%s] Using a random learning RNG seed.", QLearningMovement.class.getCanonicalName());
 			learningRNG = new Random();
 		} else {
 			// Inherit the seed from MovementModel
-			System.out.printf("[%s] Using a random learning RNG seed inherited from MovementModel.", QLearningMovement.class.getName());
+			System.out.printf("[%s] Using a random learning RNG seed inherited from MovementModel.", QLearningMovement.class.getCanonicalName());
 			Settings movementSettings = new Settings(MOVEMENT_MODEL_NS);
 			if (movementSettings.contains(RNG_SEED) && movementSettings.getInt(RNG_SEED) != 0) {
 				learningRNG = new Random(movementSettings.getInt(RNG_SEED));
@@ -632,7 +632,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 	@Override
 	public void saveTo(EpisodicPersistenceData epd) {
-		System.out.printf("<%s> Saving persistence data...%n", QLearningMovement.class.getName());
+		System.out.printf("[%s] Saving persistence data...%n", QLearningMovement.class.getCanonicalName());
 
 		/* Saving RL cores */
 		epd.prevAction = this.prevAction;
@@ -676,7 +676,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 	@Override
 	public void loadFrom(EpisodicPersistenceData epd) {
-		System.out.printf("<%s> Loading persistence data...%n", QLearningMovement.class.getName());
+		System.out.printf("[%s] Loading persistence data...%n", QLearningMovement.class.getCanonicalName());
 
 		/* Loading RL cores */
 		this.prevAction = epd.prevAction;
