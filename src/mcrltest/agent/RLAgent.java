@@ -84,11 +84,11 @@ public class RLAgent {
                 rlSettings.getSetting(RL_MODEL_S,
                         "mcrltest.qModel.QLearningModel"));
 
-        this.targetPrefix     = rlSettings.getSetting(TARGET_PREFIX_S);
-        this.stepPenalty      = rlSettings.getDouble(STEP_PENALTY_S, -0.01);
-        this.foundReward      = rlSettings.getDouble(FOUND_REWARD_S, 10.0);
-        this.speed            = rlSettings.getDouble(SPEED_S, 1.0);
-        this.targetCooldown   = rlSettings.getDouble(TARGET_COOLDOWN_S, 0);
+        this.targetPrefix      = rlSettings.getSetting(TARGET_PREFIX_S);
+        this.stepPenalty       = rlSettings.getDouble(STEP_PENALTY_S, -0.01);
+        this.foundReward       = rlSettings.getDouble(FOUND_REWARD_S, 10.0);
+        this.speed             = rlSettings.getDouble(SPEED_S, 1.0);
+        this.targetCooldown    = rlSettings.getDouble(TARGET_COOLDOWN_S, 0);
         this.destructiveTarget = rlSettings.getBoolean(DESTRUCTIVE_TARGET_S, true);
 
         this.enablePersistence = rlSettings.getBoolean(ENABLE_PERSISTENCE, false);
@@ -98,7 +98,10 @@ public class RLAgent {
         this.episodeFileName   = rlSettings.getSetting(EPISODE_FILE_NAME, "episode");
         this.agentSeed         = rlSettings.getInt(AGENT_SEED, 0);
 
-        this.random       = agentSeed == 0 ? new Random() : new Random(agentSeed);
+        this.random = (agentSeed == 0)
+                ? new Random()
+                : new Random(agentSeed);
+
         this.episodeSteps = new ArrayList<>();
     }
 
@@ -113,6 +116,7 @@ public class RLAgent {
     public void learn(int state, int action, double reward, int nextState) {
         episodeSteps.add(new EpisodeStep(state, action, reward));
         currentEpisodeReward += reward;
+
         rlModel.update(state, action, reward, nextState);
         policy.update(state, action, reward, random);
     }
@@ -130,16 +134,6 @@ public class RLAgent {
         return agentState;
     }
 
-    public double getStateDouble(String key, double def) {
-        Object v = agentState.get(key);
-        return (v instanceof Number) ? ((Number) v).doubleValue() : def;
-    }
-
-    public int getStateInt(String key, int def) {
-        Object v = agentState.get(key);
-        return (v instanceof Number) ? ((Number) v).intValue() : def;
-    }
-
     /* =============================== LOAD =============================== */
 
     public void tryLoad() {
@@ -151,28 +145,38 @@ public class RLAgent {
 
         try {
 
+            String path = "data/qtable/" + baseFolder + "/" + loadFileName;
+
             QTable qTable = rlModel.getQTable();
-            String path   = "data/qtable/" + baseFolder + "/" + loadFileName;
 
             LoadResult result = fileFormat.equalsIgnoreCase("csv")
                     ? QTableSerializer.loadFromCSV(path + ".csv", qTable)
                     : QTableSerializer.loadFromJSON(path + ".json", qTable);
 
-            if (result == null) return;
+            if (result == null) {
+                System.out.println("⚠️ No save file found.");
+                return;
+            }
 
-            /* POLICY */
+            /* ================= POLICY ================= */
+
             if (policy instanceof PolicyPersistence) {
                 PolicyPersistence p = (PolicyPersistence) policy;
 
                 if (p.getPolicyType().equals(result.policyType)) {
                     p.importState(result.policyData);
+                } else {
+                    System.out.println("⚠️ Policy type mismatch. Skipping policy load.");
                 }
             }
+
+            /* ================= RL MODEL ================= */
 
             rlModel.setTotalTrainingReward(result.totalReward);
             this.episode = result.episode + 1;
 
-            /* AGENT STATE */
+            /* ================= AGENT STATE ================= */
+
             if (result.agentState != null) {
                 agentState.clear();
                 agentState.putAll(result.agentState);
@@ -181,6 +185,7 @@ public class RLAgent {
             System.out.println("🔥 Loaded episode " + result.episode);
 
         } catch (Exception e) {
+            System.out.println("❌ Failed to load state");
             e.printStackTrace();
         }
     }
@@ -226,6 +231,7 @@ public class RLAgent {
             System.out.println("💾 Saved → " + path);
 
         } catch (Exception e) {
+            System.out.println("❌ Failed to save state");
             e.printStackTrace();
         }
     }
@@ -233,7 +239,6 @@ public class RLAgent {
     /* =============================== EPISODE SAVE =============================== */
 
     public void saveEpisodeSteps(double simTime) {
-
         try {
 
             String dirPath = "data/episodes/" + baseFolder;

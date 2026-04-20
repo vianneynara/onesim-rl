@@ -4,7 +4,6 @@ import core.*;
 import mcrltest.agent.RLAgent;
 import mcrltest.utils.DetectionInfo;
 
-import java.sql.SQLOutput;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,13 +47,14 @@ public class RLMovementModel extends MovementModel {
 
         this.agent = new RLAgent(new Settings(RLAgent.RLAGENT_NS));
 
-        this.prevState = 1;
-        this.prevAction = -1;
-        this.currentState = 1;
+        this.prevState = proto.prevState;
+        this.prevAction = proto.prevAction;
+        this.currentState = proto.currentState;
 
-        this.stepCounter = 1;
+        this.stepCounter = proto.stepCounter;
+        this.direction = proto.direction;
 
-        this.direction = rng.nextDouble() * 2 * Math.PI;
+        this.lastWaypoint = proto.lastWaypoint;
 
         this.objectiveFound = new HashMap<>();
     }
@@ -66,7 +66,7 @@ public class RLMovementModel extends MovementModel {
 
     /* =====================================
        TARGET DETECTION
-       ===================================== */
+    ===================================== */
 
     @Override
     public void changedConnection(Connection con) {
@@ -103,7 +103,7 @@ public class RLMovementModel extends MovementModel {
 
     /* =====================================
        RL LOGIC
-       ===================================== */
+    ===================================== */
 
     private int selectAction(int state) {
         return agent.selectAction(state);
@@ -115,7 +115,7 @@ public class RLMovementModel extends MovementModel {
 
     /* =====================================
        REWARD
-       ===================================== */
+    ===================================== */
 
     private double computeReward() {
 
@@ -137,13 +137,12 @@ public class RLMovementModel extends MovementModel {
 
     /* =====================================
        STATE UPDATE
-       ===================================== */
+    ===================================== */
 
     private void updateState() {
 
         if (prevAction == -1) {
-            stepCounter = 1;
-            currentState = 1;
+            // 🔥 DO NOT RESET blindly anymore
             return;
         }
 
@@ -158,20 +157,18 @@ public class RLMovementModel extends MovementModel {
 
     /* =====================================
        APPLY ACTION
-       ===================================== */
+    ===================================== */
 
     private void applyAction(int action) {
 
-        // 🔥 ONLY change direction if TURN
         if (action == 1) {
             direction = rng.nextDouble() * 2 * Math.PI;
         }
-        // action == 0 → KEEP SAME DIRECTION
     }
 
     /* =====================================
        PATH GENERATION
-       ===================================== */
+    ===================================== */
 
     private Path generatePath() {
 
@@ -198,7 +195,7 @@ public class RLMovementModel extends MovementModel {
 
     /* =====================================
        MAIN LOOP
-       ===================================== */
+    ===================================== */
 
     @Override
     public Path getPath() {
@@ -210,25 +207,24 @@ public class RLMovementModel extends MovementModel {
 
         updateState();
 
-        int action = selectAction(currentState);
-
-        if (targetDetectedThisStep) {
-            action = 1;
-            targetDetectedThisStep = false;
-        }
-
         prevState = currentState;
-        prevAction = action;
 
-        applyAction(action);
+        prevAction = targetDetectedThisStep
+                ? 1
+                : selectAction(currentState);
 
-        /* 🔥 SAVE CURRENT STATE (PERSISTENCE) */
+        targetDetectedThisStep = false;
+
+        applyAction(prevAction);
+
         Map<String, Object> state = new HashMap<>();
         state.put("x", lastWaypoint.getX());
         state.put("y", lastWaypoint.getY());
         state.put("direction", direction);
         state.put("state", currentState);
         state.put("step", stepCounter);
+        state.put("prevAction", prevAction);
+        state.put("prevState", prevState);
 
         agent.setAgentState(state);
 
@@ -236,8 +232,8 @@ public class RLMovementModel extends MovementModel {
     }
 
     /* =====================================
-       INITIAL POSITION (🔥 KEY FIX)
-       ===================================== */
+       INITIAL POSITION (FIXED)
+    ===================================== */
 
     @Override
     public Coord getInitialLocation() {
@@ -246,7 +242,6 @@ public class RLMovementModel extends MovementModel {
 
         Map<String, Object> state = agent.getAgentState();
 
-        /* ✅ LOAD FROM FILE */
         if (state != null && state.containsKey("x")) {
 
             double x = ((Number) state.get("x")).doubleValue();
@@ -254,19 +249,21 @@ public class RLMovementModel extends MovementModel {
 
             this.direction = ((Number) state.getOrDefault("direction", 0.0)).doubleValue();
             this.currentState = ((Number) state.getOrDefault("state", 1)).intValue();
-            this.prevState = currentState;
             this.stepCounter = ((Number) state.getOrDefault("step", 1)).intValue();
+            this.prevAction = ((Number) state.getOrDefault("prevAction", -1)).intValue();
+            this.prevState  = ((Number) state.getOrDefault("prevState", currentState)).intValue();
 
             Coord c = new Coord(x, y);
             lastWaypoint = c;
 
             System.out.println("📍 Loaded Position → (" + x + ", " + y + ")");
-            System.out.println("➡️ Direction: " + direction + ", State: " + currentState);
+            System.out.println("➡️ Direction: " + direction +
+                    ", State: " + currentState +
+                    ", prevAction: " + prevAction);
 
             return c;
         }
 
-        /* ✅ FIRST RUN (NO SAVE) */
         Coord c = new Coord(
                 rng.nextDouble() * getMaxX(),
                 rng.nextDouble() * getMaxY()
@@ -274,14 +271,12 @@ public class RLMovementModel extends MovementModel {
 
         lastWaypoint = c;
 
-        System.out.println("🎲 Random Start Position");
-
         return c;
     }
 
     /* =====================================
        GETTERS
-       ===================================== */
+    ===================================== */
 
     public RLAgent getAgent() {
         return agent;

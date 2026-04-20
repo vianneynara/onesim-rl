@@ -4,8 +4,7 @@ import mcrltest.policy.BehaviorPolicy;
 import mcrltest.policy.PolicyPersistence;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class QTableSerializer {
 
@@ -40,7 +39,7 @@ public class QTableSerializer {
     }
 
     /* =========================
-       JSON HELPER
+       JSON WRITER
     ========================= */
 
     private static void writeJsonValue(PrintWriter pw, Object val) {
@@ -66,6 +65,18 @@ public class QTableSerializer {
             }
 
             pw.print("}");
+        }
+        else if (val instanceof List) {
+
+            pw.print("[");
+            List<?> list = (List<?>) val;
+
+            for (int i = 0; i < list.size(); i++) {
+                writeJsonValue(pw, list.get(i));
+                if (i < list.size() - 1) pw.print(",");
+            }
+
+            pw.print("]");
         }
         else {
             pw.print("\"" + val.toString().replace("\"", "\\\"") + "\"");
@@ -160,12 +171,7 @@ public class QTableSerializer {
             }
 
             pw.println();
-            pw.println("],");
-
-            /* ROOT */
-            pw.println("\"totalReward\": " + totalReward + ",");
-            pw.println("\"episodeReward\": " + episodeReward + ",");
-            pw.println("\"episode\": " + episode);
+            pw.println("]");
 
             pw.println("}");
         }
@@ -174,7 +180,114 @@ public class QTableSerializer {
     }
 
     /* =========================
-       LOAD JSON
+       SIMPLE JSON PARSER
+    ========================= */
+
+    private static Object parseValue(String s) {
+
+        s = s.trim();
+
+        if (s.startsWith("{")) return parseObject(s);
+        if (s.startsWith("[")) return parseArray(s);
+        if (s.startsWith("\"")) return s.substring(1, s.length() - 1);
+
+        if ("true".equalsIgnoreCase(s)) return true;
+        if ("false".equalsIgnoreCase(s)) return false;
+        if ("null".equalsIgnoreCase(s)) return null;
+
+        try {
+            if (s.contains(".")) return Double.parseDouble(s);
+            return Integer.parseInt(s);
+        } catch (Exception e) {
+            return s;
+        }
+    }
+
+    private static Map<String, Object> parseObject(String s) {
+
+        Map<String, Object> map = new HashMap<>();
+
+        s = s.trim();
+        s = s.substring(1, s.length() - 1); // remove {}
+
+        int i = 0;
+
+        while (i < s.length()) {
+
+            if (s.charAt(i) == '"') {
+
+                int keyEnd = s.indexOf('"', i + 1);
+                String key = s.substring(i + 1, keyEnd);
+
+                int colon = s.indexOf(":", keyEnd);
+                int valueStart = colon + 1;
+
+                int braceCount = 0;
+                int bracketCount = 0;
+                int j = valueStart;
+
+                for (; j < s.length(); j++) {
+                    char c = s.charAt(j);
+
+                    if (c == '{') braceCount++;
+                    if (c == '}') braceCount--;
+                    if (c == '[') bracketCount++;
+                    if (c == ']') bracketCount--;
+
+                    if (c == ',' && braceCount == 0 && bracketCount == 0) break;
+                }
+
+                String valueStr = s.substring(valueStart, j).trim();
+                map.put(key, parseValue(valueStr));
+
+                i = j + 1;
+            } else {
+                i++;
+            }
+        }
+
+        return map;
+    }
+
+    private static List<Object> parseArray(String s) {
+
+        List<Object> list = new ArrayList<>();
+
+        s = s.trim();
+        s = s.substring(1, s.length() - 1); // remove []
+
+        int i = 0;
+
+        while (i < s.length()) {
+
+            int braceCount = 0;
+            int bracketCount = 0;
+            int j = i;
+
+            for (; j < s.length(); j++) {
+                char c = s.charAt(j);
+
+                if (c == '{') braceCount++;
+                if (c == '}') braceCount--;
+                if (c == '[') bracketCount++;
+                if (c == ']') bracketCount--;
+
+                if (c == ',' && braceCount == 0 && bracketCount == 0) break;
+            }
+
+            String val = s.substring(i, j).trim();
+            if (!val.isEmpty()) {
+                list.add(parseValue(val));
+            }
+
+            i = j + 1;
+        }
+
+        return list;
+    }
+
+    /* =========================
+       LOAD JSON (FIXED)
     ========================= */
 
     public static LoadResult loadFromJSON(String filename, QTable qTable) throws IOException {
@@ -182,113 +295,62 @@ public class QTableSerializer {
         File file = new File(filename);
         if (!file.exists()) return null;
 
+        StringBuilder sb = new StringBuilder();
         BufferedReader br = new BufferedReader(new FileReader(file));
 
         String line;
+        while ((line = br.readLine()) != null) {
+            sb.append(line.trim());
+        }
+        br.close();
 
-        double totalReward = 0;
-        double episodeReward = 0;
-        int episode = 0;
+        Map<String, Object> root = parseObject(sb.toString());
 
-        int state = -1;
+        /* POLICY */
+        Map<String, Object> policyMap = (Map<String, Object>) root.get("policy");
 
-        String policyType = "";
-        Map<String, Object> policyData = new HashMap<>();
-        Map<String, Object> agentState = new HashMap<>();
+        String policyType = (String) policyMap.get("type");
+
+        Map<String, Object> policyData = new HashMap<>(policyMap);
+        policyData.remove("type");
+
+        /* AGENT STATE */
+        Map<String, Object> agentState =
+                (Map<String, Object>) root.getOrDefault("agentState", new HashMap<>());
+
+        /* TRAINING */
+        Map<String, Object> training = (Map<String, Object>) root.get("training");
+
+        double totalReward = ((Number) training.get("totalReward")).doubleValue();
+        double episodeReward = ((Number) training.get("episodeReward")).doubleValue();
+        int episode = ((Number) training.get("episode")).intValue();
+
+        /* QTABLE */
+        List<Map<String, Object>> states =
+                (List<Map<String, Object>>) root.get("states");
 
         int nrofAction = qTable.getNrofAction();
 
-        while ((line = br.readLine()) != null) {
+        for (Map<String, Object> s : states) {
 
-            line = line.trim();
+            int state = ((Number) s.get("state")).intValue();
 
-            /* POLICY */
-            if (line.startsWith("\"policy\"")) {
-
-                while ((line = br.readLine()) != null) {
-
-                    line = line.trim();
-
-                    if (line.startsWith("\"type\"")) {
-                        policyType = line.split(":")[1]
-                                .replace("\"","")
-                                .replace(",","")
-                                .trim();
-                    }
-                    else if (line.contains(":")) {
-
-                        String key = line.substring(1, line.indexOf("\":"));
-                        String val = line.split(":", 2)[1].replace(",","").trim();
-
-                        try {
-                            policyData.put(key, Double.parseDouble(val));
-                        } catch (Exception e) {
-                            policyData.put(key, val.replace("\"",""));
-                        }
-                    }
-
-                    if (line.startsWith("}")) break;
-                }
+            List<Object> qVals = (List<Object>) s.get("qValues");
+            for (int i = 0; i < nrofAction; i++) {
+                qTable.setQValue(state, i,
+                        ((Number) qVals.get(i)).doubleValue());
             }
 
-            /* AGENT STATE */
-            if (line.startsWith("\"agentState\"")) {
+            if (qTable.isUseVisitCount() && s.containsKey("visitCounts")) {
 
-                String json = line.substring(line.indexOf("{") + 1, line.lastIndexOf("}"));
+                List<Object> counts = (List<Object>) s.get("visitCounts");
 
-                String[] pairs = json.split(",");
-
-                for (String pair : pairs) {
-                    if (!pair.contains(":")) continue;
-
-                    String[] kv = pair.split(":", 2);
-
-                    String key = kv[0].replace("\"","").trim();
-                    String val = kv[1].replace("\"","").trim();
-
-                    try {
-                        agentState.put(key, Double.parseDouble(val));
-                    } catch (Exception e) {
-                        agentState.put(key, val);
-                    }
-                }
-            }
-
-            /* TRAINING */
-            if (line.startsWith("\"totalReward\""))
-                totalReward = Double.parseDouble(line.split(":")[1].replace(",","").trim());
-
-            if (line.startsWith("\"episodeReward\""))
-                episodeReward = Double.parseDouble(line.split(":")[1].replace(",","").trim());
-
-            if (line.startsWith("\"episode\""))
-                episode = Integer.parseInt(line.split(":")[1].replace(",","").trim());
-
-            /* QTABLE */
-            if (line.startsWith("\"state\"")) {
-                state = Integer.parseInt(line.split(":")[1].replace(",","").trim());
-            }
-
-            if (line.startsWith("\"qValues\"")) {
-                String values = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
-                String[] qVals = values.split(",");
-
-                for (int i = 0; i < qVals.length; i++) {
-                    qTable.setQValue(state, i, Double.parseDouble(qVals[i].trim()));
-                }
-            }
-
-            if (line.startsWith("\"visitCounts\"")) {
-                String values = line.substring(line.indexOf("[") + 1, line.indexOf("]"));
-                String[] counts = values.split(",");
-
-                for (int i = 0; i < counts.length; i++) {
-                    qTable.setVisitCount(state, i, Integer.parseInt(counts[i].trim()));
+                for (int i = 0; i < nrofAction; i++) {
+                    qTable.setVisitCount(state, i,
+                            ((Number) counts.get(i)).intValue());
                 }
             }
         }
-
-        br.close();
 
         System.out.println("✅ Loaded JSON: " + filename);
 
