@@ -408,7 +408,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 				break;
 			case 1:
 				// change direction randomly and reset step counter for next call
-				direction = rng.nextDouble() * 2 * Math.PI;
+				direction = learningRNG.nextDouble() * 2 * Math.PI;
 				break;
 			default:
 				throw new IllegalStateException("Unexpected action: " + currentAction);
