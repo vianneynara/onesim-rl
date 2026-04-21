@@ -385,6 +385,7 @@ if __name__ == "__main__":
         # Separated by comma
         configs_to_run: list[int] = [int(config) for config in config_num.split(",")]
 
+        print(f"[INFO] Running {len(configs_to_run)} configurations.")
         for config_num in configs_to_run:
             # Validate whether config num is in range
             if config_num < 1 or config_num > len(LIST_OF_CONFIGS):
