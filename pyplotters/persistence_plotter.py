@@ -114,7 +114,7 @@ def retrieve_trajectoryFrequencies(_json_data):
     # Calculate probabilities
     traj_freq_df["probability"] = traj_freq_df["frequency"] / traj_freq_df["frequency"].sum()
 
-    # Calculate PDF using Kernel Density Estimation
+    # Calculate PDF (Probability Mass Function) using Kernel Density Estimation
     trajectory_values = traj_freq_df["trajectory"].astype(int).values
     # Create weights based on frequency for KDE
     kde = gaussian_kde(trajectory_values, weights=traj_freq_df["frequency"].values, bw_method='scott')
@@ -161,12 +161,15 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         max_trajectory = float(_df["trajectory"].max())
         x_min = 10 ** 0  # Always start from 10^0
 
-        if max_trajectory < 10 ** 2:
-            x_max = 10 ** 2  # At least show up to 10^2
-        elif max_trajectory < 10 ** 3:
-            x_max = 10 ** 3  # If data reaches 10^2, show up to 10^3
-        else:
-            x_max = 10 ** 4  # If data exceeds 10^3, show up to 10^4
+        # Defaults x_max to the max amount of the current data
+        x_max = max_trajectory * np.ceil(np.log10(max_trajectory))
+
+        # if max_trajectory < 10 ** 2:
+        #     x_max = 10 ** 2  # At least show up to 10^2
+        # elif max_trajectory < 10 ** 3:
+        #     x_max = 10 ** 3  # If data reaches 10^2, show up to 10^3
+        # else:
+        #     x_max = 10 ** 4  # If data exceeds 10^3, show up to 10^4
 
         ax.set_xlim(x_min, x_max)
         ax.xaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
