@@ -16,10 +16,18 @@ import argparse
 import matplotlib.pyplot as plt
 
 from typing import List, Tuple, Union
+from scipy.stats import gaussian_kde
 from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, FormatStrFormatter
 
 BASE_REPORTS_DIR = "reports\\skripsi"
 PLOT_RESULTS_DIR = "pyplotters\\plots"
+
+SUMMARY_KEYS = [
+    "configuration_directory",
+    "max_cumulative_reward",
+    "max_cumulative_true_detections",
+    "max_trajectory_length",
+]
 
 
 def log_print(msg: str, end: str = "\n"):
@@ -96,6 +104,86 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
     plt.close()
 
 
+def retrieve_trajectoryFrequencies(_json_data):
+    traj_freq_list = []
+    for trajectory_length, frequency in _json_data["trajectoryFrequencies"].items():
+        traj_freq_list.append({"trajectory": trajectory_length, "frequency": frequency})
+
+    traj_freq_df = pd.DataFrame(sorted(traj_freq_list, key=lambda x: int(x["trajectory"])))
+
+    # Calculate probabilities
+    traj_freq_df["probability"] = traj_freq_df["frequency"] / traj_freq_df["frequency"].sum()
+
+    # Calculate PDF (Probability Mass Function) using Kernel Density Estimation
+    trajectory_values = traj_freq_df["trajectory"].astype(int).values
+    # Create weights based on frequency for KDE
+    kde = gaussian_kde(trajectory_values, weights=traj_freq_df["frequency"].values, bw_method='scott')
+    traj_freq_df["pdf"] = kde(trajectory_values)
+
+    return traj_freq_df
+
+
+def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x: bool = False):
+    """
+    Plots both the probability mass function and probability density function of trajectories.
+    - Blue line: Raw probabilities (PMF)
+    - Orange line: Smoothed PDF (KDE)
+    """
+    plt.figure(figsize=(12, 6))
+
+    if not logarithmic_x:
+        # Plot both probability and PDF
+        sns.lineplot(data=_df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
+        sns.lineplot(data=_df, x="trajectory", y="pdf", label="Probability Density (KDE)", linewidth=2, linestyle="--")
+
+        plt.title("Trajectory Distribution: PMF vs PDF")
+        plt.xlabel("Trajectory Length")
+        plt.ylabel("Probability / Density")
+        plt.gca().set_yticks(np.arange(0, 1.1, 0.1))
+        plt.margins(x=0)
+        plt.legend()
+        plt.savefig(file_path, bbox_inches='tight')
+        plt.close()
+    else:
+        # Logarithmic X-axis
+        sns.lineplot(data=_df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
+        sns.lineplot(data=_df, x="trajectory", y="pdf", label="Probability Density (KDE)", linewidth=2, linestyle="--")
+
+        plt.title("Trajectory Distribution: PMF vs PDF (Logarithmic Scale)")
+        plt.xlabel("Trajectory Length (log scale)")
+        plt.ylabel("Probability / Density")
+
+        # Set X-axis to logarithmic scale with dynamic range
+        ax = plt.gca()
+        ax.set_xscale('log')
+
+        # Determine X-axis limits based on max trajectory value
+        max_trajectory = float(_df["trajectory"].max())
+        x_min = 10 ** 0  # Always start from 10^0
+
+        # Defaults x_max to the max amount of the current data
+        x_max = max_trajectory * np.ceil(np.log10(max_trajectory))
+
+        # if max_trajectory < 10 ** 2:
+        #     x_max = 10 ** 2  # At least show up to 10^2
+        # elif max_trajectory < 10 ** 3:
+        #     x_max = 10 ** 3  # If data reaches 10^2, show up to 10^3
+        # else:
+        #     x_max = 10 ** 4  # If data exceeds 10^3, show up to 10^4
+
+        ax.set_xlim(x_min, x_max)
+        ax.xaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
+        ax.xaxis.set_major_formatter(LogFormatterMathtext(base=10.0))
+
+        # Y-axis ticks at 0.1 intervals
+        ax.set_yticks(np.arange(0, 1.1, 0.1))
+
+        plt.margins(x=0)
+        plt.legend()
+        plt.savefig(file_path, bbox_inches='tight')
+        plt.close()
+
+
 def process_reports(_run_id_dir):
     """
     Common DF includes:
@@ -105,8 +193,15 @@ def process_reports(_run_id_dir):
     """
     episode_jsons_dir = retrieve_episode_json_dirs(_run_id_dir)
 
-    COMMON_IDX = ["episodeNumber", "currentEpisodeReward", "currentCumulativeReward", "previousCumulativeReward", "currentTrueDetections", "currentCumulativeTrueDetections", "previousCumulativeTrueDetections"]
+    _run_summary = {key:float("-inf") for key in SUMMARY_KEYS}
+    _run_summary["configuration_directory"] = _run_id_dir.split("\\")[-1]
+
+    COMMON_IDX = ["episodeNumber", "currentEpisodeReward", "currentCumulativeReward", "previousCumulativeReward",
+                  "currentTrueDetections", "currentCumulativeTrueDetections", "previousCumulativeTrueDetections"]
     common_df = pd.DataFrame(columns=COMMON_IDX)
+
+    # Use the last episodic JSON file to determine the number of trajectories
+    traj_freq_df = retrieve_trajectoryFrequencies(read_json_file(episode_jsons_dir[-1]))
 
     for episode_json_dir in episode_jsons_dir:
         log_print(f"Processing JSON file: {episode_json_dir}")
@@ -117,6 +212,13 @@ def process_reports(_run_id_dir):
 
         # Add the complete row to the dataframe
         common_df = pd.concat([common_df, pd.DataFrame([row_data])], ignore_index=True)
+
+        # Update summary values
+        _run_summary["max_cumulative_reward"] = max(_run_summary["max_cumulative_reward"], json_data["currentCumulativeReward"])
+        _run_summary["max_cumulative_true_detections"] = max(_run_summary["max_cumulative_true_detections"], json_data["currentCumulativeTrueDetections"])
+
+        # Get highest "trajectoryFrequencies" by grabbing and selecting the highest int-casted
+        _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"], max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))
 
     common_df_path = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"common_data.csv")
 
@@ -136,6 +238,17 @@ def process_reports(_run_id_dir):
         pp_currentEpisodeReward
     )
 
+    # currentEpisodeReward
+    pp_currentCumulativeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentCumulativeReward.png")
+    plot_by_episode(
+        common_df,
+        "currentCumulativeReward",
+        "Current Cumulative Reward",
+        "Episode",
+        "Reward",
+        pp_currentCumulativeReward
+    )
+
     # currentTrueDetections
     pp_currentTrueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentTrueDetections.png")
     plot_by_episode(
@@ -146,6 +259,19 @@ def process_reports(_run_id_dir):
         "Detection",
         pp_currentTrueDetections
     )
+
+    # trajectory distribution
+    plot_trajectoryDistribution(
+        traj_freq_df,
+        os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"trajectoryDistribution.png")
+    )
+    plot_trajectoryDistribution(
+        traj_freq_df,
+        os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"trajectoryDistributionLog.png"),
+        logarithmic_x=True
+    )
+
+    return _run_summary
 
 
 if __name__ == "__main__":
@@ -173,12 +299,24 @@ if __name__ == "__main__":
     if args.all_of:
         all_of_dir = os.path.join(BASE_REPORTS_DIR, args.all_of)
         check_exists_source_dir(all_of_dir)
+        summary_df = pd.DataFrame(columns=SUMMARY_KEYS)
 
         run_dirs = glob.glob(os.path.join(all_of_dir, "run-id", "*"))
+        if not run_dirs:
+            log_print(f"No run-id directories found under {all_of_dir}. Checking for direct subdirectories instead.")
+            run_dirs = glob.glob(os.path.join(all_of_dir, "*"))
+
         for run_dir in run_dirs:
             if os.path.isdir(run_dir):
                 log_print(f"Processing result directory: {run_dir}")
-                process_reports(run_dir)
+                run_summary = process_reports(run_dir)
+
+                summary_df = pd.concat([summary_df, pd.DataFrame([run_summary])], ignore_index=True)
+
+        log_print("Done processing all results.")
+        os.makedirs(os.path.join(PLOT_RESULTS_DIR, args.all_of), exist_ok=True)
+        log_print("Saving summary to CSV file: " + os.path.join(PLOT_RESULTS_DIR, args.all_of, "summary.csv"))
+        summary_df.to_csv(os.path.join(PLOT_RESULTS_DIR, args.all_of, "summary.csv"), index=False, sep=";", header=True)
 
     elif args.run_id:
         # Finds the args.run_id directory under BASE_REPORTS_DIR and store it in run_dir if found
