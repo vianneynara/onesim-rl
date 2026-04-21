@@ -347,6 +347,9 @@ if __name__ == "__main__":
     successes = 0
     failures = 0
 
+    start_time = datetime.now()
+    running_times = []
+
     if args.all:
         print(f"[INFO] Running {len(LIST_OF_CONFIGS)} configurations.")
         for config in LIST_OF_CONFIGS:
@@ -358,6 +361,8 @@ if __name__ == "__main__":
             id = config["id"]
             overrides = config["overrides"] if "overrides" in config else args.d
 
+            _sim_start_time = datetime.now()
+
             # Execute simulation
             success = run_simulation(
                 alg=alg,
@@ -366,6 +371,9 @@ if __name__ == "__main__":
                 run_id=id,
                 overrides_list=overrides
             )
+
+            _sim_end_time = datetime.now()
+            running_times.append(_sim_end_time - _sim_start_time)
 
             if success:
                 successes += 1
@@ -392,6 +400,8 @@ if __name__ == "__main__":
             id = config["id"]
             overrides = config["overrides"] if "overrides" in config else args.d
 
+            _sim_start_time = datetime.now()
+
             # Execute simulation
             success = run_simulation(
                 alg=alg,
@@ -401,11 +411,19 @@ if __name__ == "__main__":
                 overrides_list=overrides
             )
 
+            _sim_end_time = datetime.now()
+            running_times.append(_sim_end_time - _sim_start_time)
+
             if success:
                 successes += 1
             else:
                 failures += 1
 
+    end_time = datetime.now()
+    avg_running_time = running_times.mean()
+
     print(f"\n{'=' * 70}")
+    print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}, average running time: {format_timedelta(avg_running_time)}")
     print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
+
     print(f"{'=' * 70}\n")
