@@ -348,7 +348,7 @@ if __name__ == "__main__":
     failures = 0
 
     if args.all:
-
+        print(f"[INFO] Running {len(LIST_OF_CONFIGS)} configurations.")
         for config in LIST_OF_CONFIGS:
             alg = config["alg"]
 
