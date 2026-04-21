@@ -235,6 +235,17 @@ def process_reports(_run_id_dir):
         pp_currentEpisodeReward
     )
 
+    # currentEpisodeReward
+    pp_currentCumulativeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentCumulativeReward.png")
+    plot_by_episode(
+        common_df,
+        "currentCumulativeReward",
+        "Current Cumulative Reward",
+        "Episode",
+        "Reward",
+        pp_currentCumulativeReward
+    )
+
     # currentTrueDetections
     pp_currentTrueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentTrueDetections.png")
     plot_by_episode(
