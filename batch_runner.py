@@ -348,22 +348,19 @@ def parse_config_indices(config_string: str) -> list[int]:
                 end = int(end_str.strip())
 
                 if start > end:
-                    print(f"Warning: Invalid range '{part}', start > end. Skipping.")
-                    continue
+                    raise ValueError(f"Warning: Invalid range '{part}', start > end. Skipping.")
 
                 # Add all values in range (inclusive)
                 for i in range(start, end + 1):
                     configs.add(i)
             except ValueError:
-                print(f"Warning: Invalid range format '{part}'. Skipping.")
-                continue
+                raise ValueError(f"Warning: Invalid range format '{part}'. Skipping.")
         else:
             # It's a single value
             try:
                 configs.add(int(part))
             except ValueError:
-                print(f"Warning: Invalid config number '{part}'. Skipping.")
-                continue
+                raise ValueError(f"Warning: Invalid config number '{part}'. Skipping.")
 
     return sorted(list(configs))
 
