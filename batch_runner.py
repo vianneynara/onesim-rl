@@ -338,6 +338,46 @@ def check_runs(args_runs: int, config: dict[str, str] = None) -> int:
     return _runs
 
 
+def parse_config_indices(config_string: str) -> list[int]:
+    """
+    Parse config indices from a string supporting:
+    - Single values: "1,2,9"
+    - Ranges: "4-6" (expands to 4,5,6)
+    - Mixed: "1,2,4-6,9,10-17"
+    """
+    configs = set()
+
+    # Split by comma
+    parts = config_string.split(",")
+
+    for part in parts:
+        part = part.strip()  # Remove whitespace
+
+        if "-" in part:
+            # It's a range
+            try:
+                start_str, end_str = part.split("-", 1)  # Use maxsplit=1 to handle negative numbers
+                start = int(start_str.strip())
+                end = int(end_str.strip())
+
+                if start > end:
+                    raise ValueError(f"Warning: Invalid range '{part}', start > end. Skipping.")
+
+                # Add all values in range (inclusive)
+                for i in range(start, end + 1):
+                    configs.add(i)
+            except ValueError:
+                raise ValueError(f"Warning: Invalid range format '{part}'. Skipping.")
+        else:
+            # It's a single value
+            try:
+                configs.add(int(part))
+            except ValueError:
+                raise ValueError(f"Warning: Invalid config number '{part}'. Skipping.")
+
+    return sorted(list(configs))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="ONE Simulator multi-run/episodic launcher (version 2), simpler"
@@ -350,12 +390,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "-a", "--all", action="store_true", help="Run all configs"
     )
+
     parser.add_argument(
         "-r", "--runs", type=int, help="Number of runs for the simulation (overrides the existing configs)", required=False
     )
 
+    parser.add_argument(
+        "-cc", "--count-configs", action="store_true", help="Count the number of configs in the LIST_OF_CONFIGS and exit"
+    )
+
     # Parse arguments
     args = parser.parse_args()
+
+    if args.count_configs:
+        print(f"Number of configs: {len(LIST_OF_CONFIGS)}")
+        sys.exit(0)
 
     successes = 0
     failures = 0
@@ -395,8 +444,8 @@ if __name__ == "__main__":
     else:
         config_num = args.config
 
-        # Separated by comma
-        configs_to_run: list[int] = [int(config) for config in config_num.split(",")]
+        # Parse config indices supporting ranges with hyphens
+        configs_to_run: list[int] = parse_config_indices(config_num)
 
         print(f"[INFO] Running {len(configs_to_run)} configurations.")
         for config_num in configs_to_run:
