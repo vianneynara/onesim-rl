@@ -45,7 +45,7 @@ LIST_OF_CONFIGS = [
             "eg_ed": 0.9999999999,
             "eg_me": 0.1,
         }
-    },
+    }, #6
 
     # [ Q-Learning with UCB ]
     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
@@ -55,7 +55,17 @@ LIST_OF_CONFIGS = [
     },
     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
         "overrides": {
+            "ucb_ec": 0.75,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
             "ucb_ec": 1.0,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
+            "ucb_ec": 1.25,
         }
     },
     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
@@ -65,39 +75,64 @@ LIST_OF_CONFIGS = [
     },
     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
         "overrides": {
+            "ucb_ec": 1.75,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
             "ucb_ec": 2.0,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
+            "ucb_ec": 2.25,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
+            "ucb_ec": 2.5,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
+            "ucb_ec": 2.75,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
+            "ucb_ec": 3.0,
         }
     },
     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
         "overrides": {
             "ucb_ec": 5.0,
         }
-    },
-    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
-        "overrides": {
-            "ucb_ec": 7.5,
-        }
-    },
-    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
-        "overrides": {
-            "ucb_ec": 10.0,
-        }
-    },
-    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
-        "overrides": {
-            "ucb_ec": 12.5,
-        }
-    },
-    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
-        "overrides": {
-            "ucb_ec": 15.0,
-        }
-    },
-    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
-        "overrides": {
-            "ucb_ec": 20.0,
-        }
-    },
+    }, #18
+#     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+#         "overrides": {
+#             "ucb_ec": 7.5,
+#         }
+#     },
+#     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+#         "overrides": {
+#             "ucb_ec": 10.0,
+#         }
+#     },
+#     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+#         "overrides": {
+#             "ucb_ec": 12.5,
+#         }
+#     },
+#     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+#         "overrides": {
+#             "ucb_ec": 15.0,
+#         }
+#     },
+#     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+#         "overrides": {
+#             "ucb_ec": 20.0,
+#         }
+#     }, #23
 
     # [ Q-Learning with Thompson Sampling ]
     {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
@@ -119,5 +154,5 @@ LIST_OF_CONFIGS = [
         "overrides": {
             "ts_iv": 10.0,
         }
-    }
+    } #22
 ]
