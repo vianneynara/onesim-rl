@@ -44,6 +44,7 @@ public class EpisodicPersistenceData {
 	public int previousCumulativeTrueDetections;
 	public int currentCumulativeTrueDetections;
 	public int currentTrueDetections;
+	public int currentUniqueDetections;
 
 	// [ Episodic bookkeeping ]
 	public int episodeNumber;
