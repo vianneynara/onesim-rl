@@ -421,7 +421,8 @@ if __name__ == "__main__":
                 failures += 1
 
     end_time = datetime.now()
-    avg_running_time = running_times.mean()
+    sum_running_time = sum(running_times)
+    avg_running_time = sum_running_time // len(running_times)
 
     print(f"\n{'=' * 70}")
     print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}, average running time: {format_timedelta(avg_running_time)}")
