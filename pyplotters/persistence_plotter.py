@@ -189,7 +189,7 @@ def process_reports(_run_id_dir):
     """
     Common DF includes:
     episodeNumber, currentEpisodeReward, currentCumulativeReward, previousCumulativeRewards, currentTrueDetections,
-    currentCumulativeTrueDetections, previousCumulativeTrueDetections
+    currentUniqueDetections, currentCumulativeTrueDetections, previousCumulativeTrueDetections
 
     """
     episode_jsons_dir = retrieve_episode_json_dirs(_run_id_dir)
@@ -198,7 +198,8 @@ def process_reports(_run_id_dir):
     _run_summary["configuration_directory"] = _run_id_dir.split("\\")[-1]
 
     COMMON_IDX = ["episodeNumber", "currentEpisodeReward", "currentCumulativeReward", "previousCumulativeReward",
-                  "currentTrueDetections", "currentCumulativeTrueDetections", "previousCumulativeTrueDetections"]
+                  "currentTrueDetections", "currentUniqueDetections", "currentCumulativeTrueDetections",
+                  "previousCumulativeTrueDetections"]
     common_df = pd.DataFrame(columns=COMMON_IDX)
 
     # Use the last episodic JSON file to determine the number of trajectories
