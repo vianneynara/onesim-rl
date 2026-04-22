@@ -19,10 +19,8 @@ public class DetectionInfo implements Serializable {
 
     private int nrofMeet;
 
-    /* 🔥 mode */
     private boolean destructive;
 
-    /* 🔥 flags */
     private boolean newlyDetected;
     private boolean alreadyRewarded;
 
@@ -75,18 +73,11 @@ public class DetectionInfo implements Serializable {
            🔴 DESTRUCTIVE TARGET
            ========================= */
         if (destructive) {
-//            System.out.println("==============================");
-//            System.out.println("DESTRUCTIVE");
-
             if (alreadyRewarded) {
-//                System.out.println("HAVE ALREADY BEING REWARDED");
-//                System.out.println("==============================");
                 return false;
             }
 
             if (newlyDetected) {
-//                System.out.println("FIRST MEET, GIVE REWARD");
-//                System.out.println("==============================");
                 newlyDetected = false;
                 alreadyRewarded = true;
                 lastRewardTime = now;
@@ -101,13 +92,9 @@ public class DetectionInfo implements Serializable {
         ========================= */
         else {
             if (newlyDetected) {
-//                System.out.println("==============================");
-//                System.out.println("NON - DESTRUCTIVE");
 
                 /* 🔥 FIRST TIME: always reward */
                 if (lastRewardTime == Double.NEGATIVE_INFINITY) {
-//                    System.out.println("FIRST TIME MEET,GIVE REWARD");
-//                    System.out.println("==============================");
 
                     newlyDetected = false;
                     lastRewardTime = now;
@@ -115,16 +102,8 @@ public class DetectionInfo implements Serializable {
                     return true;
                 }
 
-//                System.out.println("DIFFERENT : " + (now - lastRewardTime));
-//                System.out.println("COOLDOWN : " +cooldown);
-//                System.out.println("==============================");
-
                 /* 🔥 NEXT TIMES: respect cooldown */
                 if (now - lastRewardTime >= cooldown) {
-//                    System.out.println("==============================");
-//                    System.out.println("HAVE PAST THE COOLDOWN");
-//                    System.out.println("==============================");
-
                     newlyDetected = false;
                     lastRewardTime = now;
 

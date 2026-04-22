@@ -24,7 +24,6 @@ public class TargetDetectionReport extends Report {
             List<DTNHost> hosts = SimScenario.getInstance().getHosts();
 
             for (DTNHost host : hosts) {
-
                 if (host.getMovement() instanceof RLMovementModel) {
 
                     RLMovementModel movement =

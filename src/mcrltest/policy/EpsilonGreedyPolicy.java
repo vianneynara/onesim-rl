@@ -25,8 +25,6 @@ public class EpsilonGreedyPolicy implements BehaviorPolicy, EpsilonPolicy, Polic
         this.epsilon = behaviorSettings.getDouble(EPSILON_S, 0.9);
         this.decayRate = behaviorSettings.getDouble(DECAY_S, 0.99999);
         this.minEpsilon = behaviorSettings.getDouble(MIN_EPSILON_S, 0.01);
-
-        System.out.println("==============================================================" + epsilon);
     }
 
     public EpsilonGreedyPolicy(double epsilon,

@@ -70,18 +70,15 @@ public class RLMovementModel extends MovementModel {
 
     @Override
     public void changedConnection(Connection con) {
-
         if (!con.isUp()) return;
 
         DTNHost other = con.getOtherNode(getHost());
         if (other == null || other == getHost()) return;
 
         if (other.getGroupId().startsWith(agent.getTargetPrefix())) {
-
             double now = SimClock.getTime();
 
             objectiveFound.compute(other, (node, info) -> {
-
                 if (info == null) {
                     info = DetectionInfo.of(
                             Double.NEGATIVE_INFINITY,
@@ -142,7 +139,6 @@ public class RLMovementModel extends MovementModel {
     private void updateState() {
 
         if (prevAction == -1) {
-            // 🔥 DO NOT RESET blindly anymore
             return;
         }
 
