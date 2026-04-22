@@ -196,7 +196,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 				if (otherNode.getGroupId().startsWith(targetPrefix)) {
 					// Update the last found time for this target
 					double now = SimClock.getTime();
-					objectiveFound.compute(otherNode, (node, existsInfo) -> {
+					this.objectiveFound.compute(otherNode, (node, existsInfo) -> {
 						if (existsInfo == null) {
 							/* First detection, negative infinity to ensure update */
 							DetectionInfo info = DetectionInfo.of(Double.NEGATIVE_INFINITY, 0);
@@ -355,7 +355,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 			/* Determining reward using lastRewardedTime based on the recency of targets found */
 			double now = SimClock.getTime();
 			int availableRewards = 0;
-			for (DetectionInfo info : new ArrayList<>(objectiveFound.values())) {
+			for (DetectionInfo info : new ArrayList<>(this.objectiveFound.values())) {
 				// check if there's an available reward for the current detection information
 				if (info.hasAvailableReward()) {
 					availableRewards++;
@@ -591,7 +591,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 	@Override
 	public Collection<DTNHost> getDiscoveredNodes() {
-		return List.of(objectiveFound.keySet().toArray(new DTNHost[0]));
+		return List.of(this.objectiveFound.keySet().toArray(new DTNHost[0]));
 	}
 
 	@Override
@@ -608,12 +608,24 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		return retrieveCurrentNewTrueDetections();
 	}
 
+	/**
+	 * Return unique amount of targets detected.
+	 * */
+	@Override
+	public int retrieveUniqueDetections() {
+		return retrieveCurrentUniqueDetections();
+	}
+
 	public int retrieveCurrentNewTrueDetections() {
-		return objectiveFound.entrySet().stream().reduce(
+		return this.objectiveFound.entrySet().stream().reduce(
 			0,
 			(sum, entry) -> sum + entry.getValue().getOccurrences(),
 			Integer::sum
 		);
+	}
+
+	private int retrieveCurrentUniqueDetections() {
+		return this.objectiveFound.size();
 	}
 
 
@@ -669,6 +681,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		epd.currentCumulativeTrueDetections = newCumulativeTrueDetections;
 		epd.currentTrueDetections = retrieveCurrentNewTrueDetections();
 		this.currentCumulativeTrueDetections = newCumulativeTrueDetections;
+
+		epd.currentUniqueDetections = retrieveCurrentUniqueDetections();
 
 		// Also save the persistence data for the BP
 		behaviorPolicy.saveTo(epd);
