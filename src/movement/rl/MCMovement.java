@@ -715,6 +715,11 @@ public class MCMovement extends MovementModel implements TrajectoryFrequencyRepo
 		);
 	}
 
+	@Override
+	public int retrieveUniqueDetections() {
+		return this.objectiveFound.size();
+	}
+
 
 	// [ EPISODIC PERSISTENCE METHODS ]
 
