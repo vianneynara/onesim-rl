@@ -79,12 +79,14 @@ ALG_LABEL = "ALG_LABEL"
 
 alg_base_settings = {
     "ql": "settings/skripsi/randomsearch-qlearn.cfg",
+    "mc": "settings/skripsi/randomsearch-mc.cfg",
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
     "lf": "settings/skripsi/randomsearch-lf.cfg"
 }
 
 alg_abbreviations = {
     "ql": "QLearningMovement",
+    "mc": "MCMovement",
     "lfe": "LevyFlightEpisodic",
     "lf": "LevyFlight"
 }
@@ -112,6 +114,17 @@ key_abbreviations = {
     "qlm_sp": "QLearningMovement.stepPenalty",
     "qlm_fr": "QLearningMovement.foundReward",
     "qlm_as": "QLearningMovement.agentSpeed",
+
+    # [ QLearningMovement settings ]
+    "mcm_bp": "MCMovement.behaviorPolicy",
+    "mcm_lr": "MCMovement.learningRate",
+    "mcm_df": "MCMovement.discountFactor",
+    "mcm_iq": "MCMovement.initialQValue",
+    "mcm_tp": "MCMovement.targetPrefix",
+    "mcm_sp": "MCMovement.stepPenalty",
+    "mcm_fr": "MCMovement.foundReward",
+    "mcm_as": "MCMovement.agentSpeed",
+    "mcm_fv": "MCMovement.firstVisit",
 
     # [ EpsilonGreedyBehavior settings ]
     "eg_ip": "BehaviorPolicy.epsilon",
