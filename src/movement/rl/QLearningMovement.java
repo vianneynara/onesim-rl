@@ -608,12 +608,24 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		return retrieveCurrentNewTrueDetections();
 	}
 
+	/**
+	 * Return unique amount of targets detected.
+	 * */
+	@Override
+	public int retrieveUniqueDetections() {
+		return retrieveCurrentUniqueDetections();
+	}
+
 	public int retrieveCurrentNewTrueDetections() {
 		return this.objectiveFound.entrySet().stream().reduce(
 			0,
 			(sum, entry) -> sum + entry.getValue().getOccurrences(),
 			Integer::sum
 		);
+	}
+
+	private int retrieveCurrentUniqueDetections() {
+		return this.objectiveFound.size();
 	}
 
 
@@ -669,6 +681,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		epd.currentCumulativeTrueDetections = newCumulativeTrueDetections;
 		epd.currentTrueDetections = retrieveCurrentNewTrueDetections();
 		this.currentCumulativeTrueDetections = newCumulativeTrueDetections;
+
+		epd.currentUniqueDetections = retrieveCurrentUniqueDetections();
 
 		// Also save the persistence data for the BP
 		behaviorPolicy.saveTo(epd);
