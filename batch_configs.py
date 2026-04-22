@@ -96,6 +96,21 @@ LIST_OF_CONFIGS = [
             "mcm_fv": True,
         }
     },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
+            "ucb_ec": 12.5,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
+            "ucb_ec": 15.0,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
+        "overrides": {
+            "ucb_ec": 20.0,
+        }
+    },
 
     # [ Q-Learning with Thompson Sampling ]
     {"alg": "mc", "runs": 500, "bp": "ts", "id": "mc1-bp=ts",

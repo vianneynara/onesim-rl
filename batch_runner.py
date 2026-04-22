@@ -14,7 +14,7 @@ import subprocess
 import datetime as dt
 import json
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ------------------------------------------------------------------------------------------------------------------- #
 # PATH VALIDATOR
@@ -360,8 +360,11 @@ if __name__ == "__main__":
     successes = 0
     failures = 0
 
-    if args.all:
+    start_time = datetime.now()
+    running_times = []
 
+    if args.all:
+        print(f"[INFO] Running {len(LIST_OF_CONFIGS)} configurations.")
         for config in LIST_OF_CONFIGS:
             alg = config["alg"]
 
@@ -371,6 +374,8 @@ if __name__ == "__main__":
             id = config["id"]
             overrides = config["overrides"] if "overrides" in config else args.d
 
+            _sim_start_time = datetime.now()
+
             # Execute simulation
             success = run_simulation(
                 alg=alg,
@@ -379,6 +384,9 @@ if __name__ == "__main__":
                 run_id=id,
                 overrides_list=overrides
             )
+
+            _sim_end_time = datetime.now()
+            running_times.append(_sim_end_time - _sim_start_time)
 
             if success:
                 successes += 1
@@ -390,6 +398,7 @@ if __name__ == "__main__":
         # Separated by comma
         configs_to_run: list[int] = [int(config) for config in config_num.split(",")]
 
+        print(f"[INFO] Running {len(configs_to_run)} configurations.")
         for config_num in configs_to_run:
             # Validate whether config num is in range
             if config_num < 1 or config_num > len(LIST_OF_CONFIGS):
@@ -405,6 +414,8 @@ if __name__ == "__main__":
             id = config["id"]
             overrides = config["overrides"] if "overrides" in config else args.d
 
+            _sim_start_time = datetime.now()
+
             # Execute simulation
             success = run_simulation(
                 alg=alg,
@@ -414,11 +425,20 @@ if __name__ == "__main__":
                 overrides_list=overrides
             )
 
+            _sim_end_time = datetime.now()
+            running_times.append(_sim_end_time - _sim_start_time)
+
             if success:
                 successes += 1
             else:
                 failures += 1
 
+    end_time = datetime.now()
+    sum_running_time = sum(running_times, timedelta())
+    avg_running_time = sum_running_time // len(running_times)
+
     print(f"\n{'=' * 70}")
+    print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}, average running time: {format_timedelta(avg_running_time)}")
     print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
+
     print(f"{'=' * 70}\n")

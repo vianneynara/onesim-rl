@@ -38,6 +38,7 @@ public class SearchingOccurrencesReporter extends Report {
 		assert representative != null : "No searching agents found in the scenario.";
 
 		int currentTrueDetections = representative.retrieveTrueDetections();
+		int currentUniqueDetections = representative.retrieveUniqueDetections();
 
 		/* Load the EPD from the JSON file using the manager */
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
@@ -53,6 +54,7 @@ public class SearchingOccurrencesReporter extends Report {
 		write(String.format("previousCumulativeTrueDetections: %d", previousCumulativeTrueDetections));
 		write(String.format("currentCumulativeTrueDetections: %d", currentCumulativeTrueDetections));
 		write(String.format("currentTrueDetections: %d", currentTrueDetections));
+		write(String.format("currentUniqueDetections: %d", currentUniqueDetections));
 
 		super.done();
 	}
