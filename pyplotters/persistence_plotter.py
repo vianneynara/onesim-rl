@@ -19,8 +19,9 @@ from typing import List, Tuple, Union
 from scipy.stats import gaussian_kde
 from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, FormatStrFormatter
 
+PARENT_DIR = "mc"
 BASE_REPORTS_DIR = "reports\\skripsi"
-PLOT_RESULTS_DIR = "pyplotters\\plots"
+PLOT_RESULTS_DIR = "pyplotters\\plots\\{PARENT_DIR}"
 
 SUMMARY_KEYS = [
     "configuration_directory",
