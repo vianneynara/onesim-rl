@@ -260,6 +260,17 @@ def process_reports(_run_id_dir):
         pp_currentTrueDetections
     )
 
+    # currentUniqueDetections
+    pp_currentUniqueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentUniqueDetections.png")
+    plot_by_episode(
+        common_df,
+        "currentUniqueDetections",
+        "Current Unique Detections",
+        "Episode",
+        "Detection",
+        pp_currentUniqueDetections
+    )
+
     # trajectory distribution
     plot_trajectoryDistribution(
         traj_freq_df,
