@@ -21,7 +21,7 @@ from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, Fo
 
 PARENT_DIR = "mc"
 BASE_REPORTS_DIR = "reports\\skripsi"
-PLOT_RESULTS_DIR = "pyplotters\\plots\\{PARENT_DIR}"
+PLOT_RESULTS_DIR = f"pyplotters\\plots\\{PARENT_DIR}"
 
 SUMMARY_KEYS = [
     "configuration_directory",
