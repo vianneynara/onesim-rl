@@ -14,7 +14,7 @@ import subprocess
 import datetime as dt
 import json
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ------------------------------------------------------------------------------------------------------------------- #
 # PATH VALIDATOR
@@ -421,7 +421,7 @@ if __name__ == "__main__":
                 failures += 1
 
     end_time = datetime.now()
-    sum_running_time = sum(running_times)
+    sum_running_time = sum(running_times, timedelta())
     avg_running_time = sum_running_time // len(running_times)
 
     print(f"\n{'=' * 70}")
