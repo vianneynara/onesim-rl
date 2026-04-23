@@ -29,6 +29,8 @@ WINDOWS_RESERVED_NAMES = {
     "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
 }
 
+LINE_LENGTH = 100
+
 
 def validate_run_id(run_id: str) -> None:
     """
@@ -232,9 +234,9 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     try:
         _start_time = datetime.now()
 
-        print(f"{'-' * 70}")
+        print(f"{'-' * LINE_LENGTH}")
         print(f"[{_start_time.strftime("%H:%M:%S")}] Running episode {str(ep)} for algorithm {algo}.")
-        print(f"{'-' * 70}\n")
+        print(f"{'-' * LINE_LENGTH}\n")
 
         print(f"[{_start_time.strftime("%H:%M:%S")}] Running command: {' '.join(script)}")
         subprocess.run(script, check=True, shell=True)
@@ -247,9 +249,9 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     finally:
         _end_time = datetime.now()
 
-        print(f"{'-' * 70}")
+        print(f"{'-' * LINE_LENGTH}")
         print(f"[{_end_time.strftime("%H:%M:%S")}] Done running episode {str(ep)} for algorithm {algo}. Took {format_timedelta(_end_time - _start_time)}.")
-        print(f"{'-' * 70}\n")
+        print(f"{'-' * LINE_LENGTH}\n")
 
 
 def _safe_int_dirnames(path: str) -> list[int]:
@@ -390,12 +392,12 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     overrides_string = "@@".join(full_overrides)
 
     # Print run information
-    print(f"\n{'=' * 70}")
+    print(f"\n{'=' * LINE_LENGTH}")
     print(f"[INFO] Starting episodic simulation batch...")
     print(f"[INFO] Algorithm: {alg} ({settings_file}), Behavior Policy: {bp}")
     print(f"[INFO] Run ID: {run_id}, Number of episodes: {runs}")
     print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
-    print(f"{'=' * 70}\n")
+    print(f"{'=' * LINE_LENGTH}\n")
 
     # Create a JSON to log the current running simulation configuration
     create_config_setting_json(alg, runs, bp, result_id_dir, full_overrides)
@@ -408,7 +410,7 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
         highest_good, problems, episodic_available = find_highest_good_episode(full_report_dir)
         expected_last = runs
 
-        print(f"\n{'-' * 70}")
+        print(f"\n{'-' * LINE_LENGTH}")
         print(f"[INFO] [VERIFY] Run dir: {full_report_dir}")
         print(f"[INFO] [VERIFY] Expected episodes (runs): {expected_last}")
         print(f"[INFO] [VERIFY] Highest contiguous uncorrupted episode: {highest_good}")
@@ -422,7 +424,7 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
                 print(f"[INFO] [VERIFY] ❌ Incomplete ({highest_good}/{expected_last})")
         else:
             print("[INFO] [VERIFY] [WARN] Cannot verify episodic persistence (saveEpisodically likely false).")
-        print(f"{'-' * 70}\n")
+        print(f"{'-' * LINE_LENGTH}\n")
 
         if do_continue:
             if not episodic_available:
@@ -472,10 +474,10 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     end_time = datetime.now()
 
     # Print summary
-    print(f"\n{'=' * 70}")
+    print(f"\n{'=' * LINE_LENGTH}")
     print(f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}")
     print(f"[INFO] Total episodes: {runs} (Success: {succeeds}, Fails: {failed})")
-    print(f"{'=' * 70}\n")
+    print(f"{'=' * LINE_LENGTH}\n")
 
     return failed == 0
 
@@ -672,8 +674,8 @@ if __name__ == "__main__":
     sum_running_time = sum(running_times, timedelta())
     avg_running_time = sum_running_time // len(running_times)
 
-    print(f"\n{'=' * 70}")
+    print(f"\n{'=' * LINE_LENGTH}")
     print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}, average running time: {format_timedelta(avg_running_time)}")
     print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
 
-    print(f"{'=' * 70}\n")
+    print(f"{'=' * LINE_LENGTH}\n")
