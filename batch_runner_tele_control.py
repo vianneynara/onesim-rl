@@ -13,8 +13,16 @@ import argparse
 import subprocess
 import datetime as dt
 import json
+import threading
 
 from datetime import datetime, timedelta
+
+# ------------------------------------------------------------------------------------------------------------------- #
+# GLOBAL STOP FLAG  (set by Telegram /stop listener)
+# ------------------------------------------------------------------------------------------------------------------- #
+
+stop_requested = False
+stop_lock = threading.Lock()
 
 # ------------------------------------------------------------------------------------------------------------------- #
 # TELEGRAM NOTIFIER
@@ -67,6 +75,60 @@ def send_telegram(cfg: dict, message: str) -> bool:
     except Exception as e:
         print(f"[TELEGRAM] Failed to send message: {e}")
         return False
+
+
+# ------------------------------------------------------------------------------------------------------------------- #
+# TELEGRAM /stop LISTENER
+# ------------------------------------------------------------------------------------------------------------------- #
+
+def start_stop_listener(cfg: dict) -> None:
+    """
+    Spawns a background daemon thread that polls Telegram for new messages.
+    When a '/stop' command is received from the authorised chat, it sets the
+    global stop_requested flag so the main loop can exit cleanly after the
+    current config finishes.
+    """
+    if cfg is None:
+        return
+
+    def _poll():
+        global stop_requested
+        import urllib.request
+
+        last_update_id = None
+
+        while True:
+            try:
+                url = (
+                    f"https://api.telegram.org/bot{cfg['bot_token']}/getUpdates"
+                    f"?timeout=10&allowed_updates=%5B%22message%22%5D"
+                )
+                if last_update_id is not None:
+                    url += f"&offset={last_update_id + 1}"
+
+                req = urllib.request.Request(url)
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+
+                for update in data.get("result", []):
+                    last_update_id = update["update_id"]
+                    msg = update.get("message", {})
+                    chat_id = str(msg.get("chat", {}).get("id", ""))
+                    text = msg.get("text", "").strip().lower()
+
+                    if chat_id == str(cfg["chat_id"]) and text == "/stop":
+                        with stop_lock:
+                            stop_requested = True
+                        print("\n[TELEGRAM] /stop received — will stop after current config finishes.\n")
+                        send_telegram(cfg,
+                            "🛑 <b>/stop received</b>\n"
+                            "The batch runner will stop after the <b>current config</b> finishes."
+                        )
+            except Exception:
+                pass  # Network blip — just keep polling
+
+    t = threading.Thread(target=_poll, daemon=True)
+    t.start()
 
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -365,7 +427,19 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1, tg_cfg: di
         # Telegram: notify episode done (success path — failure already sent above)
 
 
-def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None, tg_cfg: dict = None) -> bool:
+# Only the relevant fixed parts are shown below
+
+def run_simulation(
+        alg: str,
+        runs: int,
+        bp: str,
+        run_id: str = None,
+        overrides_list: list[str] = None,
+        tg_cfg: dict = None,
+        current_batch: int = 1,
+        total_batches: int = 1,
+        start_ep: int = 1,
+) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg)
 
@@ -386,72 +460,79 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     full_report_dir = f"reports/skripsi/{alg}/run-id/{result_id_dir}"
 
     bp_override = f"QLearningMovement.behaviorPolicy={behavior_packages[bp]}"
-    persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
+    persistence_override = (
+        f"EpisodicPersistenceManager.persistencePath="
+        f"{full_report_dir}/_persistence.json"
+    )
 
-    if overrides_list and full_overrides:
-        full_overrides.append(bp_override)
-        full_overrides.append(persistence_override)
+    if full_overrides is None:
+        full_overrides = []
+
+    full_overrides.append(bp_override)
+    full_overrides.append(persistence_override)
 
     overrides_string = "@@".join(full_overrides)
 
-    # Print run information
     print(f"\n{'=' * 70}")
     print(f"[INFO] Starting episodic simulation batch...")
+    print(f"[INFO] Batch Progress: {current_batch}/{total_batches}")
     print(f"[INFO] Algorithm: {alg} ({settings_file}), Behavior Policy: {bp}")
-    print(f"[INFO] Run ID: {run_id}, Number of episodes: {runs}")
+    print(f"[INFO] Run ID: {run_id}, Episodes: {start_ep}–{runs}")
     print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
     print(f"{'=' * 70}\n")
 
-    # Telegram: notify config start
-    send_telegram(tg_cfg,
+    # Telegram: config started (with batch progress)
+    send_telegram(
+        tg_cfg,
         f"🚀 <b>Config started</b>\n"
+        f"Batch: <b>{current_batch}/{total_batches}</b>\n"
         f"Algorithm: <code>{alg}</code> | Policy: <code>{bp}</code>\n"
         f"Run ID: <code>{result_id_dir}</code>\n"
-        f"Episodes: {runs}\n"
+        f"Episodes: {start_ep}–{runs}\n"
         f"Time: {datetime.now().strftime('%H:%M:%S')}"
     )
 
-    # Create a JSON to log the current running simulation configuration
-    create_config_setting_json(alg, runs, bp, result_id_dir, full_overrides)
+    create_config_setting_json(
+        alg,
+        runs,
+        bp,
+        result_dir_id=result_id_dir,
+        overrides_list=full_overrides
+    )
 
-    # Execute episodes
     succeeds = 0
     failed = 0
     start_time = datetime.now()
 
-    for ep in range(1, runs + 1):
+    for ep in range(start_ep, runs + 1):
         running_overrides_string = (
-                overrides_string
-                + f"@@Report.reportDir={full_report_dir}/ep/{str(ep)}"
-                + f"@@EpisodicPersistenceManager.episodeNumber={str(ep)}"
+            overrides_string
+            + f"@@Report.reportDir={full_report_dir}/ep/{ep}"
+            + f"@@EpisodicPersistenceManager.episodeNumber={ep}"
         )
+
         if run_script(alg, running_overrides_string, ep, tg_cfg):
             succeeds += 1
-
-#             # Telegram: episode success
-#             send_telegram(tg_cfg,
-#                 f"✅ <b>Episode {ep}/{runs} done</b>\n"
-#                 f"Algorithm: <code>{alg}</code>\n"
-#                 f"Success so far: {succeeds} | Failed: {failed}"
-#             )
         else:
             failed += 1
 
     end_time = datetime.now()
     elapsed = format_timedelta(end_time - start_time)
 
-    # Print summary
     print(f"\n{'=' * 70}")
-    print(f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {elapsed}")
+    print(f"[INFO] Episodic simulation batch completed at {end_time}")
+    print(f"[INFO] Time taken: {elapsed}")
     print(f"[INFO] Total episodes: {runs} (Success: {succeeds}, Fails: {failed})")
     print(f"{'=' * 70}\n")
 
-    # Telegram: notify config done
-    send_telegram(tg_cfg,
+    # Telegram: config finished (with batch progress)
+    send_telegram(
+        tg_cfg,
         f"{'✅' if failed == 0 else '⚠️'} <b>Config finished</b>\n"
+        f"Batch: <b>{current_batch}/{total_batches}</b>\n"
         f"Algorithm: <code>{alg}</code> | Policy: <code>{bp}</code>\n"
         f"Run ID: <code>{result_id_dir}</code>\n"
-        f"Episodes: {runs} (✅ {succeeds} / ❌ {failed})\n"
+        f"Episodes: {start_ep}–{runs} (✅ {succeeds} / ❌ {failed})\n"
         f"Time taken: {elapsed}"
     )
 
@@ -554,6 +635,8 @@ if __name__ == "__main__":
             f"🤖 <b>Batch runner started</b>\n"
             f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
+        start_stop_listener(tg_cfg)
+        print("[TELEGRAM] /stop listener started. Send '/stop' to stop after current config.")
     else:
         print("[TELEGRAM] Notifications disabled.")
 
@@ -564,26 +647,42 @@ if __name__ == "__main__":
     running_times = []
 
     if args.all:
-        print(f"[INFO] Running {len(LIST_OF_CONFIGS)} configurations.")
-        for config in LIST_OF_CONFIGS:
+        total_batches = len(LIST_OF_CONFIGS)
+
+        print(f"[INFO] Running {total_batches} configurations.")
+
+        for idx, config in enumerate(LIST_OF_CONFIGS, start=1):
+            # Check stop flag before starting each new config
+            with stop_lock:
+                should_stop = stop_requested
+            if should_stop:
+                print(f"\n[INFO] Stop requested — skipping remaining configs (stopped before config {idx}/{total_batches}).\n")
+                send_telegram(tg_cfg,
+                    f"🛑 <b>Batch stopped early</b>\n"
+                    f"Stopped before config {idx}/{total_batches}.\n"
+                    f"Configs completed: {successes + failures} (✅ {successes} / ❌ {failures})"
+                )
+                break
+
             alg = config["alg"]
-
             runs = check_runs(args.runs, config)
-
             bp = config["bp"]
-            id = config["id"]
-            overrides = config["overrides"] if "overrides" in config else args.d
+            run_id = config["id"]
+            overrides = config["overrides"] if "overrides" in config else None
+            start_ep = config.get("start_ep", 1)
 
             _sim_start_time = datetime.now()
 
-            # Execute simulation
             success = run_simulation(
                 alg=alg,
                 runs=runs,
                 bp=bp,
-                run_id=id,
+                run_id=run_id,
                 overrides_list=overrides,
-                tg_cfg=tg_cfg
+                tg_cfg=tg_cfg,
+                current_batch=idx,
+                total_batches=total_batches,
+                start_ep=start_ep,
             )
 
             _sim_end_time = datetime.now()
@@ -596,35 +695,52 @@ if __name__ == "__main__":
     else:
         config_num = args.config
 
-        # Parse config indices supporting ranges with hyphens
-        configs_to_run: list[int] = parse_config_indices(config_num)
+        configs_to_run = parse_config_indices(config_num)
+        total_batches = len(configs_to_run)
 
-        print(f"[INFO] Running {len(configs_to_run)} configurations.")
-        for config_num in configs_to_run:
-            # Validate whether config num is in range
+        print(f"[INFO] Running {total_batches} configurations.")
+
+        for idx, config_num in enumerate(configs_to_run, start=1):
+            # Check stop flag before starting each new config
+            with stop_lock:
+                should_stop = stop_requested
+            if should_stop:
+                print(f"\n[INFO] Stop requested — skipping remaining configs (stopped before config {idx}/{total_batches}).\n")
+                send_telegram(tg_cfg,
+                    f"🛑 <b>Batch stopped early</b>\n"
+                    f"Stopped before config {idx}/{total_batches}.\n"
+                    f"Configs completed: {successes + failures} (✅ {successes} / ❌ {failures})"
+                )
+                break
+
             if config_num < 1 or config_num > len(LIST_OF_CONFIGS):
-                print(f"Config index {config_num} out of range [1, {len(LIST_OF_CONFIGS)}]")
+                print(
+                    f"Config index {config_num} out of range "
+                    f"[1, {len(LIST_OF_CONFIGS)}]"
+                )
                 continue
 
             config = LIST_OF_CONFIGS[config_num - 1]
+
             alg = config["alg"]
-
             runs = check_runs(args.runs, config)
-
             bp = config["bp"]
-            id = config["id"]
-            overrides = config["overrides"] if "overrides" in config else args.d
+            run_id = config["id"]
+            overrides = config["overrides"] if "overrides" in config else None
+            start_ep = config.get("start_ep", 1)
 
             _sim_start_time = datetime.now()
 
-            # Execute simulation
             success = run_simulation(
                 alg=alg,
                 runs=runs,
                 bp=bp,
-                run_id=id,
+                run_id=run_id,
                 overrides_list=overrides,
-                tg_cfg=tg_cfg
+                tg_cfg=tg_cfg,
+                current_batch=idx,
+                total_batches=total_batches,
+                start_ep=start_ep,
             )
 
             _sim_end_time = datetime.now()
@@ -636,12 +752,17 @@ if __name__ == "__main__":
                 failures += 1
 
     end_time = datetime.now()
-    sum_running_time = sum(running_times, timedelta())
-    avg_running_time = sum_running_time // len(running_times)
     total_elapsed = format_timedelta(end_time - start_time)
 
+    if running_times:
+        sum_running_time = sum(running_times, timedelta())
+        avg_running_time = sum_running_time // len(running_times)
+        avg_str = format_timedelta(avg_running_time)
+    else:
+        avg_str = "N/A"
+
     print(f"\n{'=' * 70}")
-    print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {total_elapsed}, average running time: {format_timedelta(avg_running_time)}")
+    print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {total_elapsed}, average running time: {avg_str}")
     print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
     print(f"{'=' * 70}\n")
 
@@ -650,7 +771,7 @@ if __name__ == "__main__":
         f"{'🎉' if failures == 0 else '⚠️'} <b>Batch run complete!</b>\n"
         f"Configs run: {successes + failures} (✅ {successes} / ❌ {failures})\n"
         f"Total time: {total_elapsed}\n"
-        f"Avg per config: {format_timedelta(avg_running_time)}"
+        f"Avg per config: {avg_str}"
     )
 
     # PC beep — fires after everything is done
