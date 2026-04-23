@@ -267,7 +267,6 @@ public class MCMovement extends MovementModel implements TrajectoryFrequencyRepo
 		} else {
 			this.currentPosition = null;
 		}
-
 	}
 
 	/**
@@ -344,22 +343,6 @@ public class MCMovement extends MovementModel implements TrajectoryFrequencyRepo
 
 			setNewQ(state, action, newQ);
 		}
-
-
-
-
-
-	}
-
-	/**
-	 * Update the Q-table based on the experience.
-	 * According to Monte Carlo, update at the end of each episode.
-	 *
-	 * Authors @ZeroFairy
-	 *
-	 */
-	private void updateEpisode() {
-
 	}
 
 	/**
@@ -544,6 +527,17 @@ public class MCMovement extends MovementModel implements TrajectoryFrequencyRepo
 //		if (SimClock.getTime() % 1000 == 1) System.out.println("CURRENT POSITION: " + currentPosition);
 
 		return p;
+	}
+
+	public void promoteEpisode() {
+		// Promote newQ → prevQ for every known state-action pair
+		for (Map.Entry<StateActionPair, Tuple<Double, Double>> entry : qTable.entrySet()) {
+			double learned = entry.getValue().getValue(); // getNewQ
+			qTable.put(entry.getKey(), new Tuple<>(learned, learned));
+		}
+		// Reset the two things that must NOT carry over between episodes
+		this.G = 0.0;
+		this.stateActionCount.clear();
 	}
 
 	/**
@@ -774,6 +768,7 @@ public class MCMovement extends MovementModel implements TrajectoryFrequencyRepo
 		epd.currentTrueDetections = retrieveCurrentNewTrueDetections();
 		this.currentCumulativeTrueDetections = newCumulativeTrueDetections;
 
+		promoteEpisode();
 		// Also save the persistence data for the BP
 		behaviorPolicy.saveTo(epd);
 	}
@@ -819,6 +814,9 @@ public class MCMovement extends MovementModel implements TrajectoryFrequencyRepo
 		/* Loading Total occurrences recorder */
 //		System.out.println("Reading EPD.currentCumulativeTrueDetections: " + epd.currentCumulativeTrueDetections);
 		this.currentCumulativeTrueDetections = epd.currentCumulativeTrueDetections;
+
+		this.G = 0.0;
+		this.stateActionCount.clear();
 
 		// Now, also load persistence for the BP
 		behaviorPolicy.loadFrom(epd);
