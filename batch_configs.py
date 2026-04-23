@@ -1,5 +1,17 @@
 """
 The list of configurations for the batch runner. Starts from index 0.
+
+--- RESUME AFTER CRASH ---
+Each config supports an optional "start_ep" key (default: 1).
+If your PC crashed mid-run, manually set "start_ep" to the first episode
+that did NOT complete (e.g. if episodes 1-137 finished, set start_ep=138).
+The runner will skip straight to that episode without re-running earlier ones.
+Leave "start_ep" out (or set it to 1) for a fresh run.
+
+{"alg": "mcn", "runs": 500, "bp": "ucb", "id": "mcn1-bp=ucb",
+    "start_ep": 1,   # <-- change this to resume (e.g. 138 to start from ep 138)
+    "overrides": { ... }
+},
 """
 
 LIST_OF_CONFIGS = [
@@ -20,6 +32,7 @@ LIST_OF_CONFIGS = [
             "mcnm_fv": True,
         }
     },
+
 #     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
 #         "overrides": {
 #             "eg_ip": 1.0,
@@ -55,6 +68,9 @@ LIST_OF_CONFIGS = [
      #6
 
     # [ Q-Learning with UCB ]
+    # TIP: To resume after a crash, uncomment "start_ep" and set it to
+    #      the first episode that did not finish. Remove/comment it again
+    #      once the config is fully done.
     {"alg": "mcn", "runs": 500, "bp": "ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 0.5,
