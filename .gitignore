@@ -13,3 +13,5 @@ build
 /Skripsi/
 /.venv/
 __pycache__/
+
+telegram_config.json

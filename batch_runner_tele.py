@@ -17,6 +17,88 @@ import json
 from datetime import datetime, timedelta
 
 # ------------------------------------------------------------------------------------------------------------------- #
+# TELEGRAM NOTIFIER
+# ------------------------------------------------------------------------------------------------------------------- #
+
+def load_telegram_config(config_path: str = "telegram_config.json") -> dict:
+    """
+    Loads Telegram bot token and chat ID from a JSON file.
+
+    Expected format of telegram_config.json:
+    {
+        "bot_token": "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ",
+        "chat_id": "987654321"
+    }
+    """
+    if not os.path.exists(config_path):
+        print(f"[TELEGRAM] Config file '{config_path}' not found. Telegram notifications disabled.")
+        return None
+    try:
+        with open(config_path, "r") as f:
+            cfg = json.load(f)
+        if "bot_token" not in cfg or "chat_id" not in cfg:
+            print("[TELEGRAM] Config missing 'bot_token' or 'chat_id'. Telegram notifications disabled.")
+            return None
+        return cfg
+    except Exception as e:
+        print(f"[TELEGRAM] Failed to load config: {e}. Telegram notifications disabled.")
+        return None
+
+
+def send_telegram(cfg: dict, message: str) -> bool:
+    """
+    Sends a message to a Telegram chat using the Bot API.
+    Returns True on success, False on failure.
+    Does NOT raise — notification failure must never crash the simulation.
+    """
+    if cfg is None:
+        return False
+    try:
+        import urllib.request
+        url = f"https://api.telegram.org/bot{cfg['bot_token']}/sendMessage"
+        payload = json.dumps({
+            "chat_id": cfg["chat_id"],
+            "text": message,
+            "parse_mode": "HTML"
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status == 200
+    except Exception as e:
+        print(f"[TELEGRAM] Failed to send message: {e}")
+        return False
+
+
+# ------------------------------------------------------------------------------------------------------------------- #
+# PC BEEP NOTIFICATION
+# ------------------------------------------------------------------------------------------------------------------- #
+
+def beep_done():
+    """
+    Plays a beep/notification sound on Windows, macOS, or Linux.
+    Silent fail if the platform does not support it.
+    """
+    try:
+        if sys.platform == "win32":
+            import winsound
+            # Three short beeps to signal completion
+            for _ in range(3):
+                winsound.Beep(1000, 300)
+                import time; time.sleep(0.1)
+        elif sys.platform == "darwin":
+            # macOS system bell
+            subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"], check=False)
+        else:
+            # Linux — try paplay, then fallback to terminal bell
+            result = subprocess.run(["paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
+                                    check=False, capture_output=True)
+            if result.returncode != 0:
+                print("\a", end="", flush=True)  # terminal bell fallback
+    except Exception as e:
+        print(f"[BEEP] Could not play sound: {e}")
+
+
+# ------------------------------------------------------------------------------------------------------------------- #
 # PATH VALIDATOR
 # ------------------------------------------------------------------------------------------------------------------- #
 
@@ -227,7 +309,7 @@ def build_result_id_dir(alg: str, runs: int, bp: str = None, overrides: list[str
     return result_id_dir
 
 
-def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
+def run_script(algo: str, overrides_string: str = None, ep: int = -1, tg_cfg: dict = None) -> bool:
     script = [
         r".\one.bat",
         "-b",
@@ -247,26 +329,43 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
         _start_time = datetime.now()
 
         print(f"{'-' * 70}")
-        print(f"[{_start_time.strftime("%H:%M:%S")}] Running episode {str(ep)} for algorithm {algo}.")
+        print(f"[{_start_time.strftime('%H:%M:%S')}] Running episode {str(ep)} for algorithm {algo}.")
         print(f"{'-' * 70}\n")
 
-        print(f"[{_start_time.strftime("%H:%M:%S")}] Running command: {' '.join(script)}")
+#         # Telegram: notify episode start
+#         send_telegram(tg_cfg,
+#             f"▶️ <b>Episode {ep} started</b>\n"
+#             f"Algorithm: <code>{algo}</code>\n"
+#             f"Time: {_start_time.strftime('%H:%M:%S')}"
+#         )
+
+        print(f"[{_start_time.strftime('%H:%M:%S')}] Running command: {' '.join(script)}")
         subprocess.run(script, check=True, shell=True)
         return True
     except subprocess.CalledProcessError:
         _end_time = datetime.now()
 
-        print(f"[{_end_time.strftime("%H:%M:%S")}] Error running episode {ep} for algorithm {algo}.")
+        print(f"[{_end_time.strftime('%H:%M:%S')}] Error running episode {ep} for algorithm {algo}.")
+
+#         # Telegram: notify episode failure
+#         send_telegram(tg_cfg,
+#             f"❌ <b>Episode {ep} FAILED</b>\n"
+#             f"Algorithm: <code>{algo}</code>\n"
+#             f"Time: {_end_time.strftime('%H:%M:%S')}"
+#         )
         return False
     finally:
         _end_time = datetime.now()
+        elapsed = format_timedelta(_end_time - _start_time)
 
         print(f"{'-' * 70}")
-        print(f"[{_end_time.strftime("%H:%M:%S")}] Done running episode {str(ep)} for algorithm {algo}. Took {format_timedelta(_end_time - _start_time)}.")
+        print(f"[{_end_time.strftime('%H:%M:%S')}] Done running episode {str(ep)} for algorithm {algo}. Took {elapsed}.")
         print(f"{'-' * 70}\n")
 
+        # Telegram: notify episode done (success path — failure already sent above)
 
-def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None) -> bool:
+
+def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None, tg_cfg: dict = None) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg)
 
@@ -303,6 +402,15 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
     print(f"{'=' * 70}\n")
 
+    # Telegram: notify config start
+    send_telegram(tg_cfg,
+        f"🚀 <b>Config started</b>\n"
+        f"Algorithm: <code>{alg}</code> | Policy: <code>{bp}</code>\n"
+        f"Run ID: <code>{result_id_dir}</code>\n"
+        f"Episodes: {runs}\n"
+        f"Time: {datetime.now().strftime('%H:%M:%S')}"
+    )
+
     # Create a JSON to log the current running simulation configuration
     create_config_setting_json(alg, runs, bp, result_id_dir, full_overrides)
 
@@ -317,18 +425,35 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
                 + f"@@Report.reportDir={full_report_dir}/ep/{str(ep)}"
                 + f"@@EpisodicPersistenceManager.episodeNumber={str(ep)}"
         )
-        if run_script(alg, running_overrides_string, ep):
+        if run_script(alg, running_overrides_string, ep, tg_cfg):
             succeeds += 1
+
+#             # Telegram: episode success
+#             send_telegram(tg_cfg,
+#                 f"✅ <b>Episode {ep}/{runs} done</b>\n"
+#                 f"Algorithm: <code>{alg}</code>\n"
+#                 f"Success so far: {succeeds} | Failed: {failed}"
+#             )
         else:
             failed += 1
 
     end_time = datetime.now()
+    elapsed = format_timedelta(end_time - start_time)
 
     # Print summary
     print(f"\n{'=' * 70}")
-    print(f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}")
+    print(f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {elapsed}")
     print(f"[INFO] Total episodes: {runs} (Success: {succeeds}, Fails: {failed})")
     print(f"{'=' * 70}\n")
+
+    # Telegram: notify config done
+    send_telegram(tg_cfg,
+        f"{'✅' if failed == 0 else '⚠️'} <b>Config finished</b>\n"
+        f"Algorithm: <code>{alg}</code> | Policy: <code>{bp}</code>\n"
+        f"Run ID: <code>{result_id_dir}</code>\n"
+        f"Episodes: {runs} (✅ {succeeds} / ❌ {failed})\n"
+        f"Time taken: {elapsed}"
+    )
 
     return failed == 0
 
@@ -421,6 +546,17 @@ if __name__ == "__main__":
         print(f"Number of configs: {len(LIST_OF_CONFIGS)}")
         sys.exit(0)
 
+    # Load Telegram config once at startup
+    tg_cfg = load_telegram_config("telegram_config.json")
+    if tg_cfg:
+        print("[TELEGRAM] Notifications enabled.")
+        send_telegram(tg_cfg,
+            f"🤖 <b>Batch runner started</b>\n"
+            f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+    else:
+        print("[TELEGRAM] Notifications disabled.")
+
     successes = 0
     failures = 0
 
@@ -446,7 +582,8 @@ if __name__ == "__main__":
                 runs=runs,
                 bp=bp,
                 run_id=id,
-                overrides_list=overrides
+                overrides_list=overrides,
+                tg_cfg=tg_cfg
             )
 
             _sim_end_time = datetime.now()
@@ -486,7 +623,8 @@ if __name__ == "__main__":
                 runs=runs,
                 bp=bp,
                 run_id=id,
-                overrides_list=overrides
+                overrides_list=overrides,
+                tg_cfg=tg_cfg
             )
 
             _sim_end_time = datetime.now()
@@ -500,9 +638,20 @@ if __name__ == "__main__":
     end_time = datetime.now()
     sum_running_time = sum(running_times, timedelta())
     avg_running_time = sum_running_time // len(running_times)
+    total_elapsed = format_timedelta(end_time - start_time)
 
     print(f"\n{'=' * 70}")
-    print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}, average running time: {format_timedelta(avg_running_time)}")
+    print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {total_elapsed}, average running time: {format_timedelta(avg_running_time)}")
     print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
-
     print(f"{'=' * 70}\n")
+
+    # Telegram: final summary
+    send_telegram(tg_cfg,
+        f"{'🎉' if failures == 0 else '⚠️'} <b>Batch run complete!</b>\n"
+        f"Configs run: {successes + failures} (✅ {successes} / ❌ {failures})\n"
+        f"Total time: {total_elapsed}\n"
+        f"Avg per config: {format_timedelta(avg_running_time)}"
+    )
+
+    # PC beep — fires after everything is done
+    beep_done()
