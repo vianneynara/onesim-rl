@@ -45,7 +45,7 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 	private double initialQValue;
 
 	// [Configuration - Settings Keys]
-	public static final String MONTECALRO_NS     = "MonteCarloMovement";
+	public static final String MONTECALRO_NS     = "MCMovementEnd";
 	public static final String ALPHA_S           = "learningRate";
 	public static final String LAMBDA_S          = "discountFactor";
 	public static final String INITIAL_Q_S       = "initialQValue";
