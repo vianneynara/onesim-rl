@@ -13,6 +13,7 @@ import argparse
 import subprocess
 import datetime as dt
 import json
+from typing import Optional, Tuple
 
 from datetime import datetime, timedelta
 
@@ -27,6 +28,8 @@ WINDOWS_RESERVED_NAMES = {
     "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
     "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
 }
+
+LINE_LENGTH = 100
 
 
 def validate_run_id(run_id: str) -> None:
@@ -231,9 +234,9 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     try:
         _start_time = datetime.now()
 
-        print(f"{'-' * 70}")
+        print(f"{'-' * LINE_LENGTH}")
         print(f"[{_start_time.strftime("%H:%M:%S")}] Running episode {str(ep)} for algorithm {algo}.")
-        print(f"{'-' * 70}\n")
+        print(f"{'-' * LINE_LENGTH}\n")
 
         print(f"[{_start_time.strftime("%H:%M:%S")}] Running command: {' '.join(script)}")
         subprocess.run(script, check=True, shell=True)
@@ -246,12 +249,120 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     finally:
         _end_time = datetime.now()
 
-        print(f"{'-' * 70}")
+        print(f"{'-' * LINE_LENGTH}")
         print(f"[{_end_time.strftime("%H:%M:%S")}] Done running episode {str(ep)} for algorithm {algo}. Took {format_timedelta(_end_time - _start_time)}.")
-        print(f"{'-' * 70}\n")
+        print(f"{'-' * LINE_LENGTH}\n")
 
 
-def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None) -> bool:
+def _safe_int_dirnames(path: str) -> list[int]:
+    """Return sorted integer directory names directly under path (ignores non-int entries)."""
+    if not os.path.isdir(path):
+        return []
+    episodes = []
+    try:
+        for name in os.listdir(path):
+            full = os.path.join(path, name)
+            if not os.path.isdir(full):
+                continue
+            try:
+                episodes.append(int(name))
+            except ValueError:
+                continue
+    except OSError:
+        return []
+    return sorted(set(episodes))
+
+
+def _load_json_file(path: str) -> Tuple[bool, Optional[dict], Optional[str]]:
+    """Load JSON file. Returns (ok, data, error_message)."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return False, None, f"JSON root is not an object: {type(data).__name__}"
+        return True, data, None
+    except FileNotFoundError:
+        return False, None, "file not found"
+    except json.JSONDecodeError as e:
+        return False, None, f"JSON decode error at line {e.lineno} col {e.colno}: {e.msg}"
+    except OSError as e:
+        return False, None, f"I/O error: {e}"
+
+
+def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool]:
+    """Determine highest *contiguous* episode number (starting from 1) in which Persistence-Episode@N.json is readable JSON.
+
+    Returns: (highest_good, problems, episodic_available)
+    - highest_good is 0 if none are valid.
+    - episodic_available False means ep/ directory missing (saveEpisodically likely false).
+    """
+    problems: list[str] = []
+    ep_root = os.path.join(full_report_dir, "ep")
+    if not os.path.isdir(ep_root):
+        return 0, [f"[WARN] Episodic directory not found: {ep_root} (saveEpisodically likely false)"] , False
+
+    episode_dirs = _safe_int_dirnames(ep_root)
+    if not episode_dirs:
+        problems.append(f"[WARN] No episode directories found under: {ep_root}")
+        return 0, problems, True
+
+    highest_good = 0
+    # Contiguous check from 1... until first failure
+    for expected in range(1, max(episode_dirs) + 1):
+        if expected not in episode_dirs:
+            problems.append(f"[FAIL] Missing episode directory: {os.path.join(ep_root, str(expected))}")
+            break
+
+        persistence_path = os.path.join(ep_root, str(expected), f"Persistence-Episode@{expected}.json")
+        ok, data, err = _load_json_file(persistence_path)
+        if not ok:
+            problems.append(f"[FAIL] Episode {expected} persistence unreadable: {persistence_path} ({err})")
+            break
+
+        # If episodeNumber exists, ensure the stored Persistence JSON data matches
+        if "episodeNumber" in data:
+            try:
+                if int(data["episodeNumber"]) != expected:
+                    problems.append(
+                        f"[FAIL] Episode {expected} persistence mismatch: episodeNumber={data['episodeNumber']} in {persistence_path}"
+                    )
+                    break
+            except (TypeError, ValueError):
+                problems.append(f"[FAIL] Episode {expected} persistence has non-integer episodeNumber in {persistence_path}")
+                break
+
+        highest_good = expected
+
+    return highest_good, problems, True
+
+
+def rebuild_main_persistence_from_episode(full_report_dir: str, episode: int) -> Tuple[bool, str]:
+    """Rebuild {full_report_dir}/_persistence.json from ep/{episode}/Persistence-Episode@{episode}.json."""
+    src = os.path.join(full_report_dir, "ep", str(episode), f"Persistence-Episode@{episode}.json")
+    dst = os.path.join(full_report_dir, "_persistence.json")
+    tmp = dst + ".tmp"
+
+    ok, data, err = _load_json_file(src)
+    if not ok:
+        return False, f"Cannot rebuild _persistence.json; source unreadable: {src} ({err})"
+
+    try:
+        os.makedirs(full_report_dir, exist_ok=True)
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, sort_keys=True)
+        os.replace(tmp, dst)
+        return True, f"Rebuilt _persistence.json from episode {episode}: {dst}"
+    except OSError as e:
+        try:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+        except OSError:
+            pass
+        return False, f"Failed to write/replace persistence file: {e}"
+
+
+def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None,
+                   verify: bool = False, do_continue: bool = False) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg)
 
@@ -281,22 +392,75 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     overrides_string = "@@".join(full_overrides)
 
     # Print run information
-    print(f"\n{'=' * 70}")
+    print(f"\n{'=' * LINE_LENGTH}")
     print(f"[INFO] Starting episodic simulation batch...")
     print(f"[INFO] Algorithm: {alg} ({settings_file}), Behavior Policy: {bp}")
     print(f"[INFO] Run ID: {run_id}, Number of episodes: {runs}")
     print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
-    print(f"{'=' * 70}\n")
+    print(f"{'=' * LINE_LENGTH}\n")
 
     # Create a JSON to log the current running simulation configuration
     create_config_setting_json(alg, runs, bp, result_id_dir, full_overrides)
+
+    # Verification / continue pre-flight
+    start_ep = 1
+    highest_good = 0
+    episodic_available = True
+    if verify or do_continue:
+        highest_good, problems, episodic_available = find_highest_good_episode(full_report_dir)
+        expected_last = runs
+
+        print(f"\n{'-' * LINE_LENGTH}")
+        print(f"[INFO] [VERIFY] Run dir: {full_report_dir}")
+        print(f"[INFO] [VERIFY] Expected episodes (runs): {expected_last}")
+        print(f"[INFO] [VERIFY] Highest contiguous uncorrupted episode: {highest_good}")
+        if problems:
+            for p in problems:
+                print(p)
+        if episodic_available:
+            if highest_good >= expected_last:
+                print(f"[INFO] [VERIFY] ✅ Complete ({highest_good}/{expected_last})")
+            else:
+                print(f"[INFO] [VERIFY] ❌ Incomplete ({highest_good}/{expected_last})")
+        else:
+            print("[INFO] [VERIFY] [WARN] Cannot verify episodic persistence (saveEpisodically likely false).")
+        print(f"{'-' * LINE_LENGTH}\n")
+
+        if do_continue:
+            if not episodic_available:
+                # Per requirement: restart from 0 (effectively episode 1), but print warning and highest uncorrupted episode.
+                print("[INFO] [CONTINUE] Episodic snapshots not available; cannot rebuild from ep/N. Will restart from episode 1.")
+                start_ep = 1
+            elif highest_good <= 0:
+                print("[INFO] [CONTINUE] No readable episodic snapshot found; will restart from episode 1.")
+                start_ep = 1
+            else:
+                # Rebuild main persistence from last good, then resume from the next episode.
+                # Assumption: if Persistence-Episode@K.json exists and is readable, K is uncorrupted.
+                ok, msg = rebuild_main_persistence_from_episode(full_report_dir, highest_good)
+                if ok:
+                    print(f"[INFO] [CONTINUE] {msg}")
+                else:
+                    print(f"[INFO] [CONTINUE] [WARN] {msg}")
+
+                start_ep = highest_good + 1
+                if start_ep > runs:
+                    print(f"[INFO] [CONTINUE] Already complete ({highest_good}/{runs}). Nothing to continue.")
+                    return True
+
+            if highest_good > 0 and start_ep <= runs:
+                print(f"[INFO] [CONTINUE] Highest uncorrupted episode: {highest_good}. Resuming from episode {start_ep} (next episode).")
+
+    # If only verifying, do not run anything.
+    if verify and not do_continue:
+        return (episodic_available and highest_good >= runs)
 
     # Execute episodes
     succeeds = 0
     failed = 0
     start_time = datetime.now()
 
-    for ep in range(1, runs + 1):
+    for ep in range(start_ep, runs + 1):
         running_overrides_string = (
                 overrides_string
                 + f"@@Report.reportDir={full_report_dir}/ep/{str(ep)}"
@@ -310,10 +474,10 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     end_time = datetime.now()
 
     # Print summary
-    print(f"\n{'=' * 70}")
+    print(f"\n{'=' * LINE_LENGTH}")
     print(f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}")
     print(f"[INFO] Total episodes: {runs} (Success: {succeeds}, Fails: {failed})")
-    print(f"{'=' * 70}\n")
+    print(f"{'=' * LINE_LENGTH}\n")
 
     return failed == 0
 
@@ -399,8 +563,28 @@ if __name__ == "__main__":
         "-cc", "--count-configs", action="store_true", help="Count the number of configs in the LIST_OF_CONFIGS and exit"
     )
 
+    parser.add_argument(
+        "--verify", action="store_true",
+        help="Verify that selected configurations have complete, uncorrupted episodic persistence up to their runs"
+    )
+
+    parser.add_argument(
+        "--continue", dest="do_continue", action="store_true",
+        help="Verify and continue from the last good episode by rebuilding _persistence.json from it"
+    )
+
+    parser.add_argument(
+        "-vc", action="store_true",
+        help="Shortcut for --verify --continue"
+    )
+
     # Parse arguments
     args = parser.parse_args()
+
+    # -vc is equivalent to --verify --continue
+    if getattr(args, "vc", False):
+        args.verify = True
+        args.do_continue = True
 
     if args.count_configs:
         print(f"Number of configs: {len(LIST_OF_CONFIGS)}")
@@ -431,7 +615,9 @@ if __name__ == "__main__":
                 runs=runs,
                 bp=bp,
                 run_id=id,
-                overrides_list=overrides
+                overrides_list=overrides,
+                verify=args.verify,
+                do_continue=args.do_continue
             )
 
             _sim_end_time = datetime.now()
@@ -471,7 +657,9 @@ if __name__ == "__main__":
                 runs=runs,
                 bp=bp,
                 run_id=id,
-                overrides_list=overrides
+                overrides_list=overrides,
+                verify=args.verify,
+                do_continue=args.do_continue
             )
 
             _sim_end_time = datetime.now()
@@ -486,8 +674,8 @@ if __name__ == "__main__":
     sum_running_time = sum(running_times, timedelta())
     avg_running_time = sum_running_time // len(running_times)
 
-    print(f"\n{'=' * 70}")
+    print(f"\n{'=' * LINE_LENGTH}")
     print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}, average running time: {format_timedelta(avg_running_time)}")
     print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
 
-    print(f"{'=' * 70}\n")
+    print(f"{'=' * LINE_LENGTH}\n")
