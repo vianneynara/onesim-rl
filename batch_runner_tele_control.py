@@ -18,11 +18,27 @@ import threading
 from datetime import datetime, timedelta
 
 # ------------------------------------------------------------------------------------------------------------------- #
-# GLOBAL STOP FLAG  (set by Telegram /stop listener)
+# GLOBAL STATE  (shared between main thread and Telegram listener thread)
 # ------------------------------------------------------------------------------------------------------------------- #
 
 stop_requested = False
 stop_lock = threading.Lock()
+
+# Holds live progress info; updated by run_simulation() as it runs.
+current_status: dict = {
+    "running": False,
+    "batch_idx": 0,
+    "total_batches": 0,
+    "alg": "",
+    "bp": "",
+    "run_id": "",
+    "current_ep": 0,
+    "total_ep": 0,
+    "start_ep": 1,
+    "config_start_time": None,   # datetime
+    "batch_start_time": None,    # datetime
+}
+status_lock = threading.Lock()
 
 # ------------------------------------------------------------------------------------------------------------------- #
 # TELEGRAM NOTIFIER
@@ -81,12 +97,13 @@ def send_telegram(cfg: dict, message: str) -> bool:
 # TELEGRAM /stop LISTENER
 # ------------------------------------------------------------------------------------------------------------------- #
 
-def start_stop_listener(cfg: dict) -> None:
+def start_telegram_listener(cfg: dict) -> None:
     """
     Spawns a background daemon thread that polls Telegram for new messages.
-    When a '/stop' command is received from the authorised chat, it sets the
-    global stop_requested flag so the main loop can exit cleanly after the
-    current config finishes.
+
+    Supported commands (from the authorised chat only):
+      /stop   — sets stop_requested so the batch exits after the current config.
+      /status — replies with the current config, episode, and elapsed time.
     """
     if cfg is None:
         return
@@ -116,7 +133,11 @@ def start_stop_listener(cfg: dict) -> None:
                     chat_id = str(msg.get("chat", {}).get("id", ""))
                     text = msg.get("text", "").strip().lower()
 
-                    if chat_id == str(cfg["chat_id"]) and text == "/stop":
+                    if chat_id != str(cfg["chat_id"]):
+                        continue  # Ignore messages from other chats
+
+                    # ── /stop ──────────────────────────────────────────────
+                    if text == "/stop":
                         with stop_lock:
                             stop_requested = True
                         print("\n[TELEGRAM] /stop received — will stop after current config finishes.\n")
@@ -124,6 +145,49 @@ def start_stop_listener(cfg: dict) -> None:
                             "🛑 <b>/stop received</b>\n"
                             "The batch runner will stop after the <b>current config</b> finishes."
                         )
+
+                    # ── /status ────────────────────────────────────────────
+                    elif text == "/status":
+                        with status_lock:
+                            s = dict(current_status)  # snapshot
+
+                        if not s["running"]:
+                            send_telegram(cfg, "💤 <b>Status</b>\nNo batch is currently running.")
+                        else:
+                            now = datetime.now()
+
+                            # Time spent on the current config
+                            config_elapsed = (
+                                format_timedelta(now - s["config_start_time"])
+                                if s["config_start_time"] else "—"
+                            )
+                            # Total batch elapsed time
+                            batch_elapsed = (
+                                format_timedelta(now - s["batch_start_time"])
+                                if s["batch_start_time"] else "—"
+                            )
+
+                            # Episode progress bar (20 chars wide)
+                            ep_done = s["current_ep"] - s["start_ep"]
+                            ep_total = max(s["total_ep"] - s["start_ep"] + 1, 1)
+                            filled = int(ep_done / ep_total * 20)
+                            bar = "█" * filled + "░" * (20 - filled)
+                            pct = int(ep_done / ep_total * 100)
+
+                            send_telegram(cfg,
+                                f"📊 <b>Status</b>\n"
+                                f"Batch config: <b>{s['batch_idx']}/{s['total_batches']}</b>\n"
+                                f"Algorithm: <code>{s['alg']}</code> | Policy: <code>{s['bp']}</code>\n"
+                                f"Run ID: <code>{s['run_id']}</code>\n"
+                                f"\n"
+                                f"Episode: <b>{s['current_ep']}/{s['total_ep']}</b> "
+                                f"(started from {s['start_ep']})\n"
+                                f"<code>[{bar}] {pct}%</code>\n"
+                                f"\n"
+                                f"Config elapsed:  {config_elapsed}\n"
+                                f"Batch elapsed:   {batch_elapsed}"
+                            )
+
             except Exception:
                 pass  # Network blip — just keep polling
 
@@ -504,7 +568,24 @@ def run_simulation(
     failed = 0
     start_time = datetime.now()
 
+    # Update global status — config is now actively running
+    with status_lock:
+        current_status["running"] = True
+        current_status["batch_idx"] = current_batch
+        current_status["total_batches"] = total_batches
+        current_status["alg"] = alg
+        current_status["bp"] = bp
+        current_status["run_id"] = result_id_dir
+        current_status["total_ep"] = runs
+        current_status["start_ep"] = start_ep
+        current_status["current_ep"] = start_ep
+        current_status["config_start_time"] = start_time
+
     for ep in range(start_ep, runs + 1):
+        # Keep current episode up-to-date for /status queries
+        with status_lock:
+            current_status["current_ep"] = ep
+
         running_overrides_string = (
             overrides_string
             + f"@@Report.reportDir={full_report_dir}/ep/{ep}"
@@ -515,6 +596,10 @@ def run_simulation(
             succeeds += 1
         else:
             failed += 1
+
+    # Mark config as no longer actively running
+    with status_lock:
+        current_status["running"] = False
 
     end_time = datetime.now()
     elapsed = format_timedelta(end_time - start_time)
@@ -635,8 +720,8 @@ if __name__ == "__main__":
             f"🤖 <b>Batch runner started</b>\n"
             f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        start_stop_listener(tg_cfg)
-        print("[TELEGRAM] /stop listener started. Send '/stop' to stop after current config.")
+        start_telegram_listener(tg_cfg)
+        print("[TELEGRAM] Listener started. Commands: /stop (stop after current config) | /status (show progress)")
     else:
         print("[TELEGRAM] Notifications disabled.")
 
@@ -645,6 +730,10 @@ if __name__ == "__main__":
 
     start_time = datetime.now()
     running_times = []
+
+    # Record batch start time for /status elapsed calculation
+    with status_lock:
+        current_status["batch_start_time"] = start_time
 
     if args.all:
         total_batches = len(LIST_OF_CONFIGS)
