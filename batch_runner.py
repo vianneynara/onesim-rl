@@ -156,25 +156,36 @@ S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 # Import the configs
 from batch_configs import LIST_OF_CONFIGS
 
-def create_config_setting_json(alg: str, runs: int, bp: str, result_dir_id: str = None, overrides_list: list[str] = None):
+
+def create_config_setting_json(
+        alg: str,
+        parent_dir_id: str,
+        runs: int,
+        bp: str,
+        result_dir_id: str = None,
+        overrides_list: list[str] = None
+):
     config_setting_json = {
         "runner_episodes:" : runs,
         "runner_id": result_dir_id,
+
+        "alg": alg,
+        "parent_dir_id": parent_dir_id,
 
         "amm": alg_abbreviations[alg],
         "qlm_bp": behavior_packages[bp],
     }
 
-    for entry in overrides_list:
-        key, value = entry.split("=")
+    for entry in overrides_list or []:
+        key, value = entry.split("=", 1)
         config_setting_json[key] = value
 
     # Create the direcetory first
-    dir_path = f"reports/skripsi/{alg}/run-id/{result_dir_id}"
+    dir_path = f"reports/skripsi/{parent_dir_id}/run-id/{result_dir_id}"
     os.makedirs(dir_path, exist_ok=True)
 
     # Save the JSON to the report directory
-    with open(f"reports/skripsi/{alg}/run-id/{result_dir_id}/config_setting.json", "w") as json_file:
+    with open(f"reports/skripsi/{parent_dir_id}/run-id/{result_dir_id}/config_setting.json", "w") as json_file:
         json.dump(config_setting_json, json_file, indent=4)
 
 
@@ -362,7 +373,7 @@ def rebuild_main_persistence_from_episode(full_report_dir: str, episode: int) ->
 
 
 def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None,
-                   verify: bool = False, do_continue: bool = False) -> bool:
+                   verify: bool = False, do_continue: bool = False, parent_dir_id: Optional[str] = None) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg)
 
@@ -380,7 +391,11 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
 
     result_id_dir = build_result_id_dir(alg, runs, bp, abr_overrides)
     validate_run_id(result_id_dir)
-    full_report_dir = f"reports/skripsi/{alg}/run-id/{result_id_dir}"
+
+    # Allow overriding the {alg} portion of reports/skripsi/{alg}/run-id/{result_id_dir}
+    parent_dir_id_effective = (parent_dir_id or alg).strip()
+    validate_run_id(parent_dir_id_effective)
+    full_report_dir = f"reports/skripsi/{parent_dir_id_effective}/run-id/{result_id_dir}"
 
     bp_override = f"QLearningMovement.behaviorPolicy={behavior_packages[bp]}"
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
@@ -396,11 +411,12 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     print(f"[INFO] Starting episodic simulation batch...")
     print(f"[INFO] Algorithm: {alg} ({settings_file}), Behavior Policy: {bp}")
     print(f"[INFO] Run ID: {run_id}, Number of episodes: {runs}")
+    print(f"[INFO] Report parent dir id: {parent_dir_id_effective} (reports/skripsi/{parent_dir_id_effective}/...)")
     print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
     print(f"{'=' * LINE_LENGTH}\n")
 
     # Create a JSON to log the current running simulation configuration
-    create_config_setting_json(alg, runs, bp, result_id_dir, full_overrides)
+    create_config_setting_json(alg, parent_dir_id_effective, runs, bp, result_id_dir, full_overrides)
 
     # Verification / continue pre-flight
     start_ep = 1
@@ -564,6 +580,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "-pid", "--parent-dir-id", type=str, required=False,
+        help="Override script report dir base folder name under reports/skripsi/. Default uses algorithm key (e.g., 'ql')."
+    )
+
+    parser.add_argument(
         "--verify", action="store_true",
         help="Verify that selected configurations have complete, uncorrupted episodic persistence up to their runs"
     )
@@ -617,7 +638,8 @@ if __name__ == "__main__":
                 run_id=id,
                 overrides_list=overrides,
                 verify=args.verify,
-                do_continue=args.do_continue
+                do_continue=args.do_continue,
+                parent_dir_id=args.parent_dir_id
             )
 
             _sim_end_time = datetime.now()
@@ -659,7 +681,8 @@ if __name__ == "__main__":
                 run_id=id,
                 overrides_list=overrides,
                 verify=args.verify,
-                do_continue=args.do_continue
+                do_continue=args.do_continue,
+                parent_dir_id=args.parent_dir_id
             )
 
             _sim_end_time = datetime.now()
