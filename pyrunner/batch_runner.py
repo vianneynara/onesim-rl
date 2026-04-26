@@ -219,7 +219,7 @@ def build_result_id_dir(
         overrides: list[str],
         run_id: Optional[str]
 ) -> str:
-    prefix = f"cfg@{config_index}-{alg}{runs}"
+    prefix = f"cfg@{config_index:02}-{alg}{runs}"
     ordered_overrides = _order_abbreviated_overrides(overrides)
 
     if ordered_overrides:
@@ -631,7 +631,7 @@ if __name__ == "__main__":
 
             runs = check_runs(args.runs, config)
 
-            bp = config["bp"]
+            bp = config["bp"] if "bp" in config else None
             id = config["id"]
             overrides = config.get("overrides")
 
@@ -679,7 +679,7 @@ if __name__ == "__main__":
 
             runs = check_runs(args.runs, config)
 
-            bp = config["bp"]
+            bp = config["bp"] if "bp" in config else None
             id = config["id"]
             overrides = config.get("overrides")
 
