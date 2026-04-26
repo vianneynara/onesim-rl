@@ -154,5 +154,47 @@ LIST_OF_CONFIGS = [
         "overrides": {
             "ts_iv": 10.0,
         }
-    } #22
+    }, #22
+
+    # [ Episodic Lévy Flight ]
+    {"alg": "lfe", "runs": 500, "id": "lfe",
+        "overrides": {
+            "lfe_la": 0.25,
+        }
+    },
+    {"alg": "lfe", "runs": 500, "id": "lfe",
+        "overrides": {
+            "lfe_la": 0.5,
+        }
+    },
+    {"alg": "lfe", "runs": 500, "id": "lfe",
+        "overrides": {
+            "lfe_la": 0.75,
+        }
+    },
+    {"alg": "lfe", "runs": 500, "id": "lfe",
+        "overrides": {
+            "lfe_la": 1.0,
+        }
+    },
+    {"alg": "lfe", "runs": 500, "id": "lfe",
+        "overrides": {
+            "lfe_la": 1.25,
+        }
+    },
+    {"alg": "lfe", "runs": 500, "id": "lfe",
+        "overrides": {
+            "lfe_la": 1.5,
+        }
+    },
+    {"alg": "lfe", "runs": 500, "id": "lfe",
+        "overrides": {
+            "lfe_la": 1.75,
+        }
+    },
+    {"alg": "lfe", "runs": 500, "id": "lfe",
+        "overrides": {
+            "lfe_la": 2,
+        }
+    }, #0
 ]

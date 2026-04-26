@@ -7,70 +7,27 @@ The second version of batch runner, will provide better and more flexible runs.
 # ------------------------------------------------------------------------------------------------------------------- #
 
 import os
-import re
 import sys
 import argparse
 import subprocess
-import datetime as dt
 import json
-from typing import Optional, Tuple
+import logging
+from typing import Optional, Tuple, Any
 
 from datetime import datetime, timedelta
 
-# ------------------------------------------------------------------------------------------------------------------- #
-# PATH VALIDATOR
-# ------------------------------------------------------------------------------------------------------------------- #
+# Allow running this file as a script (python pyrunner/batch_runner.py) while still
+# using absolute package imports (pyrunner.*).
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-# Characters not allowed in Windows filenames/path components
-INVALID_CHARS_RE = re.compile(r'[<>:"/\\|?*]')
-WINDOWS_RESERVED_NAMES = {
-    "CON", "PRN", "AUX", "NUL",
-    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
-}
+from pyrunner.utils.fs import safe_int_dirnames
+from pyrunner.utils.jsonio import load_json_file
+from pyrunner.utils.path import validate_run_id
+from pyrunner.utils.timefmt import format_timedelta
 
 LINE_LENGTH = 100
-
-
-def validate_run_id(run_id: str) -> None:
-    """
-    Static method to validate the run_id safety to use as a Windows path component.
-
-    Raises ValueError with a clear message if invalid.
-    """
-    if not run_id:
-        raise ValueError("run_id must not be empty")
-
-    # Check for illegal characters
-    if INVALID_CHARS_RE.search(run_id):
-        raise ValueError(
-            f"run_id '{run_id}' contains invalid path characters. "
-            r"Disallowed characters are: < > : \" / \ | ? *"
-        )
-
-    # Check for control chars (ASCII 0-31)
-    if any(ord(ch) < 32 for ch in run_id):
-        raise ValueError(
-            f"run_id '{run_id}' contains control characters, which are not "
-            "allowed in Windows filenames."
-        )
-
-    # Check for reserved device names (case-insensitive, exact matches only)
-    if run_id.upper() in WINDOWS_RESERVED_NAMES:
-        raise ValueError(
-            f"run_id '{run_id}' is a reserved device name on Windows "
-            "(CON, PRN, AUX, NUL, COM1..COM9, LPT1..LPT9). "
-            "Please choose a different run_id."
-        )
-
-
-def format_timedelta(td):
-    # Calculate total components
-    total_seconds = int(td.total_seconds())
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{hours:02}:{minutes:02}:{seconds:02}"
-
+log = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------------------------------------------------------- #
 # BATCH RUNNER CONFIGURATION
@@ -84,14 +41,12 @@ alg_base_settings = {
     "ql": "settings/skripsi/randomsearch-qlearn.cfg",
     "mc": "settings/skripsi/randomsearch-mc.cfg",
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
-    "lf": "settings/skripsi/randomsearch-lf.cfg"
 }
 
 alg_abbreviations = {
     "ql": "QLearningMovement",
     "mc": "MCMovement",
     "lfe": "LevyFlightEpisodic",
-    "lf": "LevyFlight"
 }
 
 behavior_packages = {
@@ -118,7 +73,7 @@ key_abbreviations = {
     "qlm_fr": "QLearningMovement.foundReward",
     "qlm_as": "QLearningMovement.agentSpeed",
 
-    # [ QLearningMovement settings ]
+    # [ Monte-Carlo Movement settings ]
     "mcm_bp": "MCMovement.behaviorPolicy",
     "mcm_lr": "MCMovement.learningRate",
     "mcm_df": "MCMovement.discountFactor",
@@ -128,6 +83,14 @@ key_abbreviations = {
     "mcm_fr": "MCMovement.foundReward",
     "mcm_as": "MCMovement.agentSpeed",
     "mcm_fv": "MCMovement.firstVisit",
+
+    # [ Lévy Flight Episodic Movement settings ]
+    "lfe_la": "LevyFlightEpisodic.levyAlpha",
+    "lfe_xm": "LevyFlightEpisodic.xm",
+    "lfe_tp": "LevyFlightEpisodic.targetPrefix",
+    "lfe_fs": "LevyFlightEpisodic.flightSpeed",
+    "lfe_sp": "LevyFlightEpisodic.stepPenalty",
+    "lfe_fr": "LevyFlightEpisodic.foundReward",
 
     # [ EpsilonGreedyBehavior settings ]
     "eg_ip": "BehaviorPolicy.epsilon",
@@ -153,15 +116,17 @@ key_abbreviations = {
 
 S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 
+PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcm_bp"]
+
 # Import the configs
-from batch_configs import LIST_OF_CONFIGS
+from pyrunner.batch_configs import LIST_OF_CONFIGS
 
 
 def create_config_setting_json(
         alg: str,
         parent_dir_id: str,
         runs: int,
-        bp: str,
+        bp: Optional[str],
         result_dir_id: str = None,
         overrides_list: list[str] = None
 ):
@@ -173,8 +138,11 @@ def create_config_setting_json(
         "parent_dir_id": parent_dir_id,
 
         "amm": alg_abbreviations[alg],
-        "qlm_bp": behavior_packages[bp],
     }
+
+    bp_key = _get_bp_override_key(alg)
+    if bp and bp_key:
+        config_setting_json[bp_key] = behavior_packages[bp]
 
     for entry in overrides_list or []:
         key, value = entry.split("=", 1)
@@ -189,7 +157,7 @@ def create_config_setting_json(
         json.dump(config_setting_json, json_file, indent=4)
 
 
-def parse_overrides(overrides_dict: dict[str]) -> str:
+def parse_overrides(overrides_dict: dict[str, Any]) -> Tuple[list[str], list[str]]:
     # convert the override dictionary into a list of key-value
     abr_overrides_list = []
     full_overrides_list = []
@@ -208,6 +176,34 @@ def parse_overrides(overrides_dict: dict[str]) -> str:
     return abr_overrides_list, full_overrides_list
 
 
+def _get_bp_override_key(alg: str) -> Optional[str]:
+    if alg == "ql":
+        return "qlm_bp"
+    if alg == "mc":
+        return "mcm_bp"
+    return None
+
+
+def _order_abbreviated_overrides(abr_overrides: list[str]) -> list[str]:
+    if not abr_overrides:
+        return []
+
+    priority = []
+    remainder = []
+    for entry in abr_overrides:
+        key = entry.split("@", 1)[0]
+        if key in PRIORITY_OVERRIDE_KEYS:
+            priority.append(entry)
+        else:
+            remainder.append(entry)
+
+    ordered = []
+    for key in PRIORITY_OVERRIDE_KEYS:
+        ordered.extend([item for item in priority if item.startswith(f"{key}@")])
+    ordered.extend(remainder)
+    return ordered
+
+
 def expand_algorithm(alg: str) -> str:
     if alg not in alg_base_settings:
         raise ValueError(
@@ -216,14 +212,22 @@ def expand_algorithm(alg: str) -> str:
     return alg_base_settings[alg]
 
 
-def build_result_id_dir(alg: str, runs: int, bp: str = None, overrides: list[str] = None) -> str:
-    # Initial first part  of algorithm and runs
-    result_id_dir = f"{alg}{runs}-qlm_bp@{bp}-"
+def build_result_id_dir(
+        alg: str,
+        runs: int,
+        config_index: int,
+        overrides: list[str],
+        run_id: Optional[str]
+) -> str:
+    prefix = f"cfg@{config_index:02}-{alg}{runs}"
+    ordered_overrides = _order_abbreviated_overrides(overrides)
 
-    # Adds overrides if exist
-    result_id_dir += "-".join(overrides) if overrides else ""
+    if ordered_overrides:
+        suffix = "-".join(ordered_overrides)
+    else:
+        suffix = run_id or ""
 
-    return result_id_dir
+    return f"{prefix}-{suffix}" if suffix else prefix
 
 
 def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
@@ -245,59 +249,27 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     try:
         _start_time = datetime.now()
 
-        print(f"{'-' * LINE_LENGTH}")
-        print(f"[{_start_time.strftime("%H:%M:%S")}] Running episode {str(ep)} for algorithm {algo}.")
-        print(f"{'-' * LINE_LENGTH}\n")
-
-        print(f"[{_start_time.strftime("%H:%M:%S")}] Running command: {' '.join(script)}")
+        log.info("%s", "-" * LINE_LENGTH)
+        log.info("Running episode %s for algorithm %s.", ep, algo)
+        log.info("%s", "-" * LINE_LENGTH)
+        log.info("Running command: %s", " ".join(script))
         subprocess.run(script, check=True, shell=True)
         return True
     except subprocess.CalledProcessError:
         _end_time = datetime.now()
 
-        print(f"[{_end_time.strftime("%H:%M:%S")}] Error running episode {ep} for algorithm {algo}.")
+        log.error("Error running episode %s for algorithm %s.", ep, algo)
         return False
     finally:
         _end_time = datetime.now()
 
-        print(f"{'-' * LINE_LENGTH}")
-        print(f"[{_end_time.strftime("%H:%M:%S")}] Done running episode {str(ep)} for algorithm {algo}. Took {format_timedelta(_end_time - _start_time)}.")
-        print(f"{'-' * LINE_LENGTH}\n")
-
-
-def _safe_int_dirnames(path: str) -> list[int]:
-    """Return sorted integer directory names directly under path (ignores non-int entries)."""
-    if not os.path.isdir(path):
-        return []
-    episodes = []
-    try:
-        for name in os.listdir(path):
-            full = os.path.join(path, name)
-            if not os.path.isdir(full):
-                continue
-            try:
-                episodes.append(int(name))
-            except ValueError:
-                continue
-    except OSError:
-        return []
-    return sorted(set(episodes))
-
-
-def _load_json_file(path: str) -> Tuple[bool, Optional[dict], Optional[str]]:
-    """Load JSON file. Returns (ok, data, error_message)."""
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if not isinstance(data, dict):
-            return False, None, f"JSON root is not an object: {type(data).__name__}"
-        return True, data, None
-    except FileNotFoundError:
-        return False, None, "file not found"
-    except json.JSONDecodeError as e:
-        return False, None, f"JSON decode error at line {e.lineno} col {e.colno}: {e.msg}"
-    except OSError as e:
-        return False, None, f"I/O error: {e}"
+        if _start_time is not None:
+            took = format_timedelta(_end_time - _start_time)
+        else:
+            took = "??:??:??"
+        log.info("%s", "-" * LINE_LENGTH)
+        log.info("Done running episode %s for algorithm %s. Took %s.", ep, algo, took)
+        log.info("%s", "-" * LINE_LENGTH)
 
 
 def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool]:
@@ -310,24 +282,24 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
     problems: list[str] = []
     ep_root = os.path.join(full_report_dir, "ep")
     if not os.path.isdir(ep_root):
-        return 0, [f"[WARN] Episodic directory not found: {ep_root} (saveEpisodically likely false)"] , False
+        return 0, [f"Episodic directory not found: {ep_root} (saveEpisodically likely false)"], False
 
-    episode_dirs = _safe_int_dirnames(ep_root)
+    episode_dirs = safe_int_dirnames(ep_root)
     if not episode_dirs:
-        problems.append(f"[WARN] No episode directories found under: {ep_root}")
+        problems.append(f"No episode directories found under: {ep_root}")
         return 0, problems, True
 
     highest_good = 0
     # Contiguous check from 1... until first failure
     for expected in range(1, max(episode_dirs) + 1):
         if expected not in episode_dirs:
-            problems.append(f"[FAIL] Missing episode directory: {os.path.join(ep_root, str(expected))}")
+            problems.append(f"Missing episode directory: {os.path.join(ep_root, str(expected))}")
             break
 
         persistence_path = os.path.join(ep_root, str(expected), f"Persistence-Episode@{expected}.json")
-        ok, data, err = _load_json_file(persistence_path)
+        ok, data, err = load_json_file(persistence_path)
         if not ok:
-            problems.append(f"[FAIL] Episode {expected} persistence unreadable: {persistence_path} ({err})")
+            problems.append(f"Episode {expected} persistence unreadable: {persistence_path} ({err})")
             break
 
         # If episodeNumber exists, ensure the stored Persistence JSON data matches
@@ -335,11 +307,11 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
             try:
                 if int(data["episodeNumber"]) != expected:
                     problems.append(
-                        f"[FAIL] Episode {expected} persistence mismatch: episodeNumber={data['episodeNumber']} in {persistence_path}"
+                        f"Episode {expected} persistence mismatch: episodeNumber={data['episodeNumber']} in {persistence_path}"
                     )
                     break
             except (TypeError, ValueError):
-                problems.append(f"[FAIL] Episode {expected} persistence has non-integer episodeNumber in {persistence_path}")
+                problems.append(f"Episode {expected} persistence has non-integer episodeNumber in {persistence_path}")
                 break
 
         highest_good = expected
@@ -353,7 +325,7 @@ def rebuild_main_persistence_from_episode(full_report_dir: str, episode: int) ->
     dst = os.path.join(full_report_dir, "_persistence.json")
     tmp = dst + ".tmp"
 
-    ok, data, err = _load_json_file(src)
+    ok, data, err = load_json_file(src)
     if not ok:
         return False, f"Cannot rebuild _persistence.json; source unreadable: {src} ({err})"
 
@@ -372,13 +344,22 @@ def rebuild_main_persistence_from_episode(full_report_dir: str, episode: int) ->
         return False, f"Failed to write/replace persistence file: {e}"
 
 
-def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None,
-                   verify: bool = False, do_continue: bool = False, parent_dir_id: Optional[str] = None) -> bool:
+def run_simulation(
+        alg: str,
+        runs: int,
+        config_index: int,
+        bp: Optional[str] = None,
+        run_id: Optional[str] = None,
+        overrides_list: Optional[dict[str, Any]] = None,
+        verify: bool = False,
+        do_continue: bool = False,
+        parent_dir_id: Optional[str] = None
+) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg)
 
-    # Validate behavior policy
-    if bp not in behavior_packages:
+    # Validate behavior policy if provided
+    if bp and bp not in behavior_packages:
         raise ValueError(
             f"Unknown behavior policy '{bp}'. Valid options: {', '.join(behavior_packages.keys())}"
         )
@@ -389,7 +370,14 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     if overrides_list:
         abr_overrides, full_overrides = parse_overrides(overrides_list)
 
-    result_id_dir = build_result_id_dir(alg, runs, bp, abr_overrides)
+    bp_override_key = _get_bp_override_key(alg)
+    if bp and bp_override_key:
+        bp_entry_exists = overrides_list and bp_override_key in overrides_list
+        if not bp_entry_exists:
+            abr_overrides.append(f"{bp_override_key}@{bp}")
+            full_overrides.append(f"{key_abbreviations[bp_override_key]}={behavior_packages[bp]}")
+
+    result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id)
     validate_run_id(result_id_dir)
 
     # Allow overriding the {alg} portion of reports/skripsi/{alg}/run-id/{result_id_dir}
@@ -397,23 +385,23 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     validate_run_id(parent_dir_id_effective)
     full_report_dir = f"reports/skripsi/{parent_dir_id_effective}/run-id/{result_id_dir}"
 
-    bp_override = f"QLearningMovement.behaviorPolicy={behavior_packages[bp]}"
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
+    full_overrides.append(persistence_override)
 
-    if overrides_list and full_overrides:
-        full_overrides.append(bp_override)
-        full_overrides.append(persistence_override)
-
-    overrides_string = "@@".join(full_overrides)
+    overrides_string = "@@".join(full_overrides) if full_overrides else None
 
     # Print run information
-    print(f"\n{'=' * LINE_LENGTH}")
-    print(f"[INFO] Starting episodic simulation batch...")
-    print(f"[INFO] Algorithm: {alg} ({settings_file}), Behavior Policy: {bp}")
-    print(f"[INFO] Run ID: {run_id}, Number of episodes: {runs}")
-    print(f"[INFO] Report parent dir id: {parent_dir_id_effective} (reports/skripsi/{parent_dir_id_effective}/...)")
-    print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
-    print(f"{'=' * LINE_LENGTH}\n")
+    log.info("%s", "=" * LINE_LENGTH)
+    log.info("Starting episodic simulation batch...")
+    log.info("Algorithm: %s (%s), Behavior Policy: %s", alg, settings_file, bp)
+    log.info("Run ID: %s, Number of episodes: %s", run_id, runs)
+    log.info(
+        "Report parent dir id: %s (reports/skripsi/%s/...)",
+        parent_dir_id_effective,
+        parent_dir_id_effective,
+    )
+    log.info("Overrides: %s", overrides_string if overrides_string else "None")
+    log.info("%s", "=" * LINE_LENGTH)
 
     # Create a JSON to log the current running simulation configuration
     create_config_setting_json(alg, parent_dir_id_effective, runs, bp, result_id_dir, full_overrides)
@@ -426,50 +414,60 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
         highest_good, problems, episodic_available = find_highest_good_episode(full_report_dir)
         expected_last = runs
 
-        print(f"\n{'-' * LINE_LENGTH}")
-        print(f"[INFO] [VERIFY] Run dir: {full_report_dir}")
-        print(f"[INFO] [VERIFY] Expected episodes (runs): {expected_last}")
-        print(f"[INFO] [VERIFY] Highest contiguous uncorrupted episode: {highest_good}")
+        log.info("%s", "-" * LINE_LENGTH)
+        log.info("[VERIFY] Run dir: %s", full_report_dir)
+        log.info("[VERIFY] Expected episodes (runs): %s", expected_last)
+        log.info("[VERIFY] Highest contiguous uncorrupted episode: %s", highest_good)
         if problems:
             for p in problems:
-                print(p)
+                log.warning("[VERIFY] %s", p)
         if episodic_available:
             if highest_good >= expected_last:
-                print(f"[INFO] [VERIFY] ✅ Complete ({highest_good}/{expected_last})")
+                log.info("[VERIFY] Complete (%s/%s)", highest_good, expected_last)
             else:
-                print(f"[INFO] [VERIFY] ❌ Incomplete ({highest_good}/{expected_last})")
+                log.warning("[VERIFY] Incomplete (%s/%s)", highest_good, expected_last)
         else:
-            print("[INFO] [VERIFY] [WARN] Cannot verify episodic persistence (saveEpisodically likely false).")
-        print(f"{'-' * LINE_LENGTH}\n")
+            log.warning("[VERIFY] Cannot verify episodic persistence (saveEpisodically likely false).")
+        log.info("%s", "-" * LINE_LENGTH)
+
+        if not episodic_available:
+            log.error("[VERIFY] Episodic snapshots missing. Exiting with error code 1.")
+            return False
 
         if do_continue:
             if not episodic_available:
                 # Per requirement: restart from 0 (effectively episode 1), but print warning and highest uncorrupted episode.
-                print("[INFO] [CONTINUE] Episodic snapshots not available; cannot rebuild from ep/N. Will restart from episode 1.")
+                log.warning(
+                    "[CONTINUE] Episodic snapshots not available; cannot rebuild from ep/N. Will restart from episode 1."
+                )
                 start_ep = 1
             elif highest_good <= 0:
-                print("[INFO] [CONTINUE] No readable episodic snapshot found; will restart from episode 1.")
+                log.warning("[CONTINUE] No readable episodic snapshot found; will restart from episode 1.")
                 start_ep = 1
             else:
                 # Rebuild main persistence from last good, then resume from the next episode.
                 # Assumption: if Persistence-Episode@K.json exists and is readable, K is uncorrupted.
                 ok, msg = rebuild_main_persistence_from_episode(full_report_dir, highest_good)
                 if ok:
-                    print(f"[INFO] [CONTINUE] {msg}")
+                    log.info("[CONTINUE] %s", msg)
                 else:
-                    print(f"[INFO] [CONTINUE] [WARN] {msg}")
+                    log.warning("[CONTINUE] %s", msg)
 
                 start_ep = highest_good + 1
                 if start_ep > runs:
-                    print(f"[INFO] [CONTINUE] Already complete ({highest_good}/{runs}). Nothing to continue.")
+                    log.info("[CONTINUE] Already complete (%s/%s). Nothing to continue.", highest_good, runs)
                     return True
 
             if highest_good > 0 and start_ep <= runs:
-                print(f"[INFO] [CONTINUE] Highest uncorrupted episode: {highest_good}. Resuming from episode {start_ep} (next episode).")
+                log.info(
+                    "[CONTINUE] Highest uncorrupted episode: %s. Resuming from episode %s (next episode).",
+                    highest_good,
+                    start_ep,
+                )
 
     # If only verifying, do not run anything.
     if verify and not do_continue:
-        return (episodic_available and highest_good >= runs)
+        return highest_good >= runs
 
     # Execute episodes
     succeeds = 0
@@ -477,11 +475,10 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     start_time = datetime.now()
 
     for ep in range(start_ep, runs + 1):
-        running_overrides_string = (
-                overrides_string
-                + f"@@Report.reportDir={full_report_dir}/ep/{str(ep)}"
-                + f"@@EpisodicPersistenceManager.episodeNumber={str(ep)}"
-        )
+        ep_overrides = list(full_overrides)
+        ep_overrides.append(f"Report.reportDir={full_report_dir}/ep/{str(ep)}")
+        ep_overrides.append(f"EpisodicPersistenceManager.episodeNumber={str(ep)}")
+        running_overrides_string = "@@".join(ep_overrides)
         if run_script(alg, running_overrides_string, ep):
             succeeds += 1
         else:
@@ -490,27 +487,31 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     end_time = datetime.now()
 
     # Print summary
-    print(f"\n{'=' * LINE_LENGTH}")
-    print(f"[INFO] Episodic simulation batch completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}")
-    print(f"[INFO] Total episodes: {runs} (Success: {succeeds}, Fails: {failed})")
-    print(f"{'=' * LINE_LENGTH}\n")
+    log.info("%s", "=" * LINE_LENGTH)
+    log.info(
+        "Episodic simulation batch completed at %s, time taken: %s",
+        end_time,
+        format_timedelta(end_time - start_time),
+    )
+    log.info("Total episodes: %s (Success: %s, Fails: %s)", runs, succeeds, failed)
+    log.info("%s", "=" * LINE_LENGTH)
 
     return failed == 0
 
 
-def check_runs(args_runs: int, config: dict[str, str] = None) -> int:
+def check_runs(args_runs: int, config: dict[str, Any] = None) -> int:
     _runs = 0
     if args_runs:
         if args_runs <= 0:
-            print(f"Invalid number of runs: {args_runs}")
+            log.error("Invalid number of runs: %s", args_runs)
             sys.exit(1)
         _runs = args_runs
     else:
         if not config["runs"]:
-            print(f"No number of runs specified in config: {config['id']}")
+            log.error("No number of runs specified in config: %s", str(config["id"]))
             sys.exit(1)
         if config["runs"] and config["runs"] <= 0:
-            print(f"Invalid number of runs in config: {config['runs']}")
+            log.error("Invalid number of runs in config: %s", str(config["runs"]))
             sys.exit(1)
         else:
             _runs = config["runs"]
@@ -602,13 +603,19 @@ if __name__ == "__main__":
     # Parse arguments
     args = parser.parse_args()
 
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
     # -vc is equivalent to --verify --continue
     if getattr(args, "vc", False):
         args.verify = True
         args.do_continue = True
 
     if args.count_configs:
-        print(f"Number of configs: {len(LIST_OF_CONFIGS)}")
+        log.info("Number of configs: %s", len(LIST_OF_CONFIGS))
         sys.exit(0)
 
     successes = 0
@@ -618,15 +625,15 @@ if __name__ == "__main__":
     running_times = []
 
     if args.all:
-        print(f"[INFO] Running {len(LIST_OF_CONFIGS)} configurations.")
+        log.info("Running %s configurations.", len(LIST_OF_CONFIGS))
         for config in LIST_OF_CONFIGS:
             alg = config["alg"]
 
             runs = check_runs(args.runs, config)
 
-            bp = config["bp"]
+            bp = config["bp"] if "bp" in config else None
             id = config["id"]
-            overrides = config["overrides"] if "overrides" in config else args.d
+            overrides = config.get("overrides")
 
             _sim_start_time = datetime.now()
 
@@ -634,6 +641,7 @@ if __name__ == "__main__":
             success = run_simulation(
                 alg=alg,
                 runs=runs,
+                config_index=LIST_OF_CONFIGS.index(config) + 1,
                 bp=bp,
                 run_id=id,
                 overrides_list=overrides,
@@ -655,11 +663,15 @@ if __name__ == "__main__":
         # Parse config indices supporting ranges with hyphens
         configs_to_run: list[int] = parse_config_indices(config_num)
 
-        print(f"[INFO] Running {len(configs_to_run)} configurations.")
+        log.info("Running %s configurations.", len(configs_to_run))
         for config_num in configs_to_run:
             # Validate whether config num is in range
             if config_num < 1 or config_num > len(LIST_OF_CONFIGS):
-                print(f"Config index {config_num} out of range [1, {len(LIST_OF_CONFIGS)}]")
+                log.warning(
+                    "Config index %s out of range [1, %s]",
+                    config_num,
+                    len(LIST_OF_CONFIGS),
+                )
                 continue
 
             config = LIST_OF_CONFIGS[config_num - 1]
@@ -667,9 +679,9 @@ if __name__ == "__main__":
 
             runs = check_runs(args.runs, config)
 
-            bp = config["bp"]
+            bp = config["bp"] if "bp" in config else None
             id = config["id"]
-            overrides = config["overrides"] if "overrides" in config else args.d
+            overrides = config.get("overrides")
 
             _sim_start_time = datetime.now()
 
@@ -677,6 +689,7 @@ if __name__ == "__main__":
             success = run_simulation(
                 alg=alg,
                 runs=runs,
+                config_index=config_num,
                 bp=bp,
                 run_id=id,
                 overrides_list=overrides,
@@ -697,8 +710,21 @@ if __name__ == "__main__":
     sum_running_time = sum(running_times, timedelta())
     avg_running_time = sum_running_time // len(running_times)
 
-    print(f"\n{'=' * LINE_LENGTH}")
-    print(f"[SUMMARY] Batch run completed at {end_time}, time taken: {format_timedelta(end_time - start_time)}, average running time: {format_timedelta(avg_running_time)}")
-    print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
+    log.info("%s", "=" * LINE_LENGTH)
+    log.info(
+        "[SUMMARY] Batch run completed at %s, time taken: %s, average running time: %s",
+        end_time,
+        format_timedelta(end_time - start_time),
+        format_timedelta(avg_running_time),
+    )
+    log.info(
+        "[SUMMARY] Total configurations run: %s (Success: %s, Failed: %s)",
+        successes + failures,
+        successes,
+        failures,
+    )
+    log.info("%s", "=" * LINE_LENGTH)
 
-    print(f"{'=' * LINE_LENGTH}\n")
+    if (args.verify or args.do_continue) and failures > 0:
+        sys.exit(1)
+
