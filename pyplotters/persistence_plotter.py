@@ -116,9 +116,6 @@ def retrieve_trajectoryFrequencies(_json_data):
 
     # Calculate PDF (Probability Mass Function) using Kernel Density Estimation
     trajectory_values = traj_freq_df["trajectory"].astype(int).values
-    # Create weights based on frequency for KDE
-    kde = gaussian_kde(trajectory_values, weights=traj_freq_df["frequency"].values, bw_method='scott')
-    traj_freq_df["pdf"] = kde(trajectory_values)
 
     return traj_freq_df
 
@@ -134,9 +131,8 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
     if not logarithmic_x:
         # Plot both probability and PDF
         sns.lineplot(data=_df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
-        sns.lineplot(data=_df, x="trajectory", y="pdf", label="Probability Density (KDE)", linewidth=2, linestyle="--")
 
-        plt.title("Trajectory Distribution: PMF vs PDF")
+        plt.title("Trajectory Distribution (Probability Mass Function)")
         plt.xlabel("Trajectory Length")
         plt.ylabel("Probability / Density")
         plt.gca().set_yticks(np.arange(0, 1.1, 0.1))
@@ -147,9 +143,8 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
     else:
         # Logarithmic X-axis
         sns.lineplot(data=_df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
-        sns.lineplot(data=_df, x="trajectory", y="pdf", label="Probability Density (KDE)", linewidth=2, linestyle="--")
 
-        plt.title("Trajectory Distribution: PMF vs PDF (Logarithmic Scale)")
+        plt.title("Trajectory Distribution (Probability Mass Function)")
         plt.xlabel("Trajectory Length (log scale)")
         plt.ylabel("Probability / Density")
 
@@ -164,14 +159,6 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         # Defaults x_max to the max amount of the current data
         x_max = max_trajectory * np.ceil(np.log10(max_trajectory))
 
-        # if max_trajectory < 10 ** 2:
-        #     x_max = 10 ** 2  # At least show up to 10^2
-        # elif max_trajectory < 10 ** 3:
-        #     x_max = 10 ** 3  # If data reaches 10^2, show up to 10^3
-        # else:
-        #     x_max = 10 ** 4  # If data exceeds 10^3, show up to 10^4
-
-        ax.set_xlim(x_min, x_max)
         ax.xaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
         ax.xaxis.set_major_formatter(LogFormatterMathtext(base=10.0))
 
