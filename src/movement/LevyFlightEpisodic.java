@@ -64,7 +64,7 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 	/**
 	 * The target's prefix
 	 */
-	private String targetPrefix;
+	private final String targetPrefix;
 
 	public LevyFlightEpisodic(Settings _settings) {
 		super(_settings);
