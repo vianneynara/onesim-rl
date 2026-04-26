@@ -325,11 +325,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-ao", "--all_of", type=str, help="The parent report source directory. (e.g. \"ql\")"
+        "-aof", "--all_of", type=str, help="The parent report source directory. (e.g. \"ql\")"
     )
 
     parser.add_argument(
-        "-ri", "--run_id", type=str, help="The parent report source directory. (e.g. \"ql\")"
+        "-rid", "--run_id", type=str, help="The parent report source directory. (e.g. \"ql\")"
     )
 
     args = parser.parse_args()
