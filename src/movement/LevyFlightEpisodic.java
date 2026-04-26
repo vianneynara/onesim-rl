@@ -46,8 +46,7 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 	public static final String TARGET_PREFIX_S = "targetPrefix";
 	public static final String FLIGHT_SPEED_S = "flightSpeed";
 	public static final String TARGET_COOLDOWN_S = "targetCooldown";
-	public static final String STEP_PENALTY_S = "stepPenalty";
-	public static final String FOUND_REWARD_S = "foundReward";
+	public static final String LEARNING_SEED_S = "learningSeed";
 
 	public static final double DEFAULT_ALPHA = 1.5;
 	public static final double DEFAULT_XM = 1;
@@ -65,6 +64,20 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 	 * The target's prefix
 	 */
 	private final String targetPrefix;
+
+	/**
+	 * An addition to separate learning RNG (used in direction choosing), to create differentiation between
+	 * RNG used to initialize locations of the target nodes and the learning behavior. Especially when
+	 * we need the same locations of the targets per episode instead of position re-initialization per episode.
+	 *
+	 */
+	public static Random learningRNG;
+
+	// static initialization of all movement models' random number generator
+	static {
+		DTNSim.registerForReset(QLearningMovement.class.getCanonicalName());
+		reset();
+	}
 
 	public LevyFlightEpisodic(Settings _settings) {
 		super(_settings);
@@ -114,6 +127,32 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 			this.lastWaypoint = null;
 		}
 	}
+
+	/**
+	 * Resets all static fields to default values
+	 */
+	public static void reset() {
+		Settings s = new Settings(LFE_NS);
+
+		/* Initialize seed if not 0, initialize random seed if 0, inherit if not specified. */
+		if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) != 0) {
+			System.out.printf("[%s] Using %s.%s of: %s %n", QLearningMovement.class.getCanonicalName(), LFE_NS, LEARNING_SEED_S, s.getInt(LEARNING_SEED_S));
+			learningRNG = new Random(s.getInt(LEARNING_SEED_S));
+		} else if (s.contains(LEARNING_SEED_S) && s.getInt(LEARNING_SEED_S) == 0) {
+			System.out.printf("[%s] Using a random learning RNG seed.", QLearningMovement.class.getCanonicalName());
+			learningRNG = new Random();
+		} else {
+			// Inherit the seed from MovementModel
+			System.out.printf("[%s] Using a random learning RNG seed inherited from MovementModel.", QLearningMovement.class.getCanonicalName());
+			Settings movementSettings = new Settings(MOVEMENT_MODEL_NS);
+			if (movementSettings.contains(RNG_SEED) && movementSettings.getInt(RNG_SEED) != 0) {
+				learningRNG = new Random(movementSettings.getInt(RNG_SEED));
+			} else {
+				learningRNG = new Random();  // truly random if not set
+			}
+		}
+	}
+
 
 	@Override
 	public void changedConnection(Connection con) {
@@ -165,7 +204,7 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		Path p = new Path(this.flightSpeed);
 		p.addWaypoint(lastWaypoint.clone());
 
-		Coord c = LevyFlightEpisodic();
+		Coord c = computeNextLevyPoint();
 		double distance = lastWaypoint.distance(c);
 		int trajLength = (int) distance;
 		recordFinishedTrajectory(trajLength);
@@ -214,12 +253,12 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 	/**
 	 * Performs a Lévy Flight step to determine the next coordinate.
 	 */
-	protected Coord LevyFlightEpisodic() {
+	protected Coord computeNextLevyPoint() {
 		double next_X, next_Y;
 
 		do {
 			double step_length = pareto();
-			double theta = rng.nextDouble(0, 2 * Math.PI);
+			double theta = learningRNG.nextDouble(0, 2 * Math.PI);
 
 			next_X = (int) lastWaypoint.getX() + step_length * Math.cos(theta);
 			next_Y = (int) lastWaypoint.getY() + step_length * Math.sin(theta);
