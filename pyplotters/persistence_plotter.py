@@ -76,13 +76,28 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
     return episodic_rewards
 
 
-def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str):
+def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False):
     plt.figure(figsize=(10, 6))
+
+    if not _yalias:
+        _yalias = _ylabel
 
     max_episodes = _df["episodeNumber"].max()
     min_episodes = _df["episodeNumber"].min()
 
     sns.lineplot(data=_df, x="episodeNumber", y=_key)
+
+    # Summary statistics for the selected Y series
+    y = pd.to_numeric(_df[_key], errors="coerce")
+    y = y.dropna()
+    y_max = y_min = y_mean = y_mode = None
+    if len(y) > 0:
+        y_max = float(y.max())
+        y_min = float(y.min())
+        y_mean = float(y.mean())
+        # Pandas mode can return multiple values; pick the first (smallest)
+        modes = y.mode()
+        y_mode = float(modes.iloc[0]) if len(modes) > 0 else None
 
     if max_episodes <= 20:
         ticks = np.arange(min_episodes, max_episodes + 1, 1)
@@ -94,12 +109,41 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
     plt.xticks(ticks)
 
     # Labels & title
-    plt.title(_title)
+    plt.title(_title, fontweight='bold')
     plt.xlabel(_xlabel)
     plt.ylabel(_ylabel)
 
     plt.margins(x=0)
     plt.xlim(left=min_episodes)
+
+    # Add summary stats into legend without adding visual lines to the plot.
+    ax = plt.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    if y_max is not None:
+        from matplotlib.lines import Line2D
+
+        # Use monospace to keep alignment stable
+        if not _discrete:
+            stat_lines = [
+                f"{'Highest ' + _yalias:<20}: {y_max:>10.4f}",
+                f"{'Lowest ' + _yalias:<20}: {y_min:>10.4f}",
+                f"{'Mean ' + _yalias:<20}: {y_mean:>10.4f}",
+            ]
+        else:
+            y_max = int(y_max)
+            y_min = int(y_min)
+            stat_lines = [
+                f"{'Highest ' + _yalias:<20}: {y_max:>10d}",
+                f"{'Lowest ' + _yalias:<20}: {y_min:>10d}",
+                f"{'Mean ' + _yalias:<20}: {y_mean:>10.2f}",
+            ]
+        # if y_mode is not None:
+        #     stat_lines.append(f"{'Mode ' + _yalias:<24}: {y_mode:>12.4f}")
+
+        handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
+
+    if handles:
+        ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
     plt.savefig(file_path, bbox_inches='tight')
     plt.close()
 
@@ -159,7 +203,7 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         ax.set_xlim(1, xmax_plot)
 
         # Major tick every 200; minor tick every 50 (optional)
-        ax.xaxis.set_major_locator(MultipleLocator(50))
+        ax.xaxis.set_major_locator(MultipleLocator(200))
         ax.xaxis.set_minor_locator(MultipleLocator(50))
 
         plt.gca().set_yticks(np.arange(0, 1.1, 0.1))
@@ -170,12 +214,13 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         handles, labels = ax.get_legend_handles_labels()
         if max_len is not None:
             from matplotlib.lines import Line2D
-            handles.extend([
-                Line2D([], [], linestyle='none', color='none', label=f"      Max trajectory : {max_len}"),
-                Line2D([], [], linestyle='none', color='none', label=f"         Highest PMF : {max_p:.2f}"),
-                Line2D([], [], linestyle='none', color='none', label=f"   Mean length (PMF) : {mean_len:.2f}"),
-                Line2D([], [], linestyle='none', color='none', label=f"Most probable (mode) : {mode_len}"),
-            ])
+            stat_lines = [
+                f"{'Max trajectory':<20}: {max_len:>6d}",
+                f"{'Highest PMF':<20}: {max_p:>10.3f}",
+                f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
+                f"{'Most probable (mode)':<20}: {mode_len:>6d}",
+            ]
+            handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
         plt.savefig(file_path, bbox_inches='tight')
         plt.close()
@@ -204,12 +249,13 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         handles, labels = ax.get_legend_handles_labels()
         if max_len is not None:
             from matplotlib.lines import Line2D
-            handles.extend([
-                Line2D([], [], linestyle='none', color='none', label=f"      Max trajectory : {max_len}"),
-                Line2D([], [], linestyle='none', color='none', label=f"         Highest PMF : {max_p:.2f}"),
-                Line2D([], [], linestyle='none', color='none', label=f"   Mean length (PMF) : {mean_len:.2f}"),
-                Line2D([], [], linestyle='none', color='none', label=f"Most probable (mode) : {mode_len}"),
-            ])
+            stat_lines = [
+                f"{'Max trajectory':<20}: {max_len:>10d}",
+                f"{'Highest PMF':<20}: {max_p:>10.6f}",
+                f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
+                f"{'Most probable (mode)':<20}: {mode_len:>10d}",
+            ]
+            handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
         plt.savefig(file_path, bbox_inches='tight')
         plt.close()
@@ -267,7 +313,8 @@ def process_reports(_run_id_dir):
         "Current Episode Reward",
         "Episode",
         "Reward",
-        pp_currentEpisodeReward
+        pp_currentEpisodeReward,
+        _yalias="reward"
     )
 
     # currentEpisodeReward
@@ -278,7 +325,8 @@ def process_reports(_run_id_dir):
         "Current Cumulative Reward",
         "Episode",
         "Reward",
-        pp_currentCumulativeReward
+        pp_currentCumulativeReward,
+        _yalias="cumu. reward"
     )
 
     # currentTrueDetections
@@ -289,7 +337,9 @@ def process_reports(_run_id_dir):
         "Current True Detections",
         "Episode",
         "Detection",
-        pp_currentTrueDetections
+        pp_currentTrueDetections,
+        _yalias="detection",
+        _discrete=True
     )
 
     # currentUniqueDetections
@@ -300,7 +350,9 @@ def process_reports(_run_id_dir):
         "Current Unique Detections",
         "Episode",
         "Detection",
-        pp_currentUniqueDetections
+        pp_currentUniqueDetections,
+        _yalias="uniq. detection",
+        _discrete=True
     )
 
     # trajectory distribution
