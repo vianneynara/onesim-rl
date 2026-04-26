@@ -375,6 +375,7 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		epd.previousCumulativeTrueDetections = this.currentCumulativeTrueDetections;
 		epd.currentCumulativeTrueDetections = this.currentCumulativeTrueDetections + currentTrueDetections;
 		epd.currentTrueDetections = currentTrueDetections;
+		epd.currentUniqueDetections = retrieveUniqueDetections();
 	}
 
 	@Override
