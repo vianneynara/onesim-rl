@@ -44,6 +44,8 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 	public static final String ALPHA_S = "levyAlpha";
 	public static final String XM_S = "xm";
 	public static final String TARGET_PREFIX_S = "targetPrefix";
+	public static final String STEP_PENALTY_S = "stepPenalty";
+	public static final String FOUND_REWARD_S = "foundReward";
 	public static final String FLIGHT_SPEED_S = "flightSpeed";
 	public static final String TARGET_COOLDOWN_S = "targetCooldown";
 	public static final String LEARNING_SEED_S = "learningSeed";
