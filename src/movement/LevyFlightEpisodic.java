@@ -84,9 +84,11 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		Settings s = new Settings(LFE_NS);
 
 		this.trajectoryFrequencies = new HashMap<>();
+		this.currentCumulativeReward = 0.0;
+		this.currentEpisodeReward = 0.0;
 		this.currentCumulativeTrueDetections = 0;
 		this.currentTrueDetections = 0;
-		this.objectiveFound = new java.util.HashMap<>();
+		this.objectiveFound = new HashMap<>();
 
 		this.targetPrefix = s.getSetting(TARGET_PREFIX_S, DEFAULT_TARGET_PREFIX);
 		this.alpha = s.getDouble(ALPHA_S, DEFAULT_ALPHA);
@@ -109,6 +111,8 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		super(proto);
 
 		this.trajectoryFrequencies = new HashMap<>(proto.trajectoryFrequencies);
+		this.currentCumulativeReward = proto.currentCumulativeReward;
+		this.currentEpisodeReward = proto.currentEpisodeReward;
 		this.currentCumulativeTrueDetections = proto.currentCumulativeTrueDetections;
 		this.currentTrueDetections = proto.currentTrueDetections;
 		this.objectiveFound = new HashMap<>(proto.objectiveFound);
