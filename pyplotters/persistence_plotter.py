@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 
 from typing import List, Tuple, Union
 from scipy.stats import gaussian_kde
-from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, FormatStrFormatter
+from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, FormatStrFormatter, MultipleLocator
 
 BASE_REPORTS_DIR = "reports\\skripsi"
 PLOT_RESULTS_DIR = "pyplotters\\plots"
@@ -127,6 +127,25 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
     - Orange line: Smoothed PDF (KDE)
     """
     plt.figure(figsize=(12, 6))
+    xmax_plot = 500
+
+    # Ensure numeric dtypes (JSON keys often arrive as strings)
+    _df = _df.copy()
+    _df["trajectory"] = _df["trajectory"].astype(int)
+    _df["probability"] = _df["probability"].astype(float)
+
+    # Summary statistics to display in legend
+    max_len = None
+    mean_len = None
+    max_p = None
+    mode_len = None
+    if len(_df) > 0 and float(_df["probability"].sum()) > 0:
+        max_len = int(_df["trajectory"].max())
+        # Expected trajectory length under PMF
+        mean_len = float((_df["trajectory"] * _df["probability"]).sum())
+        # Most probable trajectory length (mode); in ties pick the smallest length
+        max_p = _df["probability"].max()
+        mode_len = int(_df.loc[_df["probability"] == max_p, "trajectory"].min())
 
     if not logarithmic_x:
         # Plot both probability and PDF
@@ -135,9 +154,29 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         plt.title("Trajectory Distribution (Probability Mass Function)")
         plt.xlabel("Trajectory Length")
         plt.ylabel("Probability / Density")
+
+        ax = plt.gca()
+        ax.set_xlim(1, xmax_plot)
+
+        # Major tick every 200; minor tick every 50 (optional)
+        ax.xaxis.set_major_locator(MultipleLocator(50))
+        ax.xaxis.set_minor_locator(MultipleLocator(50))
+
         plt.gca().set_yticks(np.arange(0, 1.1, 0.1))
         plt.margins(x=0)
-        plt.legend()
+
+        # Add summary stats into legend without adding visual lines to the plot.
+        # To keep the column alignment, render legend text using a monospace font.
+        handles, labels = ax.get_legend_handles_labels()
+        if max_len is not None:
+            from matplotlib.lines import Line2D
+            handles.extend([
+                Line2D([], [], linestyle='none', color='none', label=f"      Max trajectory : {max_len}"),
+                Line2D([], [], linestyle='none', color='none', label=f"         Highest PMF : {max_p:.2f}"),
+                Line2D([], [], linestyle='none', color='none', label=f"   Mean length (PMF) : {mean_len:.2f}"),
+                Line2D([], [], linestyle='none', color='none', label=f"Most probable (mode) : {mode_len}"),
+            ])
+        ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
         plt.savefig(file_path, bbox_inches='tight')
         plt.close()
     else:
@@ -152,21 +191,26 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         ax = plt.gca()
         ax.set_xscale('log')
 
-        # Determine X-axis limits based on max trajectory value
-        max_trajectory = float(_df["trajectory"].max())
-        x_min = 10 ** 0  # Always start from 10^0
-
-        # Defaults x_max to the max amount of the current data
-        x_max = max_trajectory * np.ceil(np.log10(max_trajectory))
-
-        ax.xaxis.set_major_locator(LogLocator(base=10.0, numticks=10))
-        ax.xaxis.set_major_formatter(LogFormatterMathtext(base=10.0))
+        # Set X-axis ticks from 10^0 to 10^3
+        # xmax_plot = _df["trajectory"].max()
+        ax.set_xlim(1, xmax_plot)
+        ax.set_xticks([1, 10, 100, 1000])
 
         # Y-axis ticks at 0.1 intervals
         ax.set_yticks(np.arange(0, 1.1, 0.1))
 
         plt.margins(x=0)
-        plt.legend()
+
+        handles, labels = ax.get_legend_handles_labels()
+        if max_len is not None:
+            from matplotlib.lines import Line2D
+            handles.extend([
+                Line2D([], [], linestyle='none', color='none', label=f"      Max trajectory : {max_len}"),
+                Line2D([], [], linestyle='none', color='none', label=f"         Highest PMF : {max_p:.2f}"),
+                Line2D([], [], linestyle='none', color='none', label=f"   Mean length (PMF) : {mean_len:.2f}"),
+                Line2D([], [], linestyle='none', color='none', label=f"Most probable (mode) : {mode_len}"),
+            ])
+        ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
         plt.savefig(file_path, bbox_inches='tight')
         plt.close()
 
@@ -216,7 +260,7 @@ def process_reports(_run_id_dir):
     common_df.to_csv(common_df_path, index=False, sep=";", header=True)
 
     # currentEpisodeReward
-    pp_currentEpisodeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentEpisodeReward.png")
+    pp_currentEpisodeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Current Episode Reward.png")
     plot_by_episode(
         common_df,
         "currentEpisodeReward",
@@ -227,7 +271,7 @@ def process_reports(_run_id_dir):
     )
 
     # currentEpisodeReward
-    pp_currentCumulativeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentCumulativeReward.png")
+    pp_currentCumulativeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Current Cumulative Reward.png")
     plot_by_episode(
         common_df,
         "currentCumulativeReward",
@@ -238,7 +282,7 @@ def process_reports(_run_id_dir):
     )
 
     # currentTrueDetections
-    pp_currentTrueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentTrueDetections.png")
+    pp_currentTrueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Current True Detections.png")
     plot_by_episode(
         common_df,
         "currentTrueDetections",
@@ -249,7 +293,7 @@ def process_reports(_run_id_dir):
     )
 
     # currentUniqueDetections
-    pp_currentUniqueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"currentUniqueDetections.png")
+    pp_currentUniqueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Current Unique Detections.png")
     plot_by_episode(
         common_df,
         "currentUniqueDetections",
@@ -262,11 +306,11 @@ def process_reports(_run_id_dir):
     # trajectory distribution
     plot_trajectoryDistribution(
         traj_freq_df,
-        os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"trajectoryDistribution.png")
+        os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Trajectory Distribution.png")
     )
     plot_trajectoryDistribution(
         traj_freq_df,
-        os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"trajectoryDistributionLog.png"),
+        os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Trajectory Distribution (log scale).png"),
         logarithmic_x=True
     )
 
