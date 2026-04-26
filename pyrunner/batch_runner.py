@@ -84,14 +84,12 @@ alg_base_settings = {
     "ql": "settings/skripsi/randomsearch-qlearn.cfg",
     "mc": "settings/skripsi/randomsearch-mc.cfg",
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
-    "lf": "settings/skripsi/randomsearch-lf.cfg"
 }
 
 alg_abbreviations = {
     "ql": "QLearningMovement",
     "mc": "MCMovement",
     "lfe": "LevyFlightEpisodic",
-    "lf": "LevyFlight"
 }
 
 behavior_packages = {
@@ -118,7 +116,7 @@ key_abbreviations = {
     "qlm_fr": "QLearningMovement.foundReward",
     "qlm_as": "QLearningMovement.agentSpeed",
 
-    # [ QLearningMovement settings ]
+    # [ Monte-Carlo Movement settings ]
     "mcm_bp": "MCMovement.behaviorPolicy",
     "mcm_lr": "MCMovement.learningRate",
     "mcm_df": "MCMovement.discountFactor",
@@ -128,6 +126,14 @@ key_abbreviations = {
     "mcm_fr": "MCMovement.foundReward",
     "mcm_as": "MCMovement.agentSpeed",
     "mcm_fv": "MCMovement.firstVisit",
+
+    # [ Lévy Flight Episodic Movement settings ]
+    "lfe_la": "LevyFlightEpisodic.levyAlpha",
+    "lfe_xm": "LevyFlightEpisodic.xm",
+    "lfe_tp": "LevyFlightEpisodic.targetPrefix",
+    "lfe_fs": "LevyFlightEpisodic.flightSpeed",
+    "lfe_sp": "LevyFlightEpisodic.stepPenalty",
+    "lfe_fr": "LevyFlightEpisodic.foundReward",
 
     # [ EpsilonGreedyBehavior settings ]
     "eg_ip": "BehaviorPolicy.epsilon",
@@ -153,6 +159,8 @@ key_abbreviations = {
 
 S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 
+PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcm_bp"]
+
 # Import the configs
 from batch_configs import LIST_OF_CONFIGS
 
@@ -161,7 +169,7 @@ def create_config_setting_json(
         alg: str,
         parent_dir_id: str,
         runs: int,
-        bp: str,
+        bp: Optional[str],
         result_dir_id: str = None,
         overrides_list: list[str] = None
 ):
@@ -173,8 +181,11 @@ def create_config_setting_json(
         "parent_dir_id": parent_dir_id,
 
         "amm": alg_abbreviations[alg],
-        "qlm_bp": behavior_packages[bp],
     }
+
+    bp_key = _get_bp_override_key(alg)
+    if bp and bp_key:
+        config_setting_json[bp_key] = behavior_packages[bp]
 
     for entry in overrides_list or []:
         key, value = entry.split("=", 1)
@@ -189,7 +200,7 @@ def create_config_setting_json(
         json.dump(config_setting_json, json_file, indent=4)
 
 
-def parse_overrides(overrides_dict: dict[str]) -> str:
+def parse_overrides(overrides_dict: dict[str]) -> Tuple[list[str], list[str]]:
     # convert the override dictionary into a list of key-value
     abr_overrides_list = []
     full_overrides_list = []
@@ -208,6 +219,34 @@ def parse_overrides(overrides_dict: dict[str]) -> str:
     return abr_overrides_list, full_overrides_list
 
 
+def _get_bp_override_key(alg: str) -> Optional[str]:
+    if alg == "ql":
+        return "qlm_bp"
+    if alg == "mc":
+        return "mcm_bp"
+    return None
+
+
+def _order_abbreviated_overrides(abr_overrides: list[str]) -> list[str]:
+    if not abr_overrides:
+        return []
+
+    priority = []
+    remainder = []
+    for entry in abr_overrides:
+        key = entry.split("@", 1)[0]
+        if key in PRIORITY_OVERRIDE_KEYS:
+            priority.append(entry)
+        else:
+            remainder.append(entry)
+
+    ordered = []
+    for key in PRIORITY_OVERRIDE_KEYS:
+        ordered.extend([item for item in priority if item.startswith(f"{key}@")])
+    ordered.extend(remainder)
+    return ordered
+
+
 def expand_algorithm(alg: str) -> str:
     if alg not in alg_base_settings:
         raise ValueError(
@@ -216,14 +255,22 @@ def expand_algorithm(alg: str) -> str:
     return alg_base_settings[alg]
 
 
-def build_result_id_dir(alg: str, runs: int, bp: str = None, overrides: list[str] = None) -> str:
-    # Initial first part  of algorithm and runs
-    result_id_dir = f"{alg}{runs}-qlm_bp@{bp}-"
+def build_result_id_dir(
+        alg: str,
+        runs: int,
+        config_index: int,
+        overrides: list[str],
+        run_id: Optional[str]
+) -> str:
+    prefix = f"cfg@{config_index}-{alg}{runs}"
+    ordered_overrides = _order_abbreviated_overrides(overrides)
 
-    # Adds overrides if exist
-    result_id_dir += "-".join(overrides) if overrides else ""
+    if ordered_overrides:
+        suffix = "-".join(ordered_overrides)
+    else:
+        suffix = run_id or ""
 
-    return result_id_dir
+    return f"{prefix}-{suffix}" if suffix else prefix
 
 
 def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
@@ -372,13 +419,22 @@ def rebuild_main_persistence_from_episode(full_report_dir: str, episode: int) ->
         return False, f"Failed to write/replace persistence file: {e}"
 
 
-def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_list: list[str] = None,
-                   verify: bool = False, do_continue: bool = False, parent_dir_id: Optional[str] = None) -> bool:
+def run_simulation(
+        alg: str,
+        runs: int,
+        config_index: int,
+        bp: Optional[str] = None,
+        run_id: Optional[str] = None,
+        overrides_list: Optional[dict[str]] = None,
+        verify: bool = False,
+        do_continue: bool = False,
+        parent_dir_id: Optional[str] = None
+) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg)
 
-    # Validate behavior policy
-    if bp not in behavior_packages:
+    # Validate behavior policy if provided
+    if bp and bp not in behavior_packages:
         raise ValueError(
             f"Unknown behavior policy '{bp}'. Valid options: {', '.join(behavior_packages.keys())}"
         )
@@ -389,7 +445,14 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     if overrides_list:
         abr_overrides, full_overrides = parse_overrides(overrides_list)
 
-    result_id_dir = build_result_id_dir(alg, runs, bp, abr_overrides)
+    bp_override_key = _get_bp_override_key(alg)
+    if bp and bp_override_key:
+        bp_entry_exists = overrides_list and bp_override_key in overrides_list
+        if not bp_entry_exists:
+            abr_overrides.append(f"{bp_override_key}@{bp}")
+            full_overrides.append(f"{key_abbreviations[bp_override_key]}={behavior_packages[bp]}")
+
+    result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id)
     validate_run_id(result_id_dir)
 
     # Allow overriding the {alg} portion of reports/skripsi/{alg}/run-id/{result_id_dir}
@@ -397,14 +460,8 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     validate_run_id(parent_dir_id_effective)
     full_report_dir = f"reports/skripsi/{parent_dir_id_effective}/run-id/{result_id_dir}"
 
-    bp_override = f"QLearningMovement.behaviorPolicy={behavior_packages[bp]}"
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
-
-    if overrides_list and full_overrides:
-        full_overrides.append(bp_override)
-        full_overrides.append(persistence_override)
-
-    overrides_string = "@@".join(full_overrides)
+    full_overrides.append(persistence_override)
 
     # Print run information
     print(f"\n{'=' * LINE_LENGTH}")
@@ -442,6 +499,10 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
             print("[INFO] [VERIFY] [WARN] Cannot verify episodic persistence (saveEpisodically likely false).")
         print(f"{'-' * LINE_LENGTH}\n")
 
+        if not episodic_available:
+            print("[INFO] [VERIFY] [WARN] Episodic snapshots missing. Exiting with error code 1.")
+            return False
+
         if do_continue:
             if not episodic_available:
                 # Per requirement: restart from 0 (effectively episode 1), but print warning and highest uncorrupted episode.
@@ -469,7 +530,7 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
 
     # If only verifying, do not run anything.
     if verify and not do_continue:
-        return (episodic_available and highest_good >= runs)
+        return highest_good >= runs
 
     # Execute episodes
     succeeds = 0
@@ -477,11 +538,10 @@ def run_simulation(alg: str, runs: int, bp: str, run_id: str = None, overrides_l
     start_time = datetime.now()
 
     for ep in range(start_ep, runs + 1):
-        running_overrides_string = (
-                overrides_string
-                + f"@@Report.reportDir={full_report_dir}/ep/{str(ep)}"
-                + f"@@EpisodicPersistenceManager.episodeNumber={str(ep)}"
-        )
+        ep_overrides = list(full_overrides)
+        ep_overrides.append(f"Report.reportDir={full_report_dir}/ep/{str(ep)}")
+        ep_overrides.append(f"EpisodicPersistenceManager.episodeNumber={str(ep)}")
+        running_overrides_string = "@@".join(ep_overrides)
         if run_script(alg, running_overrides_string, ep):
             succeeds += 1
         else:
@@ -626,7 +686,7 @@ if __name__ == "__main__":
 
             bp = config["bp"]
             id = config["id"]
-            overrides = config["overrides"] if "overrides" in config else args.d
+            overrides = config.get("overrides")
 
             _sim_start_time = datetime.now()
 
@@ -634,6 +694,7 @@ if __name__ == "__main__":
             success = run_simulation(
                 alg=alg,
                 runs=runs,
+                config_index=LIST_OF_CONFIGS.index(config) + 1,
                 bp=bp,
                 run_id=id,
                 overrides_list=overrides,
@@ -669,7 +730,7 @@ if __name__ == "__main__":
 
             bp = config["bp"]
             id = config["id"]
-            overrides = config["overrides"] if "overrides" in config else args.d
+            overrides = config.get("overrides")
 
             _sim_start_time = datetime.now()
 
@@ -677,6 +738,7 @@ if __name__ == "__main__":
             success = run_simulation(
                 alg=alg,
                 runs=runs,
+                config_index=config_num,
                 bp=bp,
                 run_id=id,
                 overrides_list=overrides,
@@ -702,3 +764,7 @@ if __name__ == "__main__":
     print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
 
     print(f"{'=' * LINE_LENGTH}\n")
+
+    if (args.verify or args.do_continue) and failures > 0:
+        sys.exit(1)
+
