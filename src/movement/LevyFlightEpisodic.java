@@ -4,14 +4,12 @@ import core.*;
 import movement.rl.persistence.EpisodicPersistable;
 import movement.rl.persistence.EpisodicPersistenceData;
 import movement.rl.persistence.EpisodicPersistenceManager;
+import movement.util.MovUtil;
 import report.RewardReporting;
 import report.SearchingOccurrencesReporting;
 import report.TrajectoryFrequencyReporting;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Generates movement paths according to human-like behavior,
@@ -77,7 +75,7 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 
 	// static initialization of all movement models' random number generator
 	static {
-		DTNSim.registerForReset(QLearningMovement.class.getCanonicalName());
+		DTNSim.registerForReset(LevyFlightEpisodic.class.getCanonicalName());
 		reset();
 	}
 
@@ -180,7 +178,8 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 
 	/**
 	 * Computes whether the detected host is found over the cooldown since the last time it was found.
-	 * */
+	 *
+	 */
 	private boolean isTrueDetection(DTNHost targetHost) {
 		double currTime = SimClock.getTime();
 		double lastTimeFound = this.objectiveFound.getOrDefault(targetHost, 0.0);
@@ -215,6 +214,30 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		int trajLength = (int) distance;
 		recordFinishedTrajectory(trajLength);
 
+		double nextX = c.getX();
+		double nextY = c.getY();
+
+		// If the straight step would exit the world bounds, bounce off the wall instead.
+		if (nextX >= getMaxX() || nextY >= getMaxY() || nextX <= 0 || nextY <= 0) {
+			double[] bounced = MovUtil.bounce(lastWaypoint.getX(), lastWaypoint.getY(), nextX, nextY, getMaxX(), getMaxY());
+			double bounceX = bounced[0];
+			double bounceY = bounced[1];
+//			direction = bounced[2]; // reflected direction: unused, because LF is random
+			double remainX = bounced[3]; // remaining step X-component after bounce
+			double remainY = bounced[4]; // remaining step Y-component after bounce
+
+			// Add the wall-contact point as an intermediate waypoint.
+			p.addWaypoint(new Coord(bounceX, bounceY));
+
+			// Continue from the bounce point with the remaining distance.
+			nextX = bounceX + remainX;
+			nextY = bounceY + remainY;
+
+			// Clamp to bounds in case a corner or very short remaining step still exits.
+			nextX = Math.max(0, Math.min(getMaxX(), nextX));
+			nextY = Math.max(0, Math.min(getMaxY(), nextY));
+		}
+
 		/* Record estimated penalty before simulation ends */
 
 //		double estimatedPenalty = distance * -this.stepPenalty;
@@ -235,7 +258,8 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		double estimatedPenalty = -this.stepPenalty * executedDistance;
 		this.currentEpisodeReward += estimatedPenalty;
 
-		p.addWaypoint(c);
+		Coord nextWaypoint = new Coord(nextX, nextY);
+		p.addWaypoint(nextWaypoint);
 
 		this.lastWaypoint = c;
 		return p;
