@@ -7,7 +7,6 @@ The second version of batch runner, will provide better and more flexible runs.
 # ------------------------------------------------------------------------------------------------------------------- #
 
 import os
-import re
 import sys
 import argparse
 import subprocess
@@ -17,59 +16,12 @@ from typing import Optional, Tuple
 
 from datetime import datetime, timedelta
 
-# ------------------------------------------------------------------------------------------------------------------- #
-# PATH VALIDATOR
-# ------------------------------------------------------------------------------------------------------------------- #
-
-# Characters not allowed in Windows filenames/path components
-INVALID_CHARS_RE = re.compile(r'[<>:"/\\|?*]')
-WINDOWS_RESERVED_NAMES = {
-    "CON", "PRN", "AUX", "NUL",
-    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
-}
+from pyrunner.utils.fs import safe_int_dirnames
+from pyrunner.utils.jsonio import load_json_file
+from pyrunner.utils.path import validate_run_id
+from pyrunner.utils.timefmt import format_timedelta
 
 LINE_LENGTH = 100
-
-
-def validate_run_id(run_id: str) -> None:
-    """
-    Static method to validate the run_id safety to use as a Windows path component.
-
-    Raises ValueError with a clear message if invalid.
-    """
-    if not run_id:
-        raise ValueError("run_id must not be empty")
-
-    # Check for illegal characters
-    if INVALID_CHARS_RE.search(run_id):
-        raise ValueError(
-            f"run_id '{run_id}' contains invalid path characters. "
-            r"Disallowed characters are: < > : \" / \ | ? *"
-        )
-
-    # Check for control chars (ASCII 0-31)
-    if any(ord(ch) < 32 for ch in run_id):
-        raise ValueError(
-            f"run_id '{run_id}' contains control characters, which are not "
-            "allowed in Windows filenames."
-        )
-
-    # Check for reserved device names (case-insensitive, exact matches only)
-    if run_id.upper() in WINDOWS_RESERVED_NAMES:
-        raise ValueError(
-            f"run_id '{run_id}' is a reserved device name on Windows "
-            "(CON, PRN, AUX, NUL, COM1..COM9, LPT1..LPT9). "
-            "Please choose a different run_id."
-        )
-
-
-def format_timedelta(td):
-    # Calculate total components
-    total_seconds = int(td.total_seconds())
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -162,7 +114,7 @@ S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcm_bp"]
 
 # Import the configs
-from batch_configs import LIST_OF_CONFIGS
+from pyrunner.batch_configs import LIST_OF_CONFIGS
 
 
 def create_config_setting_json(
@@ -312,41 +264,6 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
         print(f"{'-' * LINE_LENGTH}\n")
 
 
-def _safe_int_dirnames(path: str) -> list[int]:
-    """Return sorted integer directory names directly under path (ignores non-int entries)."""
-    if not os.path.isdir(path):
-        return []
-    episodes = []
-    try:
-        for name in os.listdir(path):
-            full = os.path.join(path, name)
-            if not os.path.isdir(full):
-                continue
-            try:
-                episodes.append(int(name))
-            except ValueError:
-                continue
-    except OSError:
-        return []
-    return sorted(set(episodes))
-
-
-def _load_json_file(path: str) -> Tuple[bool, Optional[dict], Optional[str]]:
-    """Load JSON file. Returns (ok, data, error_message)."""
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if not isinstance(data, dict):
-            return False, None, f"JSON root is not an object: {type(data).__name__}"
-        return True, data, None
-    except FileNotFoundError:
-        return False, None, "file not found"
-    except json.JSONDecodeError as e:
-        return False, None, f"JSON decode error at line {e.lineno} col {e.colno}: {e.msg}"
-    except OSError as e:
-        return False, None, f"I/O error: {e}"
-
-
 def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool]:
     """Determine highest *contiguous* episode number (starting from 1) in which Persistence-Episode@N.json is readable JSON.
 
@@ -359,7 +276,7 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
     if not os.path.isdir(ep_root):
         return 0, [f"[WARN] Episodic directory not found: {ep_root} (saveEpisodically likely false)"] , False
 
-    episode_dirs = _safe_int_dirnames(ep_root)
+    episode_dirs = safe_int_dirnames(ep_root)
     if not episode_dirs:
         problems.append(f"[WARN] No episode directories found under: {ep_root}")
         return 0, problems, True
@@ -372,7 +289,7 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
             break
 
         persistence_path = os.path.join(ep_root, str(expected), f"Persistence-Episode@{expected}.json")
-        ok, data, err = _load_json_file(persistence_path)
+        ok, data, err = load_json_file(persistence_path)
         if not ok:
             problems.append(f"[FAIL] Episode {expected} persistence unreadable: {persistence_path} ({err})")
             break
@@ -400,7 +317,7 @@ def rebuild_main_persistence_from_episode(full_report_dir: str, episode: int) ->
     dst = os.path.join(full_report_dir, "_persistence.json")
     tmp = dst + ".tmp"
 
-    ok, data, err = _load_json_file(src)
+    ok, data, err = load_json_file(src)
     if not ok:
         return False, f"Cannot rebuild _persistence.json; source unreadable: {src} ({err})"
 
@@ -462,6 +379,8 @@ def run_simulation(
 
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
     full_overrides.append(persistence_override)
+
+    overrides_string = "@@".join(full_overrides) if full_overrides else None
 
     # Print run information
     print(f"\n{'=' * LINE_LENGTH}")
