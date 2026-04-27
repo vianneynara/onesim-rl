@@ -22,8 +22,9 @@ from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, Fo
 
 log = logging.getLogger(__name__)
 
+PARENT_DIR       = "mcn1"
 BASE_REPORTS_DIR = "reports\\skripsi"
-PLOT_RESULTS_DIR = "pyplotters\\plots"
+PLOT_RESULTS_DIR = f"pyplotters\\plots\\{PARENT_DIR}"
 
 SUMMARY_KEYS = [
     "configuration_directory",
@@ -168,7 +169,7 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
     - Orange line: Smoothed PDF (KDE)
     """
     plt.figure(figsize=(12, 6))
-    xmax_plot = 500
+    xmax_plot = 50
 
     # Ensure numeric dtypes (JSON keys often arrive as strings)
     _df = _df.copy()
@@ -200,7 +201,7 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         ax.set_xlim(1, xmax_plot)
 
         # Major tick every 200; minor tick every 50 (optional)
-        ax.xaxis.set_major_locator(MultipleLocator(200))
+        ax.xaxis.set_major_locator(MultipleLocator(10))
         ax.xaxis.set_minor_locator(MultipleLocator(50))
 
         plt.gca().set_yticks(np.arange(0, 1.1, 0.1))
