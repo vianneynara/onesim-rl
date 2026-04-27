@@ -20,6 +20,12 @@ from typing import List, Tuple, Union
 from scipy.stats import gaussian_kde
 from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, FormatStrFormatter, MultipleLocator
 
+LINE_LENGTH = 100
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s %(levelname)s %(name)s]: %(message)s",
+    datefmt="%H:%M:%S",
+)
 log = logging.getLogger(__name__)
 
 BASE_REPORTS_DIR = "reports\\skripsi"
@@ -43,7 +49,7 @@ def read_json_file(file_path):
         with open(file_path, "r") as file:
             json_data = json.load(file)
     except FileNotFoundError:
-        log.info(f"The file {file_path} does not exist.")
+        log.error(f"The file {file_path} does not exist.")
         raise FileNotFoundError(f"The json file {file_path} does not exist.")
     return json_data
 

@@ -27,6 +27,11 @@ from pyrunner.utils.path import validate_run_id
 from pyrunner.utils.timefmt import format_timedelta
 
 LINE_LENGTH = 100
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s %(levelname)s %(name)s]: %(message)s",
+    datefmt="%H:%M:%S",
+)
 log = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------------------------------------------------------- #
