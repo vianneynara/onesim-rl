@@ -79,16 +79,25 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
     return episodic_rewards
 
 
-def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False):
+def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False):
     plt.figure(figsize=(10, 6))
 
     if not _yalias:
         _yalias = _ylabel
 
+
     max_episodes = _df["episodeNumber"].max()
     min_episodes = _df["episodeNumber"].min()
 
-    sns.lineplot(data=_df, x="episodeNumber", y=_key)
+    sns.lineplot(data=_df, x="episodeNumber", y=_key, label=_yalias, color="skyblue")
+
+    if _ema_line:
+        _ema_series = pd.Series(_df[_key]).ewm(span=20, adjust=False).mean()
+        sns.lineplot(data=_df, x="episodeNumber", y=_ema_series, label="EMA", color="orange")
+
+    if _ma_line:
+        _ma_series = pd.Series(_df[_key]).rolling(window=20).mean()
+        sns.lineplot(data=_df, x="episodeNumber", y=_ma_series, label="MA", color="green")
 
     # Summary statistics for the selected Y series
     y = pd.to_numeric(_df[_key], errors="coerce")
@@ -292,6 +301,10 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
 
     """
     episode_jsons_dir = retrieve_episode_json_dirs(_run_id_dir)
+    run_id = _run_id_dir.split("\\")[-1]
+
+    log.info(LINE_LENGTH * "-")
+    log.info(f"Processing run directory: {run_id}")
 
     _run_summary = {key:float("-inf") for key in SUMMARY_KEYS}
     _run_summary["configuration_directory"] = _run_id_dir.split("\\")[-1]
@@ -305,7 +318,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     traj_freq_df = retrieve_trajectoryFrequencies(read_json_file(episode_jsons_dir[-1]))
 
     for episode_json_dir in episode_jsons_dir:
-        log.info(f"Processing JSON file: {episode_json_dir}")
+        # log.info(f"Processing JSON file: {episode_json_dir}")
         json_data = read_json_file(episode_json_dir)
 
         # Collect all values for this episode
@@ -320,8 +333,6 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
 
         # Get highest "trajectoryFrequencies" by grabbing and selecting the highest int-casted
         _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"], max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))
-
-    run_id = _run_id_dir.split("\\")[-1]
 
     # Output directory: pyplotters/plots[/<parent>]/<run_id>/
     _parent_results_dir = os.path.join(PLOT_RESULTS_DIR, _parent_dir) if _parent_dir else PLOT_RESULTS_DIR
@@ -340,7 +351,9 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
         "Episode",
         "Reward",
         pp_currentEpisodeReward,
-        _yalias="reward"
+        _yalias="Reward",
+        # _ema_line=True,
+        # _ma_line=True
     )
 
     # currentEpisodeReward
@@ -352,7 +365,9 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
         "Episode",
         "Reward",
         pp_currentCumulativeReward,
-        _yalias="cumu. reward"
+        _yalias="Cumu. Reward",
+        # _ema_line=True,
+        # _ma_line=True
     )
 
     # currentTrueDetections
@@ -364,8 +379,10 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
         "Episode",
         "Detection",
         pp_currentTrueDetections,
-        _yalias="detection",
-        _discrete=True
+        _yalias="Detection",
+        _discrete=True,
+        # _ema_line=True,
+        # _ma_line=True
     )
 
     # currentUniqueDetections
@@ -377,8 +394,10 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
         "Episode",
         "Detection",
         pp_currentUniqueDetections,
-        _yalias="uniq. detection",
-        _discrete=True
+        _yalias="Uniq. Detection",
+        _discrete=True,
+        # _ema_line=True,
+        # _ma_line=True
     )
 
     # trajectory distribution
@@ -392,6 +411,10 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
         os.path.join(run_out_dir, "Trajectory Distribution (log scale).png"),
         logarithmic_x=True
     )
+
+    log.info(f"Finished processing run directory: {run_id}")
+    log.info(f"Saving common data to CSV file: {common_df_path}")
+    log.info(LINE_LENGTH * "=")
 
     return _run_summary
 
