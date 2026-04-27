@@ -524,6 +524,7 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 		epd.previousCumulativeTrueDetections = this.currentCumulativeTrueDetections;
 		epd.currentCumulativeTrueDetections  = newCumulativeDetections;
 		epd.currentTrueDetections            = retrieveCurrentNewTrueDetections();
+		epd.currentUniqueDetections			 = retrieveUniqueDetections();
 		this.currentCumulativeTrueDetections = newCumulativeDetections;
 
 		behaviorPolicy.saveTo(epd);

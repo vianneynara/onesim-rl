@@ -1,5 +1,15 @@
 """
 The second version of batch runner, will provide better and more flexible runs.
+
+--- FIXES FROM PREVIOUS VERSION ---
+1. key_abbreviations: eg_ip/eg_ed/eg_me now correctly map to
+   BehaviorPolicy.EpsilonGreedy.* (was BehaviorPolicy.* — key not recognized by ONE Simulator)
+
+2. alg_bp_key in run_simulation() now covers all algorithms including lfe and lf,
+   so bp_override is always sent to the correct movement class.
+
+3. create_config_setting_json: entry.split("=") changed to entry.split("=", 1)
+   to handle values that contain "=" (e.g. persistence file paths on Windows).
 """
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -239,28 +249,24 @@ WINDOWS_RESERVED_NAMES = {
 
 def validate_run_id(run_id: str) -> None:
     """
-    Static method to validate the run_id safety to use as a Windows path component.
-
+    Validates that run_id is safe to use as a Windows path component.
     Raises ValueError with a clear message if invalid.
     """
     if not run_id:
         raise ValueError("run_id must not be empty")
 
-    # Check for illegal characters
     if INVALID_CHARS_RE.search(run_id):
         raise ValueError(
             f"run_id '{run_id}' contains invalid path characters. "
             r"Disallowed characters are: < > : \" / \ | ? *"
         )
 
-    # Check for control chars (ASCII 0-31)
     if any(ord(ch) < 32 for ch in run_id):
         raise ValueError(
             f"run_id '{run_id}' contains control characters, which are not "
             "allowed in Windows filenames."
         )
 
-    # Check for reserved device names (case-insensitive, exact matches only)
     if run_id.upper() in WINDOWS_RESERVED_NAMES:
         raise ValueError(
             f"run_id '{run_id}' is a reserved device name on Windows "
@@ -270,7 +276,6 @@ def validate_run_id(run_id: str) -> None:
 
 
 def format_timedelta(td):
-    # Calculate total components
     total_seconds = int(td.total_seconds())
     hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
@@ -281,34 +286,43 @@ def format_timedelta(td):
 # BATCH RUNNER CONFIGURATION
 # ------------------------------------------------------------------------------------------------------------------- #
 
-
 ID_LABEL = "ID_LABEL"
 ALG_LABEL = "ALG_LABEL"
 
 alg_base_settings = {
-    "ql": "settings/skripsi/randomsearch-qlearn.cfg",
-    "mc": "settings/skripsi/randomsearch-mc.cfg",
+    "ql":  "settings/skripsi/randomsearch-qlearn.cfg",
+#     "mc":  "settings/skripsi/randomsearch-mc.cfg",
     "mcn": "settings/skripsi/randomsearch-mcn.cfg",
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
-    "lf": "settings/skripsi/randomsearch-lf.cfg"
+    "lf":  "settings/skripsi/randomsearch-lf.cfg",
 }
 
 alg_abbreviations = {
-    "ql": "QLearningMovement",
-    "mc": "MCMovement",
+    "ql":  "QLearningMovement",
+#     "mc":  "MCMovement",
     "mcn": "MCMovementEnd",
     "lfe": "LevyFlightEpisodic",
-    "lf": "LevyFlight"
+    "lf":  "LevyFlight",
 }
 
 behavior_packages = {
     "epsilon": "movement.rl.behavior.EpsilonGreedyBehavior",
-    "ucb": "movement.rl.behavior.UCBBehavior",
-    "ts": "movement.rl.behavior.ThompsonSamplingBehavior"
+    "ucb":     "movement.rl.behavior.UCBBehavior",
+    "ts":      "movement.rl.behavior.ThompsonSamplingBehavior",
+}
+
+# Maps each algorithm to the config key that sets its behavior policy in ONE Simulator.
+# FIX: was hardcoded to "QLearningMovement.behaviorPolicy" for all algorithms.
+alg_bp_key = {
+    "ql":  "QLearningMovement.behaviorPolicy",
+#     "mc":  "MCMovement.behaviorPolicy",
+    "mcn": "MCMovementEnd.behaviorPolicy",
+    "lfe": "LevyFlightEpisodic.behaviorPolicy",
+    "lf":  "LevyFlight.behaviorPolicy",
 }
 
 key_abbreviations = {
-    # [ Agent movement settings ]
+    # [ Agent/target movement settings ]
     "amm": "Group1.movementModel",
     "tmm": "Group2.movementModel",
 
@@ -325,32 +339,34 @@ key_abbreviations = {
     "qlm_fr": "QLearningMovement.foundReward",
     "qlm_as": "QLearningMovement.agentSpeed",
 
-    # [ MCMovement settings ]
-    "mcm_bp": "MCMovement.behaviorPolicy",
-    "mcm_lr": "MCMovement.learningRate",
-    "mcm_df": "MCMovement.discountFactor",
-    "mcm_iq": "MCMovement.initialQValue",
-    "mcm_tp": "MCMovement.targetPrefix",
-    "mcm_sp": "MCMovement.stepPenalty",
-    "mcm_fr": "MCMovement.foundReward",
-    "mcm_as": "MCMovement.agentSpeed",
-    "mcm_fv": "MCMovement.firstVisit",
+#     # [ MCMovement settings ]
+#     "mcm_bp": "MCMovement.behaviorPolicy",
+#     "mcm_lr": "MCMovement.learningRate",
+#     "mcm_df": "MCMovement.discountFactor",
+#     "mcm_iq": "MCMovement.initialQValue",
+#     "mcm_tp": "MCMovement.targetPrefix",
+#     "mcm_sp": "MCMovement.stepPenalty",
+#     "mcm_fr": "MCMovement.foundReward",
+#     "mcm_as": "MCMovement.agentSpeed",
+#     "mcm_fv": "MCMovement.firstVisit",
 
     # [ MCMovementEnd settings ]
-    "mcmn_bp": "MCMovementEnd.behaviorPolicy",
-    "mcmn_lr": "MCMovementEnd.learningRate",
-    "mcmn_df": "MCMovementEnd.discountFactor",
-    "mcmn_iq": "MCMovementEnd.initialQValue",
-    "mcmn_tp": "MCMovementEnd.targetPrefix",
-    "mcmn_sp": "MCMovementEnd.stepPenalty",
-    "mcmn_fr": "MCMovementEnd.foundReward",
-    "mcmn_as": "MCMovementEnd.agentSpeed",
-    "mcmn_fv": "MCMovementEnd.firstVisit",
+    "mcnm_bp": "MCMovementEnd.behaviorPolicy",
+    "mcnm_lr": "MCMovementEnd.learningRate",
+    "mcnm_df": "MCMovementEnd.discountFactor",
+    "mcnm_iq": "MCMovementEnd.initialQValue",
+    "mcnm_tp": "MCMovementEnd.targetPrefix",
+    "mcnm_sp": "MCMovementEnd.stepPenalty",
+    "mcnm_fr": "MCMovementEnd.foundReward",
+    "mcnm_as": "MCMovementEnd.agentSpeed",
+    "mcnm_fv": "MCMovementEnd.firstVisit",
 
     # [ EpsilonGreedyBehavior settings ]
-    "eg_ip": "BehaviorPolicy.epsilon",
-    "eg_ed": "BehaviorPolicy.epsilonDecay",
-    "eg_me": "BehaviorPolicy.minEpsilon",
+    # FIX: was "BehaviorPolicy.epsilon/epsilonDecay/minEpsilon" —
+    #      ONE Simulator expects the "EpsilonGreedy" infix.
+    "eg_ip": "BehaviorPolicy.EpsilonGreedy.epsilon",
+    "eg_ed": "BehaviorPolicy.EpsilonGreedy.epsilonDecay",
+    "eg_me": "BehaviorPolicy.EpsilonGreedy.minEpsilon",
 
     # [ UCBBehavior settings ]
     "ucb_ec": "BehaviorPolicy.UCB.explorationConstant",
@@ -359,14 +375,13 @@ key_abbreviations = {
     "ts_iv": "BehaviorPolicy.TS.initialVariance",
 
     # [ EpisodicPersistenceManager settings ]
-    "epm_ep": "EpisodicPersistenceManager.episodeNumber",
-    "epm_path": "EpisodicPersistenceManager.persistencePath",
+    "epm_ep":    "EpisodicPersistenceManager.episodeNumber",
+    "epm_path":  "EpisodicPersistenceManager.persistencePath",
     "epm_saves": "EpisodicPersistenceManager.saveEpisodically",
 
     # [ Movement model settings ]
     "m_seed": "MovementModel.seed",
-    "m_ws": "MovementModel.worldSize",
-
+    "m_ws":   "MovementModel.worldSize",
 }
 
 S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
@@ -374,43 +389,39 @@ S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 # Import the configs
 from batch_configs import LIST_OF_CONFIGS
 
+
 def create_config_setting_json(alg: str, runs: int, bp: str, result_dir_id: str = None, overrides_list: list[str] = None):
     config_setting_json = {
-        "runner_episodes:" : runs,
+        "runner_episodes": runs,
         "runner_id": result_dir_id,
-
         "amm": alg_abbreviations[alg],
-
-        # dont know what
-        "mcmn_bp": behavior_packages[bp],
+        "bp": behavior_packages[bp],
     }
 
     for entry in overrides_list:
-        key, value = entry.split("=")
+        # FIX: use maxsplit=1 so values containing "=" (e.g. file paths) are not split incorrectly.
+        key, value = entry.split("=", 1)
         config_setting_json[key] = value
 
-    # Create the direcetory first
+    # Ensure directory exists before writing
     dir_path = f"reports/skripsi/{alg}/run-id/{result_dir_id}"
     os.makedirs(dir_path, exist_ok=True)
 
-    # Save the JSON to the report directory
     with open(f"reports/skripsi/{alg}/run-id/{result_dir_id}/config_setting.json", "w") as json_file:
         json.dump(config_setting_json, json_file, indent=4)
 
 
-def parse_overrides(overrides_dict: dict[str]) -> str:
-    # convert the override dictionary into a list of key-value
+def parse_overrides(overrides_dict: dict) -> tuple[list[str], list[str]]:
+    """
+    Converts the override dictionary from batch_configs into two parallel lists:
+      abr_overrides_list : abbreviated key@value pairs (used for building the run-id directory name)
+      full_overrides_list: full ONE Simulator key=value pairs (passed to the simulator via -d)
+    """
     abr_overrides_list = []
     full_overrides_list = []
+
     for key, value in overrides_dict.items():
-
-        # Check if key is an abbreviation
-        if key in key_abbreviations:
-            full_key = key_abbreviations[key]
-        else:
-            # Use the key as-is (assuming the real setting full key)
-            full_key = key
-
+        full_key = key_abbreviations.get(key, key)
         abr_overrides_list.append(f"{key}@{value}")
         full_overrides_list.append(f"{full_key}={value}")
 
@@ -426,12 +437,8 @@ def expand_algorithm(alg: str) -> str:
 
 
 def build_result_id_dir(alg: str, runs: int, bp: str = None, overrides: list[str] = None) -> str:
-    # Initial first part  of algorithm and runs
-    result_id_dir = f"{alg}{runs}-qlm_bp@{bp}-"
-
-    # Adds overrides if exist
+    result_id_dir = f"{alg}{runs}-{alg}_bp@{bp}-"
     result_id_dir += "-".join(overrides) if overrides else ""
-
     return result_id_dir
 
 
@@ -442,11 +449,9 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1, tg_cfg: di
         "1",
     ]
 
-    # Add overrides only if provided
     if overrides_string:
         script.extend(["-d", overrides_string])
 
-    # Add config file path
     script.append(alg_base_settings[algo])
 
     _start_time = None
@@ -458,40 +463,22 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1, tg_cfg: di
         print(f"[{_start_time.strftime('%H:%M:%S')}] Running episode {str(ep)} for algorithm {algo}.")
         print(f"{'-' * 70}\n")
 
-#         # Telegram: notify episode start
-#         send_telegram(tg_cfg,
-#             f"▶️ <b>Episode {ep} started</b>\n"
-#             f"Algorithm: <code>{algo}</code>\n"
-#             f"Time: {_start_time.strftime('%H:%M:%S')}"
-#         )
-
         print(f"[{_start_time.strftime('%H:%M:%S')}] Running command: {' '.join(script)}")
         subprocess.run(script, check=True, shell=True)
         return True
+
     except subprocess.CalledProcessError:
         _end_time = datetime.now()
-
         print(f"[{_end_time.strftime('%H:%M:%S')}] Error running episode {ep} for algorithm {algo}.")
-
-#         # Telegram: notify episode failure
-#         send_telegram(tg_cfg,
-#             f"❌ <b>Episode {ep} FAILED</b>\n"
-#             f"Algorithm: <code>{algo}</code>\n"
-#             f"Time: {_end_time.strftime('%H:%M:%S')}"
-#         )
         return False
+
     finally:
         _end_time = datetime.now()
         elapsed = format_timedelta(_end_time - _start_time)
-
         print(f"{'-' * 70}")
         print(f"[{_end_time.strftime('%H:%M:%S')}] Done running episode {str(ep)} for algorithm {algo}. Took {elapsed}.")
         print(f"{'-' * 70}\n")
 
-        # Telegram: notify episode done (success path — failure already sent above)
-
-
-# Only the relevant fixed parts are shown below
 
 def run_simulation(
         alg: str,
@@ -515,7 +502,6 @@ def run_simulation(
 
     abr_overrides, full_overrides = [], []
 
-    # Build the base overrides
     if overrides_list:
         abr_overrides, full_overrides = parse_overrides(overrides_list)
 
@@ -523,14 +509,17 @@ def run_simulation(
     validate_run_id(result_id_dir)
     full_report_dir = f"reports/skripsi/{alg}/run-id/{result_id_dir}"
 
-    bp_override = f"QLearningMovement.behaviorPolicy={behavior_packages[bp]}"
+    # Ensure the report directory exists before ONE Simulator runs,
+    # so _persistence.json can always be written successfully.
+    os.makedirs(full_report_dir, exist_ok=True)
+
+    # FIX: bp_override now uses alg_bp_key so it targets the correct movement class.
+    bp_override = f"{alg_bp_key[alg]}={behavior_packages[bp]}"
+
     persistence_override = (
         f"EpisodicPersistenceManager.persistencePath="
         f"{full_report_dir}/_persistence.json"
     )
-
-    if full_overrides is None:
-        full_overrides = []
 
     full_overrides.append(bp_override)
     full_overrides.append(persistence_override)
@@ -541,11 +530,10 @@ def run_simulation(
     print(f"[INFO] Starting episodic simulation batch...")
     print(f"[INFO] Batch Progress: {current_batch}/{total_batches}")
     print(f"[INFO] Algorithm: {alg} ({settings_file}), Behavior Policy: {bp}")
-    print(f"[INFO] Run ID: {run_id}, Episodes: {start_ep}–{runs}")
+    print(f"[INFO] Run ID: {result_id_dir}, Episodes: {start_ep}–{runs}")
     print(f"[INFO] Overrides: {overrides_string if overrides_string else 'None'}")
     print(f"{'=' * 70}\n")
 
-    # Telegram: config started (with batch progress)
     send_telegram(
         tg_cfg,
         f"🚀 <b>Config started</b>\n"
@@ -568,7 +556,6 @@ def run_simulation(
     failed = 0
     start_time = datetime.now()
 
-    # Update global status — config is now actively running
     with status_lock:
         current_status["running"] = True
         current_status["batch_idx"] = current_batch
@@ -582,7 +569,6 @@ def run_simulation(
         current_status["config_start_time"] = start_time
 
     for ep in range(start_ep, runs + 1):
-        # Keep current episode up-to-date for /status queries
         with status_lock:
             current_status["current_ep"] = ep
 
@@ -597,7 +583,6 @@ def run_simulation(
         else:
             failed += 1
 
-    # Mark config as no longer actively running
     with status_lock:
         current_status["running"] = False
 
@@ -610,7 +595,6 @@ def run_simulation(
     print(f"[INFO] Total episodes: {runs} (Success: {succeeds}, Fails: {failed})")
     print(f"{'=' * 70}\n")
 
-    # Telegram: config finished (with batch progress)
     send_telegram(
         tg_cfg,
         f"{'✅' if failed == 0 else '⚠️'} <b>Config finished</b>\n"
@@ -624,24 +608,20 @@ def run_simulation(
     return failed == 0
 
 
-def check_runs(args_runs: int, config: dict[str, str] = None) -> int:
-    _runs = 0
+def check_runs(args_runs: int, config: dict = None) -> int:
     if args_runs:
         if args_runs <= 0:
             print(f"Invalid number of runs: {args_runs}")
             sys.exit(1)
-        _runs = args_runs
+        return args_runs
     else:
         if not config["runs"]:
             print(f"No number of runs specified in config: {config['id']}")
             sys.exit(1)
-        if config["runs"] and config["runs"] <= 0:
+        if config["runs"] <= 0:
             print(f"Invalid number of runs in config: {config['runs']}")
             sys.exit(1)
-        else:
-            _runs = config["runs"]
-
-    return _runs
+        return config["runs"]
 
 
 def parse_config_indices(config_string: str) -> list[int]:
@@ -652,34 +632,26 @@ def parse_config_indices(config_string: str) -> list[int]:
     - Mixed: "1,2,4-6,9,10-17"
     """
     configs = set()
-
-    # Split by comma
     parts = config_string.split(",")
 
     for part in parts:
-        part = part.strip()  # Remove whitespace
-
+        part = part.strip()
         if "-" in part:
-            # It's a range
             try:
-                start_str, end_str = part.split("-", 1)  # Use maxsplit=1 to handle negative numbers
+                start_str, end_str = part.split("-", 1)
                 start = int(start_str.strip())
                 end = int(end_str.strip())
-
                 if start > end:
-                    raise ValueError(f"Warning: Invalid range '{part}', start > end. Skipping.")
-
-                # Add all values in range (inclusive)
+                    raise ValueError(f"Invalid range '{part}', start > end.")
                 for i in range(start, end + 1):
                     configs.add(i)
             except ValueError:
-                raise ValueError(f"Warning: Invalid range format '{part}'. Skipping.")
+                raise ValueError(f"Invalid range format '{part}'.")
         else:
-            # It's a single value
             try:
                 configs.add(int(part))
             except ValueError:
-                raise ValueError(f"Warning: Invalid config number '{part}'. Skipping.")
+                raise ValueError(f"Invalid config number '{part}'.")
 
     return sorted(list(configs))
 
@@ -690,27 +662,27 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-c", "--config", type=str, help="Config index to run", required=False
+        "-c", "--config", type=str, help="Config index to run (e.g. '1', '1,3', '4-6', '1,4-6,9')", required=False
     )
-
     parser.add_argument(
         "-a", "--all", action="store_true", help="Run all configs"
     )
-
     parser.add_argument(
-        "-r", "--runs", type=int, help="Number of runs for the simulation (overrides the existing configs)", required=False
+        "-r", "--runs", type=int, help="Number of runs (overrides the config's own 'runs' value)", required=False
+    )
+    parser.add_argument(
+        "-cc", "--count-configs", action="store_true", help="Print the number of configs and exit"
     )
 
-    parser.add_argument(
-        "-cc", "--count-configs", action="store_true", help="Count the number of configs in the LIST_OF_CONFIGS and exit"
-    )
-
-    # Parse arguments
     args = parser.parse_args()
 
     if args.count_configs:
         print(f"Number of configs: {len(LIST_OF_CONFIGS)}")
         sys.exit(0)
+
+    if not args.all and not args.config:
+        parser.print_help()
+        sys.exit(1)
 
     # Load Telegram config once at startup
     tg_cfg = load_telegram_config("telegram_config.json")
@@ -727,21 +699,17 @@ if __name__ == "__main__":
 
     successes = 0
     failures = 0
-
     start_time = datetime.now()
     running_times = []
 
-    # Record batch start time for /status elapsed calculation
     with status_lock:
         current_status["batch_start_time"] = start_time
 
     if args.all:
         total_batches = len(LIST_OF_CONFIGS)
-
-        print(f"[INFO] Running {total_batches} configurations.")
+        print(f"[INFO] Running all {total_batches} configurations.")
 
         for idx, config in enumerate(LIST_OF_CONFIGS, start=1):
-            # Check stop flag before starting each new config
             with stop_lock:
                 should_stop = stop_requested
             if should_stop:
@@ -753,44 +721,33 @@ if __name__ == "__main__":
                 )
                 break
 
-            alg = config["alg"]
-            runs = check_runs(args.runs, config)
-            bp = config["bp"]
-            run_id = config["id"]
-            overrides = config["overrides"] if "overrides" in config else None
-            start_ep = config.get("start_ep", 1)
+            alg       = config["alg"]
+            runs      = check_runs(args.runs, config)
+            bp        = config["bp"]
+            run_id    = config["id"]
+            overrides = config.get("overrides", None)
+            start_ep  = config.get("start_ep", 1)
 
             _sim_start_time = datetime.now()
-
             success = run_simulation(
-                alg=alg,
-                runs=runs,
-                bp=bp,
-                run_id=run_id,
-                overrides_list=overrides,
-                tg_cfg=tg_cfg,
-                current_batch=idx,
-                total_batches=total_batches,
+                alg=alg, runs=runs, bp=bp, run_id=run_id,
+                overrides_list=overrides, tg_cfg=tg_cfg,
+                current_batch=idx, total_batches=total_batches,
                 start_ep=start_ep,
             )
-
-            _sim_end_time = datetime.now()
-            running_times.append(_sim_end_time - _sim_start_time)
+            running_times.append(datetime.now() - _sim_start_time)
 
             if success:
                 successes += 1
             else:
                 failures += 1
+
     else:
-        config_num = args.config
-
-        configs_to_run = parse_config_indices(config_num)
+        configs_to_run = parse_config_indices(args.config)
         total_batches = len(configs_to_run)
-
-        print(f"[INFO] Running {total_batches} configurations.")
+        print(f"[INFO] Running {total_batches} configuration(s): {configs_to_run}")
 
         for idx, config_num in enumerate(configs_to_run, start=1):
-            # Check stop flag before starting each new config
             with stop_lock:
                 should_stop = stop_requested
             if should_stop:
@@ -803,37 +760,25 @@ if __name__ == "__main__":
                 break
 
             if config_num < 1 or config_num > len(LIST_OF_CONFIGS):
-                print(
-                    f"Config index {config_num} out of range "
-                    f"[1, {len(LIST_OF_CONFIGS)}]"
-                )
+                print(f"Config index {config_num} out of range [1, {len(LIST_OF_CONFIGS)}]")
                 continue
 
-            config = LIST_OF_CONFIGS[config_num - 1]
-
-            alg = config["alg"]
-            runs = check_runs(args.runs, config)
-            bp = config["bp"]
-            run_id = config["id"]
-            overrides = config["overrides"] if "overrides" in config else None
-            start_ep = config.get("start_ep", 1)
+            config    = LIST_OF_CONFIGS[config_num - 1]
+            alg       = config["alg"]
+            runs      = check_runs(args.runs, config)
+            bp        = config["bp"]
+            run_id    = config["id"]
+            overrides = config.get("overrides", None)
+            start_ep  = config.get("start_ep", 1)
 
             _sim_start_time = datetime.now()
-
             success = run_simulation(
-                alg=alg,
-                runs=runs,
-                bp=bp,
-                run_id=run_id,
-                overrides_list=overrides,
-                tg_cfg=tg_cfg,
-                current_batch=idx,
-                total_batches=total_batches,
+                alg=alg, runs=runs, bp=bp, run_id=run_id,
+                overrides_list=overrides, tg_cfg=tg_cfg,
+                current_batch=idx, total_batches=total_batches,
                 start_ep=start_ep,
             )
-
-            _sim_end_time = datetime.now()
-            running_times.append(_sim_end_time - _sim_start_time)
+            running_times.append(datetime.now() - _sim_start_time)
 
             if success:
                 successes += 1
@@ -844,8 +789,7 @@ if __name__ == "__main__":
     total_elapsed = format_timedelta(end_time - start_time)
 
     if running_times:
-        sum_running_time = sum(running_times, timedelta())
-        avg_running_time = sum_running_time // len(running_times)
+        avg_running_time = sum(running_times, timedelta()) // len(running_times)
         avg_str = format_timedelta(avg_running_time)
     else:
         avg_str = "N/A"
@@ -855,7 +799,6 @@ if __name__ == "__main__":
     print(f"[SUMMARY] Total configurations run: {successes + failures} (Success: {successes}, Failed: {failures})")
     print(f"{'=' * 70}\n")
 
-    # Telegram: final summary
     send_telegram(tg_cfg,
         f"{'🎉' if failures == 0 else '⚠️'} <b>Batch run complete!</b>\n"
         f"Configs run: {successes + failures} (✅ {successes} / ❌ {failures})\n"
@@ -863,5 +806,4 @@ if __name__ == "__main__":
         f"Avg per config: {avg_str}"
     )
 
-    # PC beep — fires after everything is done
     beep_done()
