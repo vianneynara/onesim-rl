@@ -38,7 +38,7 @@ public class StationaryGridPoisson extends StationaryNodes {
 	static class GridPoissonGenerator {
 		/**
 		 * Knuth Algorithm - Inverse transform method
-		 *
+		 * Generates a Poisson-distributed random number with parameter lambda.
 		 */
 		public static int poissonRandom(double lambda, Random random) {
 			double L = Math.exp(-lambda);
