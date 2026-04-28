@@ -46,6 +46,7 @@ public class StationaryClustered extends StationaryNodes {
 	public StationaryClustered(Settings s) {
 		super(s);
 
+		System.out.println("TESSSSSSSSSST" + CLUSTERPOI_NS + ": " + s.contains(CLUSTERPOI_NS));
 		if (s.contains(CLUSTERPOI_NS)) {
 			int[] clusterRange = s.getCsvInts(CLUSTERPOI_NS); // Group2.cluster = 10, 10
 			System.out.println("Cluster range: " + clusterRange[0] + ", " + clusterRange[1]);
