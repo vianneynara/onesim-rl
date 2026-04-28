@@ -15,7 +15,7 @@ import core.Settings;
  *
  * @author narwa
  */
-public class StationaryUniformRandom extends StationaryNodes {
+public class StationaryPoisson extends StationaryNodes {
 
 	/**
 	 * Optional: minimum distance between points to avoid overlap (in meters)
@@ -26,13 +26,13 @@ public class StationaryUniformRandom extends StationaryNodes {
 
 	private final double minDistance;
 
-	public StationaryUniformRandom(Settings s) {
+	public StationaryPoisson(Settings s) {
 		super(s);
 		this.minDistance = s.contains(MIN_DISTANCE_S) ? 
 			s.getDouble(MIN_DISTANCE_S) : DEFAULT_MIN_DISTANCE;
 	}
 
-	public StationaryUniformRandom(StationaryUniformRandom sur) {
+	public StationaryPoisson(StationaryPoisson sur) {
 		super(sur);
 		this.minDistance = sur.minDistance;
 	}
@@ -52,8 +52,8 @@ public class StationaryUniformRandom extends StationaryNodes {
 	}
 
 	@Override
-	public StationaryUniformRandom replicate() {
-		return new StationaryUniformRandom(this);
+	public StationaryPoisson replicate() {
+		return new StationaryPoisson(this);
 	}
 
 	/**
