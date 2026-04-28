@@ -12,15 +12,17 @@ import java.util.List;
  * @author Jordan, Nara
  */
 public class StationaryClustered extends StationaryNodes {
+
+	public static final String STATIONARY_CLUSTERED_NS = "StationaryClustered";
 	/**
 	 * Number of clusters
 	 */
-	public static final String CLUSTERPOI_NS = "cluster";
+	public static final String CLUSTER_S = "cluster";
 
 	/**
 	 * Controls how heavy the distribution tail is
 	 */
-	public static final String ALPHA_NS = "alpha";
+	public static final String ALPHA_S = "alpha";
 	public static final double DEFAULT_ALPHA = 0.5;
 
 	/**
@@ -43,21 +45,21 @@ public class StationaryClustered extends StationaryNodes {
 	private final double[] sigma;
 	private Coord location;
 
-	public StationaryClustered(Settings s) {
-		super(s);
+	public StationaryClustered(Settings _settings) {
+		super(_settings);
 
-		if (s.contains(CLUSTERPOI_NS)) {
-			int[] clusterRange = s.getCsvInts(CLUSTERPOI_NS); // Group2.cluster = 10, 10
-			System.out.println("Cluster range: " + clusterRange[0] + ", " + clusterRange[1]);
+		Settings s = new Settings(STATIONARY_CLUSTERED_NS);
+
+		if (s.contains(CLUSTER_S)) {
+			int[] clusterRange = s.getCsvInts(CLUSTER_S);
 			nrofCluster = Math.min(
 				clusterRange[1],
 				(int) Math.ceil(rng.nextDouble(clusterRange[0], clusterRange[1] + 1))
 			);
 		} else nrofCluster = 3;
-		System.out.println("Number of clusters being used: " + nrofCluster);
 
-		this.alpha = s.contains(ALPHA_NS) ? s.getDouble(ALPHA_NS) : DEFAULT_ALPHA;
-		this.xm = s.contains(XM_NS) ? s.getDouble(XM_NS) : DEFAULT_XM;
+		this.alpha = s.getDouble(ALPHA_S, DEFAULT_ALPHA);
+		this.xm = s.getDouble(XM_NS, DEFAULT_XM);
 
 		if (s.contains(SIGMA_NS)) {
 			sigma = s.getCsvDoubles(SIGMA_NS);
