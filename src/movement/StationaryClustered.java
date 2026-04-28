@@ -35,8 +35,8 @@ public class StationaryClustered extends StationaryNodes {
 	public static final String SIGMA_NS = "sigma";
 	public static final double[] DEFAULT_SIGMA = new double[]{3.0, 3.0};
 
-	protected static int nrofCluster;
-	protected static List<Coord> POICoords;
+	private int nrofCluster;
+	private List<Coord> POICoords;
 
 	private final double xm;
 	private final double alpha;
@@ -46,8 +46,10 @@ public class StationaryClustered extends StationaryNodes {
 	public StationaryClustered(Settings s) {
 		super(s);
 
+		System.out.println("TESSSSSSSSSST" + CLUSTERPOI_NS + ": " + s.contains(CLUSTERPOI_NS));
 		if (s.contains(CLUSTERPOI_NS)) {
 			int[] clusterRange = s.getCsvInts(CLUSTERPOI_NS); // Group2.cluster = 10, 10
+			System.out.println("Cluster range: " + clusterRange[0] + ", " + clusterRange[1]);
 			nrofCluster = Math.min(
 				clusterRange[1],
 				(int) Math.ceil(rng.nextDouble(clusterRange[0], clusterRange[1] + 1))
@@ -66,6 +68,9 @@ public class StationaryClustered extends StationaryNodes {
 
 	public StationaryClustered(StationaryClustered sc) {
 		super(sc);
+		this.nrofCluster = sc.nrofCluster;
+		this.POICoords = new ArrayList<>(sc.POICoords);
+
 		this.location = sc.location;
 		this.alpha = sc.alpha;
 		this.xm = sc.xm;
