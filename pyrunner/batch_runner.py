@@ -6,15 +6,15 @@ The second version of batch runner, will provide better and more flexible runs.
 # IMPORTS
 # ------------------------------------------------------------------------------------------------------------------- #
 
-import os
-import sys
 import argparse
-import subprocess
 import json
 import logging
-from typing import Optional, Tuple, Any
-
+import os
+import subprocess
+import sys
+import time
 from datetime import datetime, timedelta
+from typing import Optional, Tuple, Any
 
 # Allow running this file as a script (python pyrunner/batch_runner.py) while still
 # using absolute package imports (pyrunner.*).
@@ -277,6 +277,81 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
         log.info("%s", "-" * LINE_LENGTH)
 
 
+def find_next_version_number(parent_dir_id: str, base_result_id_dir: str) -> int:
+    """
+    Find the next available version number for a run directory.
+    
+    Checks if base_result_id_dir exists, and if so, finds the highest version number (N) where
+    base_result_id_dir(N) exists, then returns N+1. If base_result_id_dir doesn't exist, returns 1.
+    
+    Returns: Next version number (1-based, or 1 if no versioned directory exists yet)
+    """
+    base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
+    
+    # If base directory doesn't exist yet, no versioning needed
+    if not os.path.isdir(base_path):
+        return 1
+    
+    # Base directory exists; find the highest version number
+    highest_version = 0
+    
+    # Check for versioned directories (N) in parent
+    parent_path = os.path.dirname(base_path)
+    if not os.path.isdir(parent_path):
+        return 1
+    
+    for item in os.listdir(parent_path):
+        item_path = os.path.join(parent_path, item)
+        if not os.path.isdir(item_path):
+            continue
+        
+        # Check if this item matches the pattern: base_result_id_dir(N)
+        if item.startswith(base_result_id_dir + "(") and item.endswith(")"):
+            try:
+                version_str = item[len(base_result_id_dir) + 1:-1]
+                version_num = int(version_str)
+                highest_version = max(highest_version, version_num)
+            except (ValueError, IndexError):
+                pass
+    
+    # Also check if unversioned base directory exists
+    if os.path.isdir(base_path):
+        highest_version = max(highest_version, 0)
+    
+    return highest_version + 1
+
+
+def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str) -> str:
+    """
+    Get the versioned result_id_dir if needed.
+    
+    If the base result_id_dir directory doesn't exist, returns it as-is.
+    If it exists, appends (N) where N is the next available version number.
+    
+    Returns: result_id_dir, possibly with (N) suffix
+    """
+    base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
+    
+    if not os.path.isdir(base_path):
+        # No existing run, use base as-is
+        return base_result_id_dir
+    
+    # Existing run detected, find next version
+    next_version = find_next_version_number(parent_dir_id, base_result_id_dir)
+    versioned_id = f"{base_result_id_dir}({next_version})"
+    
+    log.info(
+        "[OVERRIDE] Existing run detected at: %s",
+        base_path
+    )
+    log.info(
+        "[OVERRIDE] Creating versioned run: %s",
+        versioned_id
+    )
+    
+    return versioned_id
+
+
 def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool, bool]:
     """Determine highest *contiguous* episode number (starting from 1) in which Persistence-Episode@N.json is readable JSON.
 
@@ -397,6 +472,14 @@ def run_simulation(
     # Allow overriding the {alg} portion of reports/skripsi/{alg}/run-id/{result_id_dir}
     parent_dir_id_effective = (parent_dir_id or alg).strip()
     validate_run_id(parent_dir_id_effective)
+    
+    # Check if we need versioning (only when NOT in verify or continue mode)
+    if not verify and not do_continue:
+        result_id_dir = get_versioned_result_id_dir(parent_dir_id_effective, result_id_dir)
+        WAIT_TIME = 10
+        log.info("[OVERRIDE] Continuing running in %s seconds.", WAIT_TIME)
+        time.sleep(WAIT_TIME) # Making sure the user reads this
+    
     full_report_dir = f"reports/skripsi/{parent_dir_id_effective}/run-id/{result_id_dir}"
 
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
