@@ -50,6 +50,49 @@ PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcm_bp"]
 # Import the configs
 from pyrunner.batch_configs import LIST_OF_CONFIGS
 
+HIGHLIGHTED_SETTINGS = [
+    "MovementModel.rngSeed",
+    "MovementModel.worldSize",
+
+    "StationaryClustered.alpha",
+    "StationaryClustered.cluster",
+    "StationaryClustered.sigma",
+
+    "QLearningMovement.learningRate",
+    "QLearningMovement.discountFactor",
+    "QLearningMovement.initialQValue",
+    "QLearningMovement.targetPrefix",
+    "QLearningMovement.stepPenalty",
+    "QLearningMovement.foundReward",
+    "QLearningMovement.agentSpeed",
+    "QLearningMovement.targetCooldown",
+    "QLearningMovement.learningSeed",
+
+    "LevyFlightEpisodic.levyAlpha",
+    "LevyFlightEpisodic.xm",
+    "LevyFlightEpisodic.targetPrefix",
+    "LevyFlightEpisodic.flightSpeed",
+    "LevyFlightEpisodic.targetCooldown",
+    "LevyFlightEpisodic.stepPenalty",
+    "LevyFlightEpisodic.foundReward",
+    "LevyFlightEpisodic.learningSeed",
+
+    "BehaviorPolicy.EpsilonGreedy.epsilon",
+    "BehaviorPolicy.EpsilonGreedy.epsilonDecay",
+    "BehaviorPolicy.EpsilonGreedy.minEpsilon",
+
+    "BehaviorPolicy.UCB.explorationConstant",
+
+    "BehaviorPolicy.TS.initialVariance",
+
+    "SearchingAgentRouter.targetPrefix",
+    "Group1.nrofHosts",
+    "Group1.movementModel",
+    "Group2.nrofHosts",
+    "Group2.movementModel",
+    "Group2.groupID",
+]
+
 
 def create_config_setting_json(
         alg: str,
