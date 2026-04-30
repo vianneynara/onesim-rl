@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple, Any
 
 from pyrunner.term_dictionary import KEY_ABBREVIATIONS, BEHAVIOR_PACKAGES, ALG_BASE_SETTINGS_PATH, ALG_ABBREVIATIONS
+from pyrunner.config_parser import parse_config_file, extract_highlighted_settings
 
 # Allow running this file as a script (python pyrunner/batch_runner.py) while still
 # using absolute package imports (pyrunner.*).
@@ -102,25 +103,44 @@ def create_config_setting_json(
         result_dir_id: str = None,
         overrides_list: list[str] = None
 ):
-    config_setting_json = {
-        "runner_episodes:" : runs,
-        "runner_id": result_dir_id,
-
-        "alg": alg,
-        "parent_dir_id": parent_dir_id,
-
+    # Parse the algorithm's base config file
+    cfg_file_path = ALG_BASE_SETTINGS_PATH[alg]
+    config_dict = parse_config_file(cfg_file_path)
+    
+    # Extract highlighted settings from the parsed config
+    _highlighted_settings = extract_highlighted_settings(config_dict, HIGHLIGHTED_SETTINGS)
+    
+    # Initialize overridden settings with algorithm mapping
+    _overridden_settings = {
         "amm": ALG_ABBREVIATIONS[alg],
     }
 
+    # Build config setting JSON
+    config_setting_json = {
+        "parent_dir_id": parent_dir_id,
+        "runner_id": result_dir_id,
+        "runner_algorithm": alg,
+        "runner_nrof_episodes:": runs,
+    }
+
+    # Add behavior policy override if specified
     bp_key = _get_bp_override_key(alg)
     if bp and bp_key:
-        config_setting_json[bp_key] = BEHAVIOR_PACKAGES[bp]
+        _overridden_settings[bp_key] = BEHAVIOR_PACKAGES[bp]
 
+    # Process additional overrides from the override list
     for entry in overrides_list or []:
         key, value = entry.split("=", 1)
-        config_setting_json[key] = value
+        _overridden_settings[key] = value
 
-    # Create the direcetory first
+    # Merge settings: overridden_settings take precedence over highlighted_settings
+    _highlighted_settings.update(_overridden_settings)
+    
+    # Add merged settings to config JSON
+    config_setting_json["highlighted_settings"] = _highlighted_settings
+    config_setting_json["overridden_settings"] = _overridden_settings
+
+    # Create the directory first
     dir_path = f"reports/skripsi/{parent_dir_id}/run-id/{result_dir_id}"
     os.makedirs(dir_path, exist_ok=True)
 
@@ -254,24 +274,24 @@ def find_next_version_number(parent_dir_id: str, base_result_id_dir: str) -> int
     Returns: Next version number (1-based, or 1 if no versioned directory exists yet)
     """
     base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
-    
+
     # If base directory doesn't exist yet, no versioning needed
     if not os.path.isdir(base_path):
         return 1
-    
+
     # Base directory exists; find the highest version number
     highest_version = 0
-    
+
     # Check for versioned directories (N) in parent
     parent_path = os.path.dirname(base_path)
     if not os.path.isdir(parent_path):
         return 1
-    
+
     for item in os.listdir(parent_path):
         item_path = os.path.join(parent_path, item)
         if not os.path.isdir(item_path):
             continue
-        
+
         # Check if this item matches the pattern: base_result_id_dir(N)
         if item.startswith(base_result_id_dir + "(") and item.endswith(")"):
             try:
@@ -280,11 +300,11 @@ def find_next_version_number(parent_dir_id: str, base_result_id_dir: str) -> int
                 highest_version = max(highest_version, version_num)
             except (ValueError, IndexError):
                 pass
-    
+
     # Also check if unversioned base directory exists
     if os.path.isdir(base_path):
         highest_version = max(highest_version, 0)
-    
+
     return highest_version + 1
 
 
@@ -335,14 +355,14 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
     - main_persistence_available False means _persistence.json missing (simulation has never run).
     """
     problems: list[str] = []
-    
+
     # Check main persistence file first (adjacent to config_setting.json)
     main_persistence_path = os.path.join(full_report_dir, "_persistence.json")
     main_persistence_available = os.path.isfile(main_persistence_path)
     if not main_persistence_available:
         problems.append(f"Main persistence not found: {main_persistence_path} (simulation has never run)")
         return 0, problems, True, False
-    
+
     ep_root = os.path.join(full_report_dir, "ep")
     if not os.path.isdir(ep_root):
         return 0, [f"Episodic directory not found: {ep_root} (saveEpisodically likely false)"], False, True
@@ -446,14 +466,11 @@ def run_simulation(
     # Allow overriding the {alg} portion of reports/skripsi/{alg}/run-id/{result_id_dir}
     parent_dir_id_effective = (parent_dir_id or alg).strip()
     validate_run_id(parent_dir_id_effective)
-    
+
     # Check if we need versioning (only when NOT in verify or continue mode)
     if not verify and not do_continue:
         result_id_dir = get_versioned_result_id_dir(parent_dir_id_effective, result_id_dir)
-        WAIT_TIME = 10
-        log.info("[OVERRIDE] Continuing running in %s seconds.", WAIT_TIME)
-        time.sleep(WAIT_TIME) # Making sure the user reads this
-    
+
     full_report_dir = f"reports/skripsi/{parent_dir_id_effective}/run-id/{result_id_dir}"
 
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
@@ -483,7 +500,8 @@ def run_simulation(
     episodic_available = True
     main_persistence_available = True
     if verify or do_continue:
-        highest_good, problems, episodic_available, main_persistence_available = find_highest_good_episode(full_report_dir)
+        highest_good, problems, episodic_available, main_persistence_available = find_highest_good_episode(
+            full_report_dir)
         expected_last = runs
 
         log.info("%s", "-" * LINE_LENGTH)
@@ -654,11 +672,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-r", "--runs", type=int, help="Number of runs for the simulation (overrides the existing configs)", required=False
+        "-r", "--runs", type=int, help="Number of runs for the simulation (overrides the existing configs)",
+        required=False
     )
 
     parser.add_argument(
-        "-cc", "--count-configs", action="store_true", help="Count the number of configs in the LIST_OF_CONFIGS and exit"
+        "-cc", "--count-configs", action="store_true",
+        help="Count the number of configs in the LIST_OF_CONFIGS and exit"
     )
 
     parser.add_argument(
@@ -812,4 +832,3 @@ if __name__ == "__main__":
 
     if (args.verify or args.do_continue) and failures > 0:
         sys.exit(1)
-
