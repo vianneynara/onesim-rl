@@ -277,22 +277,31 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
         log.info("%s", "-" * LINE_LENGTH)
 
 
-def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool]:
+def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool, bool]:
     """Determine highest *contiguous* episode number (starting from 1) in which Persistence-Episode@N.json is readable JSON.
 
-    Returns: (highest_good, problems, episodic_available)
+    Returns: (highest_good, problems, episodic_available, main_persistence_available)
     - highest_good is 0 if none are valid.
     - episodic_available False means ep/ directory missing (saveEpisodically likely false).
+    - main_persistence_available False means _persistence.json missing (simulation has never run).
     """
     problems: list[str] = []
+    
+    # Check main persistence file first (adjacent to config_setting.json)
+    main_persistence_path = os.path.join(full_report_dir, "_persistence.json")
+    main_persistence_available = os.path.isfile(main_persistence_path)
+    if not main_persistence_available:
+        problems.append(f"Main persistence not found: {main_persistence_path} (simulation has never run)")
+        return 0, problems, True, False
+    
     ep_root = os.path.join(full_report_dir, "ep")
     if not os.path.isdir(ep_root):
-        return 0, [f"Episodic directory not found: {ep_root} (saveEpisodically likely false)"], False
+        return 0, [f"Episodic directory not found: {ep_root} (saveEpisodically likely false)"], False, True
 
     episode_dirs = safe_int_dirnames(ep_root)
     if not episode_dirs:
         problems.append(f"No episode directories found under: {ep_root}")
-        return 0, problems, True
+        return 0, problems, True, True
 
     highest_good = 0
     # Contiguous check from 1... until first failure
@@ -321,7 +330,7 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
 
         highest_good = expected
 
-    return highest_good, problems, True
+    return highest_good, problems, True, True
 
 
 def rebuild_main_persistence_from_episode(full_report_dir: str, episode: int) -> Tuple[bool, str]:
@@ -415,32 +424,42 @@ def run_simulation(
     start_ep = 1
     highest_good = 0
     episodic_available = True
+    main_persistence_available = True
     if verify or do_continue:
-        highest_good, problems, episodic_available = find_highest_good_episode(full_report_dir)
+        highest_good, problems, episodic_available, main_persistence_available = find_highest_good_episode(full_report_dir)
         expected_last = runs
 
         log.info("%s", "-" * LINE_LENGTH)
         log.info("[VERIFY] Run dir: %s", full_report_dir)
         log.info("[VERIFY] Expected episodes (runs): %s", expected_last)
+        log.info("[VERIFY] Main persistence available: %s", main_persistence_available)
         log.info("[VERIFY] Highest contiguous uncorrupted episode: %s", highest_good)
         if problems:
             for p in problems:
                 log.warning("[VERIFY] %s", p)
-        if episodic_available:
-            if highest_good >= expected_last:
-                log.info("[VERIFY] Complete (%s/%s)", highest_good, expected_last)
+        if main_persistence_available:
+            if episodic_available:
+                if highest_good >= expected_last:
+                    log.info("[VERIFY] Complete (%s/%s)", highest_good, expected_last)
+                else:
+                    log.warning("[VERIFY] Incomplete (%s/%s)", highest_good, expected_last)
             else:
-                log.warning("[VERIFY] Incomplete (%s/%s)", highest_good, expected_last)
+                log.warning("[VERIFY] Cannot verify episodic persistence (saveEpisodically likely false).")
         else:
-            log.warning("[VERIFY] Cannot verify episodic persistence (saveEpisodically likely false).")
+            log.warning("[VERIFY] Main persistence missing; simulation has never run. Will start from episode 1.")
         log.info("%s", "-" * LINE_LENGTH)
 
-        if not episodic_available:
+        if not episodic_available and main_persistence_available:
             log.error("[VERIFY] Episodic snapshots missing. Exiting with error code 1.")
             return False
 
         if do_continue:
-            if not episodic_available:
+            if not main_persistence_available:
+                log.warning(
+                    "[CONTINUE] Main persistence not available; simulation has never run. Will restart from episode 1."
+                )
+                start_ep = 1
+            elif not episodic_available:
                 # Per requirement: restart from 0 (effectively episode 1), but print warning and highest uncorrupted episode.
                 log.warning(
                     "[CONTINUE] Episodic snapshots not available; cannot rebuild from ep/N. Will restart from episode 1."
