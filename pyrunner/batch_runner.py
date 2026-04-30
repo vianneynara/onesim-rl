@@ -298,15 +298,18 @@ def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str) -> 
     Returns: result_id_dir, possibly with (N) suffix
     """
     base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
-    
+
     if not os.path.isdir(base_path):
         # No existing run, use base as-is
         return base_result_id_dir
-    
+
     # Existing run detected, find next version
     next_version = find_next_version_number(parent_dir_id, base_result_id_dir)
     versioned_id = f"{base_result_id_dir}({next_version})"
-    
+
+    WAIT_TIME = 10
+
+    log.info("⚠️" * (LINE_LENGTH // 2))
     log.info(
         "[OVERRIDE] Existing run detected at: %s",
         base_path
@@ -315,7 +318,11 @@ def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str) -> 
         "[OVERRIDE] Creating versioned run: %s",
         versioned_id
     )
-    
+
+    log.info("[OVERRIDE] Continuing running in %s seconds. \"Ctrl + C\" to cancel.", WAIT_TIME)
+    log.info("⚠️" * (LINE_LENGTH // 2))
+    time.sleep(WAIT_TIME)  # Making sure the user reads this
+
     return versioned_id
 
 
