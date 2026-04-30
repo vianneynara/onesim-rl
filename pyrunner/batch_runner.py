@@ -6,15 +6,15 @@ The second version of batch runner, will provide better and more flexible runs.
 # IMPORTS
 # ------------------------------------------------------------------------------------------------------------------- #
 
-import os
-import sys
 import argparse
-import subprocess
 import json
 import logging
-from typing import Optional, Tuple, Any
-
+import os
+import subprocess
+import sys
+import time
 from datetime import datetime, timedelta
+from typing import Optional, Tuple, Any
 
 # Allow running this file as a script (python pyrunner/batch_runner.py) while still
 # using absolute package imports (pyrunner.*).
@@ -277,22 +277,106 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
         log.info("%s", "-" * LINE_LENGTH)
 
 
-def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool]:
+def find_next_version_number(parent_dir_id: str, base_result_id_dir: str) -> int:
+    """
+    Find the next available version number for a run directory.
+    
+    Checks if base_result_id_dir exists, and if so, finds the highest version number (N) where
+    base_result_id_dir(N) exists, then returns N+1. If base_result_id_dir doesn't exist, returns 1.
+    
+    Returns: Next version number (1-based, or 1 if no versioned directory exists yet)
+    """
+    base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
+    
+    # If base directory doesn't exist yet, no versioning needed
+    if not os.path.isdir(base_path):
+        return 1
+    
+    # Base directory exists; find the highest version number
+    highest_version = 0
+    
+    # Check for versioned directories (N) in parent
+    parent_path = os.path.dirname(base_path)
+    if not os.path.isdir(parent_path):
+        return 1
+    
+    for item in os.listdir(parent_path):
+        item_path = os.path.join(parent_path, item)
+        if not os.path.isdir(item_path):
+            continue
+        
+        # Check if this item matches the pattern: base_result_id_dir(N)
+        if item.startswith(base_result_id_dir + "(") and item.endswith(")"):
+            try:
+                version_str = item[len(base_result_id_dir) + 1:-1]
+                version_num = int(version_str)
+                highest_version = max(highest_version, version_num)
+            except (ValueError, IndexError):
+                pass
+    
+    # Also check if unversioned base directory exists
+    if os.path.isdir(base_path):
+        highest_version = max(highest_version, 0)
+    
+    return highest_version + 1
+
+
+def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str) -> str:
+    """
+    Get the versioned result_id_dir if needed.
+    
+    If the base result_id_dir directory doesn't exist, returns it as-is.
+    If it exists, appends (N) where N is the next available version number.
+    
+    Returns: result_id_dir, possibly with (N) suffix
+    """
+    base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
+    
+    if not os.path.isdir(base_path):
+        # No existing run, use base as-is
+        return base_result_id_dir
+    
+    # Existing run detected, find next version
+    next_version = find_next_version_number(parent_dir_id, base_result_id_dir)
+    versioned_id = f"{base_result_id_dir}({next_version})"
+    
+    log.info(
+        "[OVERRIDE] Existing run detected at: %s",
+        base_path
+    )
+    log.info(
+        "[OVERRIDE] Creating versioned run: %s",
+        versioned_id
+    )
+    
+    return versioned_id
+
+
+def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool, bool]:
     """Determine highest *contiguous* episode number (starting from 1) in which Persistence-Episode@N.json is readable JSON.
 
-    Returns: (highest_good, problems, episodic_available)
+    Returns: (highest_good, problems, episodic_available, main_persistence_available)
     - highest_good is 0 if none are valid.
     - episodic_available False means ep/ directory missing (saveEpisodically likely false).
+    - main_persistence_available False means _persistence.json missing (simulation has never run).
     """
     problems: list[str] = []
+    
+    # Check main persistence file first (adjacent to config_setting.json)
+    main_persistence_path = os.path.join(full_report_dir, "_persistence.json")
+    main_persistence_available = os.path.isfile(main_persistence_path)
+    if not main_persistence_available:
+        problems.append(f"Main persistence not found: {main_persistence_path} (simulation has never run)")
+        return 0, problems, True, False
+    
     ep_root = os.path.join(full_report_dir, "ep")
     if not os.path.isdir(ep_root):
-        return 0, [f"Episodic directory not found: {ep_root} (saveEpisodically likely false)"], False
+        return 0, [f"Episodic directory not found: {ep_root} (saveEpisodically likely false)"], False, True
 
     episode_dirs = safe_int_dirnames(ep_root)
     if not episode_dirs:
         problems.append(f"No episode directories found under: {ep_root}")
-        return 0, problems, True
+        return 0, problems, True, True
 
     highest_good = 0
     # Contiguous check from 1... until first failure
@@ -321,7 +405,7 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
 
         highest_good = expected
 
-    return highest_good, problems, True
+    return highest_good, problems, True, True
 
 
 def rebuild_main_persistence_from_episode(full_report_dir: str, episode: int) -> Tuple[bool, str]:
@@ -388,6 +472,14 @@ def run_simulation(
     # Allow overriding the {alg} portion of reports/skripsi/{alg}/run-id/{result_id_dir}
     parent_dir_id_effective = (parent_dir_id or alg).strip()
     validate_run_id(parent_dir_id_effective)
+    
+    # Check if we need versioning (only when NOT in verify or continue mode)
+    if not verify and not do_continue:
+        result_id_dir = get_versioned_result_id_dir(parent_dir_id_effective, result_id_dir)
+        WAIT_TIME = 10
+        log.info("[OVERRIDE] Continuing running in %s seconds.", WAIT_TIME)
+        time.sleep(WAIT_TIME) # Making sure the user reads this
+    
     full_report_dir = f"reports/skripsi/{parent_dir_id_effective}/run-id/{result_id_dir}"
 
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
@@ -415,32 +507,42 @@ def run_simulation(
     start_ep = 1
     highest_good = 0
     episodic_available = True
+    main_persistence_available = True
     if verify or do_continue:
-        highest_good, problems, episodic_available = find_highest_good_episode(full_report_dir)
+        highest_good, problems, episodic_available, main_persistence_available = find_highest_good_episode(full_report_dir)
         expected_last = runs
 
         log.info("%s", "-" * LINE_LENGTH)
         log.info("[VERIFY] Run dir: %s", full_report_dir)
         log.info("[VERIFY] Expected episodes (runs): %s", expected_last)
+        log.info("[VERIFY] Main persistence available: %s", main_persistence_available)
         log.info("[VERIFY] Highest contiguous uncorrupted episode: %s", highest_good)
         if problems:
             for p in problems:
                 log.warning("[VERIFY] %s", p)
-        if episodic_available:
-            if highest_good >= expected_last:
-                log.info("[VERIFY] Complete (%s/%s)", highest_good, expected_last)
+        if main_persistence_available:
+            if episodic_available:
+                if highest_good >= expected_last:
+                    log.info("[VERIFY] Complete (%s/%s)", highest_good, expected_last)
+                else:
+                    log.warning("[VERIFY] Incomplete (%s/%s)", highest_good, expected_last)
             else:
-                log.warning("[VERIFY] Incomplete (%s/%s)", highest_good, expected_last)
+                log.warning("[VERIFY] Cannot verify episodic persistence (saveEpisodically likely false).")
         else:
-            log.warning("[VERIFY] Cannot verify episodic persistence (saveEpisodically likely false).")
+            log.warning("[VERIFY] Main persistence missing; simulation has never run. Will start from episode 1.")
         log.info("%s", "-" * LINE_LENGTH)
 
-        if not episodic_available:
+        if not episodic_available and main_persistence_available:
             log.error("[VERIFY] Episodic snapshots missing. Exiting with error code 1.")
             return False
 
         if do_continue:
-            if not episodic_available:
+            if not main_persistence_available:
+                log.warning(
+                    "[CONTINUE] Main persistence not available; simulation has never run. Will restart from episode 1."
+                )
+                start_ep = 1
+            elif not episodic_available:
                 # Per requirement: restart from 0 (effectively episode 1), but print warning and highest uncorrupted episode.
                 log.warning(
                     "[CONTINUE] Episodic snapshots not available; cannot rebuild from ep/N. Will restart from episode 1."
@@ -664,6 +766,10 @@ if __name__ == "__main__":
                 failures += 1
     else:
         config_num = args.config
+
+        if not config_num:
+            log.error("No config specified. Use -c or --config to specify a config index.")
+            sys.exit(1)
 
         # Parse config indices supporting ranges with hyphens
         configs_to_run: list[int] = parse_config_indices(config_num)
