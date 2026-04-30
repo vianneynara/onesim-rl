@@ -16,6 +16,9 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, Tuple, Any
 
+from pyrunner.term_dictionary import KEY_ABBREVIATIONS, BEHAVIOR_PACKAGES, ALG_BASE_SETTINGS_PATH, ALG_ABBREVIATIONS
+from pyrunner.config_parser import parse_config_file, extract_highlighted_settings
+
 # Allow running this file as a script (python pyrunner/batch_runner.py) while still
 # using absolute package imports (pyrunner.*).
 if __package__ in (None, ""):
@@ -38,86 +41,8 @@ log = logging.getLogger(__name__)
 # BATCH RUNNER CONFIGURATION
 # ------------------------------------------------------------------------------------------------------------------- #
 
-
 ID_LABEL = "ID_LABEL"
 ALG_LABEL = "ALG_LABEL"
-
-alg_base_settings = {
-    "ql": "settings/skripsi/randomsearch-qlearn.cfg",
-    "mc": "settings/skripsi/randomsearch-mc.cfg",
-    "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
-}
-
-alg_abbreviations = {
-    "ql": "QLearningMovement",
-    "mc": "MCMovement",
-    "lfe": "LevyFlightEpisodic",
-}
-
-behavior_packages = {
-    "epsilon": "movement.rl.behavior.EpsilonGreedyBehavior",
-    "ucb": "movement.rl.behavior.UCBBehavior",
-    "ts": "movement.rl.behavior.ThompsonSamplingBehavior"
-}
-
-key_abbreviations = {
-    # [ Agent movement settings ]
-    "amm": "Group1.movementModel",
-    "tmm": "Group2.movementModel",
-
-    # [ Report settings ]
-    "r_dir": "Report.reportDir",
-
-    # [ QLearningMovement settings ]
-    "qlm_bp": "QLearningMovement.behaviorPolicy",
-    "qlm_lr": "QLearningMovement.learningRate",
-    "qlm_df": "QLearningMovement.discountFactor",
-    "qlm_iq": "QLearningMovement.initialQValue",
-    "qlm_tp": "QLearningMovement.targetPrefix",
-    "qlm_sp": "QLearningMovement.stepPenalty",
-    "qlm_fr": "QLearningMovement.foundReward",
-    "qlm_as": "QLearningMovement.agentSpeed",
-
-    # [ Monte-Carlo Movement settings ]
-    "mcm_bp": "MCMovement.behaviorPolicy",
-    "mcm_lr": "MCMovement.learningRate",
-    "mcm_df": "MCMovement.discountFactor",
-    "mcm_iq": "MCMovement.initialQValue",
-    "mcm_tp": "MCMovement.targetPrefix",
-    "mcm_sp": "MCMovement.stepPenalty",
-    "mcm_fr": "MCMovement.foundReward",
-    "mcm_as": "MCMovement.agentSpeed",
-    "mcm_fv": "MCMovement.firstVisit",
-
-    # [ Lévy Flight Episodic Movement settings ]
-    "lfe_la": "LevyFlightEpisodic.levyAlpha",
-    "lfe_xm": "LevyFlightEpisodic.xm",
-    "lfe_tp": "LevyFlightEpisodic.targetPrefix",
-    "lfe_fs": "LevyFlightEpisodic.flightSpeed",
-    "lfe_sp": "LevyFlightEpisodic.stepPenalty",
-    "lfe_fr": "LevyFlightEpisodic.foundReward",
-
-    # [ EpsilonGreedyBehavior settings ]
-    "eg_ip": "BehaviorPolicy.epsilon",
-    "eg_ed": "BehaviorPolicy.epsilonDecay",
-    "eg_me": "BehaviorPolicy.minEpsilon",
-
-    # [ UCBBehavior settings ]
-    "ucb_ec": "BehaviorPolicy.UCB.explorationConstant",
-
-    # [ TSBehavior settings ]
-    "ts_iv": "BehaviorPolicy.TS.initialVariance",
-
-    # [ EpisodicPersistenceManager settings ]
-    "epm_ep": "EpisodicPersistenceManager.episodeNumber",
-    "epm_path": "EpisodicPersistenceManager.persistencePath",
-    "epm_saves": "EpisodicPersistenceManager.saveEpisodically",
-
-    # [ Movement model settings ]
-    "m_seed": "MovementModel.seed",
-    "m_ws": "MovementModel.worldSize",
-
-}
 
 S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 
@@ -125,6 +50,49 @@ PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcm_bp"]
 
 # Import the configs
 from pyrunner.batch_configs import LIST_OF_CONFIGS
+
+HIGHLIGHTED_SETTINGS = [
+    "MovementModel.rngSeed",
+    "MovementModel.worldSize",
+
+    "StationaryClustered.alpha",
+    "StationaryClustered.cluster",
+    "StationaryClustered.sigma",
+
+    "QLearningMovement.learningRate",
+    "QLearningMovement.discountFactor",
+    "QLearningMovement.initialQValue",
+    "QLearningMovement.targetPrefix",
+    "QLearningMovement.stepPenalty",
+    "QLearningMovement.foundReward",
+    "QLearningMovement.agentSpeed",
+    "QLearningMovement.targetCooldown",
+    "QLearningMovement.learningSeed",
+
+    "LevyFlightEpisodic.levyAlpha",
+    "LevyFlightEpisodic.xm",
+    "LevyFlightEpisodic.targetPrefix",
+    "LevyFlightEpisodic.flightSpeed",
+    "LevyFlightEpisodic.targetCooldown",
+    "LevyFlightEpisodic.stepPenalty",
+    "LevyFlightEpisodic.foundReward",
+    "LevyFlightEpisodic.learningSeed",
+
+    "BehaviorPolicy.EpsilonGreedy.epsilon",
+    "BehaviorPolicy.EpsilonGreedy.epsilonDecay",
+    "BehaviorPolicy.EpsilonGreedy.minEpsilon",
+
+    "BehaviorPolicy.UCB.explorationConstant",
+
+    "BehaviorPolicy.TS.initialVariance",
+
+    "SearchingAgentRouter.targetPrefix",
+    "Group1.nrofHosts",
+    "Group1.movementModel",
+    "Group2.nrofHosts",
+    "Group2.movementModel",
+    "Group2.groupID",
+]
 
 
 def create_config_setting_json(
@@ -135,25 +103,44 @@ def create_config_setting_json(
         result_dir_id: str = None,
         overrides_list: list[str] = None
 ):
-    config_setting_json = {
-        "runner_episodes:" : runs,
-        "runner_id": result_dir_id,
-
-        "alg": alg,
-        "parent_dir_id": parent_dir_id,
-
-        "amm": alg_abbreviations[alg],
+    # Parse the algorithm's base config file
+    cfg_file_path = ALG_BASE_SETTINGS_PATH[alg]
+    config_dict = parse_config_file(cfg_file_path)
+    
+    # Extract highlighted settings from the parsed config
+    _highlighted_settings = extract_highlighted_settings(config_dict, HIGHLIGHTED_SETTINGS)
+    
+    # Initialize overridden settings with algorithm mapping
+    _overridden_settings = {
+        "amm": ALG_ABBREVIATIONS[alg],
     }
 
+    # Build config setting JSON
+    config_setting_json = {
+        "parent_dir_id": parent_dir_id,
+        "runner_id": result_dir_id,
+        "runner_algorithm": alg,
+        "runner_nrof_episodes:": runs,
+    }
+
+    # Add behavior policy override if specified
     bp_key = _get_bp_override_key(alg)
     if bp and bp_key:
-        config_setting_json[bp_key] = behavior_packages[bp]
+        _overridden_settings[bp_key] = BEHAVIOR_PACKAGES[bp]
 
+    # Process additional overrides from the override list
     for entry in overrides_list or []:
         key, value = entry.split("=", 1)
-        config_setting_json[key] = value
+        _overridden_settings[key] = value
 
-    # Create the direcetory first
+    # Merge settings: overridden_settings take precedence over highlighted_settings
+    _highlighted_settings.update(_overridden_settings)
+    
+    # Add merged settings to config JSON
+    config_setting_json["highlighted_settings"] = _highlighted_settings
+    config_setting_json["overridden_settings"] = _overridden_settings
+
+    # Create the directory first
     dir_path = f"reports/skripsi/{parent_dir_id}/run-id/{result_dir_id}"
     os.makedirs(dir_path, exist_ok=True)
 
@@ -169,8 +156,8 @@ def parse_overrides(overrides_dict: dict[str, Any]) -> Tuple[list[str], list[str
     for key, value in overrides_dict.items():
 
         # Check if key is an abbreviation
-        if key in key_abbreviations:
-            full_key = key_abbreviations[key]
+        if key in KEY_ABBREVIATIONS:
+            full_key = KEY_ABBREVIATIONS[key]
         else:
             # Use the key as-is (assuming the real setting full key)
             full_key = key
@@ -210,11 +197,11 @@ def _order_abbreviated_overrides(abr_overrides: list[str]) -> list[str]:
 
 
 def expand_algorithm(alg: str) -> str:
-    if alg not in alg_base_settings:
+    if alg not in ALG_BASE_SETTINGS_PATH:
         raise ValueError(
-            f"Unknown algorithm '{alg}'. Valid options: {', '.join(alg_base_settings.keys())}"
+            f"Unknown algorithm '{alg}'. Valid options: {', '.join(ALG_BASE_SETTINGS_PATH.keys())}"
         )
-    return alg_base_settings[alg]
+    return ALG_BASE_SETTINGS_PATH[alg]
 
 
 def build_result_id_dir(
@@ -247,7 +234,7 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
         script.extend(["-d", overrides_string])
 
     # Add config file path
-    script.append(alg_base_settings[algo])
+    script.append(ALG_BASE_SETTINGS_PATH[algo])
 
     _start_time = None
 
@@ -287,24 +274,24 @@ def find_next_version_number(parent_dir_id: str, base_result_id_dir: str) -> int
     Returns: Next version number (1-based, or 1 if no versioned directory exists yet)
     """
     base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
-    
+
     # If base directory doesn't exist yet, no versioning needed
     if not os.path.isdir(base_path):
         return 1
-    
+
     # Base directory exists; find the highest version number
     highest_version = 0
-    
+
     # Check for versioned directories (N) in parent
     parent_path = os.path.dirname(base_path)
     if not os.path.isdir(parent_path):
         return 1
-    
+
     for item in os.listdir(parent_path):
         item_path = os.path.join(parent_path, item)
         if not os.path.isdir(item_path):
             continue
-        
+
         # Check if this item matches the pattern: base_result_id_dir(N)
         if item.startswith(base_result_id_dir + "(") and item.endswith(")"):
             try:
@@ -313,11 +300,11 @@ def find_next_version_number(parent_dir_id: str, base_result_id_dir: str) -> int
                 highest_version = max(highest_version, version_num)
             except (ValueError, IndexError):
                 pass
-    
+
     # Also check if unversioned base directory exists
     if os.path.isdir(base_path):
         highest_version = max(highest_version, 0)
-    
+
     return highest_version + 1
 
 
@@ -331,15 +318,18 @@ def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str) -> 
     Returns: result_id_dir, possibly with (N) suffix
     """
     base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
-    
+
     if not os.path.isdir(base_path):
         # No existing run, use base as-is
         return base_result_id_dir
-    
+
     # Existing run detected, find next version
     next_version = find_next_version_number(parent_dir_id, base_result_id_dir)
     versioned_id = f"{base_result_id_dir}({next_version})"
-    
+
+    WAIT_TIME = 10
+
+    log.info("⚠️" * (LINE_LENGTH // 2))
     log.info(
         "[OVERRIDE] Existing run detected at: %s",
         base_path
@@ -348,7 +338,11 @@ def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str) -> 
         "[OVERRIDE] Creating versioned run: %s",
         versioned_id
     )
-    
+
+    log.info("[OVERRIDE] Continuing running in %s seconds. \"Ctrl + C\" to cancel.", WAIT_TIME)
+    log.info("⚠️" * (LINE_LENGTH // 2))
+    time.sleep(WAIT_TIME)  # Making sure the user reads this
+
     return versioned_id
 
 
@@ -361,14 +355,14 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
     - main_persistence_available False means _persistence.json missing (simulation has never run).
     """
     problems: list[str] = []
-    
+
     # Check main persistence file first (adjacent to config_setting.json)
     main_persistence_path = os.path.join(full_report_dir, "_persistence.json")
     main_persistence_available = os.path.isfile(main_persistence_path)
     if not main_persistence_available:
         problems.append(f"Main persistence not found: {main_persistence_path} (simulation has never run)")
         return 0, problems, True, False
-    
+
     ep_root = os.path.join(full_report_dir, "ep")
     if not os.path.isdir(ep_root):
         return 0, [f"Episodic directory not found: {ep_root} (saveEpisodically likely false)"], False, True
@@ -448,9 +442,9 @@ def run_simulation(
     settings_file = expand_algorithm(alg)
 
     # Validate behavior policy if provided
-    if bp and bp not in behavior_packages:
+    if bp and bp not in BEHAVIOR_PACKAGES:
         raise ValueError(
-            f"Unknown behavior policy '{bp}'. Valid options: {', '.join(behavior_packages.keys())}"
+            f"Unknown behavior policy '{bp}'. Valid options: {', '.join(BEHAVIOR_PACKAGES.keys())}"
         )
 
     abr_overrides, full_overrides = [], []
@@ -464,7 +458,7 @@ def run_simulation(
         bp_entry_exists = overrides_list and bp_override_key in overrides_list
         if not bp_entry_exists:
             abr_overrides.append(f"{bp_override_key}@{bp}")
-            full_overrides.append(f"{key_abbreviations[bp_override_key]}={behavior_packages[bp]}")
+            full_overrides.append(f"{KEY_ABBREVIATIONS[bp_override_key]}={BEHAVIOR_PACKAGES[bp]}")
 
     result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id)
     validate_run_id(result_id_dir)
@@ -472,14 +466,11 @@ def run_simulation(
     # Allow overriding the {alg} portion of reports/skripsi/{alg}/run-id/{result_id_dir}
     parent_dir_id_effective = (parent_dir_id or alg).strip()
     validate_run_id(parent_dir_id_effective)
-    
+
     # Check if we need versioning (only when NOT in verify or continue mode)
     if not verify and not do_continue:
         result_id_dir = get_versioned_result_id_dir(parent_dir_id_effective, result_id_dir)
-        WAIT_TIME = 10
-        log.info("[OVERRIDE] Continuing running in %s seconds.", WAIT_TIME)
-        time.sleep(WAIT_TIME) # Making sure the user reads this
-    
+
     full_report_dir = f"reports/skripsi/{parent_dir_id_effective}/run-id/{result_id_dir}"
 
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
@@ -509,7 +500,8 @@ def run_simulation(
     episodic_available = True
     main_persistence_available = True
     if verify or do_continue:
-        highest_good, problems, episodic_available, main_persistence_available = find_highest_good_episode(full_report_dir)
+        highest_good, problems, episodic_available, main_persistence_available = find_highest_good_episode(
+            full_report_dir)
         expected_last = runs
 
         log.info("%s", "-" * LINE_LENGTH)
@@ -680,11 +672,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-r", "--runs", type=int, help="Number of runs for the simulation (overrides the existing configs)", required=False
+        "-r", "--runs", type=int, help="Number of runs for the simulation (overrides the existing configs)",
+        required=False
     )
 
     parser.add_argument(
-        "-cc", "--count-configs", action="store_true", help="Count the number of configs in the LIST_OF_CONFIGS and exit"
+        "-cc", "--count-configs", action="store_true",
+        help="Count the number of configs in the LIST_OF_CONFIGS and exit"
     )
 
     parser.add_argument(
@@ -838,4 +832,3 @@ if __name__ == "__main__":
 
     if (args.verify or args.do_continue) and failures > 0:
         sys.exit(1)
-
