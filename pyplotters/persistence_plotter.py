@@ -20,11 +20,16 @@ from typing import List, Tuple, Union
 from scipy.stats import gaussian_kde
 from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, FormatStrFormatter, MultipleLocator
 
+LINE_LENGTH = 100
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s %(levelname)s %(name)s]: %(message)s",
+    datefmt="%H:%M:%S",
+)
 log = logging.getLogger(__name__)
 
-PARENT_DIR       = "mcn1"
 BASE_REPORTS_DIR = "reports\\skripsi"
-PLOT_RESULTS_DIR = f"pyplotters\\plots\\{PARENT_DIR}"
+PLOT_RESULTS_DIR = "pyplotters\\plots"
 
 SUMMARY_KEYS = [
     "configuration_directory",
@@ -44,7 +49,7 @@ def read_json_file(file_path):
         with open(file_path, "r") as file:
             json_data = json.load(file)
     except FileNotFoundError:
-        log.info(f"The file {file_path} does not exist.")
+        log.error(f"The file {file_path} does not exist.")
         raise FileNotFoundError(f"The json file {file_path} does not exist.")
     return json_data
 
@@ -74,16 +79,25 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
     return episodic_rewards
 
 
-def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False):
+def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False):
     plt.figure(figsize=(10, 6))
 
     if not _yalias:
         _yalias = _ylabel
 
+
     max_episodes = _df["episodeNumber"].max()
     min_episodes = _df["episodeNumber"].min()
 
-    sns.lineplot(data=_df, x="episodeNumber", y=_key)
+    sns.lineplot(data=_df, x="episodeNumber", y=_key, label=_yalias, color="skyblue")
+
+    if _ema_line:
+        _ema_series = pd.Series(_df[_key]).ewm(span=20, adjust=False).mean()
+        sns.lineplot(data=_df, x="episodeNumber", y=_ema_series, label="EMA", color="orange")
+
+    if _ma_line:
+        _ma_series = pd.Series(_df[_key]).rolling(window=20).mean()
+        sns.lineplot(data=_df, x="episodeNumber", y=_ma_series, label="MA", color="green")
 
     # Summary statistics for the selected Y series
     y = pd.to_numeric(_df[_key], errors="coerce")
@@ -142,6 +156,12 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
 
     if handles:
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
+
+    # Ensure output directory exists (savefig does not create directories)
+    out_dir = os.path.dirname(file_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
     plt.savefig(file_path, bbox_inches='tight')
     plt.close()
 
@@ -162,14 +182,18 @@ def retrieve_trajectoryFrequencies(_json_data):
     return traj_freq_df
 
 
-def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x: bool = False):
+def plot_trajectoryDistribution(
+        _df: pd.DataFrame,
+        file_path: str,
+        logarithmic_x: bool = False,
+        x_max: int = 500
+):
     """
     Plots both the probability mass function and probability density function of trajectories.
     - Blue line: Raw probabilities (PMF)
     - Orange line: Smoothed PDF (KDE)
     """
     plt.figure(figsize=(12, 6))
-    xmax_plot = 50
 
     # Ensure numeric dtypes (JSON keys often arrive as strings)
     _df = _df.copy()
@@ -198,10 +222,10 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
         plt.ylabel("Probability / Density")
 
         ax = plt.gca()
-        ax.set_xlim(1, xmax_plot)
+        ax.set_xlim(1, x_max)
 
         # Major tick every 200; minor tick every 50 (optional)
-        ax.xaxis.set_major_locator(MultipleLocator(10))
+        ax.xaxis.set_major_locator(MultipleLocator(50))
         ax.xaxis.set_minor_locator(MultipleLocator(50))
 
         plt.gca().set_yticks(np.arange(0, 1.1, 0.1))
@@ -220,6 +244,11 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
             ]
             handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
+
+        out_dir = os.path.dirname(file_path)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+
         plt.savefig(file_path, bbox_inches='tight')
         plt.close()
     else:
@@ -236,7 +265,7 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
 
         # Set X-axis ticks from 10^0 to 10^3
         # xmax_plot = _df["trajectory"].max()
-        ax.set_xlim(1, xmax_plot)
+        ax.set_xlim(1, x_max)
         ax.set_xticks([1, 10, 100, 1000])
 
         # Y-axis ticks at 0.1 intervals
@@ -255,11 +284,16 @@ def plot_trajectoryDistribution(_df: pd.DataFrame, file_path: str, logarithmic_x
             ]
             handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
+
+        out_dir = os.path.dirname(file_path)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+
         plt.savefig(file_path, bbox_inches='tight')
         plt.close()
 
 
-def process_reports(_run_id_dir):
+def process_reports(_run_id_dir, _parent_dir: str = None):
     """
     Common DF includes:
     episodeNumber, currentEpisodeReward, currentCumulativeReward, previousCumulativeRewards, currentTrueDetections,
@@ -267,6 +301,10 @@ def process_reports(_run_id_dir):
 
     """
     episode_jsons_dir = retrieve_episode_json_dirs(_run_id_dir)
+    run_id = _run_id_dir.split("\\")[-1]
+
+    log.info(LINE_LENGTH * "-")
+    log.info(f"Processing run directory: {run_id}")
 
     _run_summary = {key:float("-inf") for key in SUMMARY_KEYS}
     _run_summary["configuration_directory"] = _run_id_dir.split("\\")[-1]
@@ -280,7 +318,7 @@ def process_reports(_run_id_dir):
     traj_freq_df = retrieve_trajectoryFrequencies(read_json_file(episode_jsons_dir[-1]))
 
     for episode_json_dir in episode_jsons_dir:
-        log.info(f"Processing JSON file: {episode_json_dir}")
+        # log.info(f"Processing JSON file: {episode_json_dir}")
         json_data = read_json_file(episode_json_dir)
 
         # Collect all values for this episode
@@ -296,15 +334,16 @@ def process_reports(_run_id_dir):
         # Get highest "trajectoryFrequencies" by grabbing and selecting the highest int-casted
         _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"], max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))
 
-    common_df_path = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"common_data.csv")
+    # Output directory: pyplotters/plots[/<parent>]/<run_id>/
+    _parent_results_dir = os.path.join(PLOT_RESULTS_DIR, _parent_dir) if _parent_dir else PLOT_RESULTS_DIR
+    run_out_dir = os.path.join(_parent_results_dir, run_id)
+    os.makedirs(run_out_dir, exist_ok=True)
 
-    # make sure path exists
-    os.makedirs(os.path.dirname(common_df_path), exist_ok=True)
-
+    common_df_path = os.path.join(run_out_dir, "common_data.csv")
     common_df.to_csv(common_df_path, index=False, sep=";", header=True)
 
     # currentEpisodeReward
-    pp_currentEpisodeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Current Episode Reward.png")
+    pp_currentEpisodeReward = os.path.join(run_out_dir, "Current Episode Reward.png")
     plot_by_episode(
         common_df,
         "currentEpisodeReward",
@@ -312,11 +351,13 @@ def process_reports(_run_id_dir):
         "Episode",
         "Reward",
         pp_currentEpisodeReward,
-        _yalias="reward"
+        _yalias="Reward",
+        # _ema_line=True,
+        # _ma_line=True
     )
 
     # currentEpisodeReward
-    pp_currentCumulativeReward = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Current Cumulative Reward.png")
+    pp_currentCumulativeReward = os.path.join(run_out_dir, "Current Cumulative Reward.png")
     plot_by_episode(
         common_df,
         "currentCumulativeReward",
@@ -324,11 +365,13 @@ def process_reports(_run_id_dir):
         "Episode",
         "Reward",
         pp_currentCumulativeReward,
-        _yalias="cumu. reward"
+        _yalias="Cumu. Reward",
+        # _ema_line=True,
+        # _ma_line=True
     )
 
     # currentTrueDetections
-    pp_currentTrueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Current True Detections.png")
+    pp_currentTrueDetections = os.path.join(run_out_dir, "Current True Detections.png")
     plot_by_episode(
         common_df,
         "currentTrueDetections",
@@ -336,12 +379,14 @@ def process_reports(_run_id_dir):
         "Episode",
         "Detection",
         pp_currentTrueDetections,
-        _yalias="detection",
-        _discrete=True
+        _yalias="Detection",
+        _discrete=True,
+        # _ema_line=True,
+        # _ma_line=True
     )
 
     # currentUniqueDetections
-    pp_currentUniqueDetections = os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Current Unique Detections.png")
+    pp_currentUniqueDetections = os.path.join(run_out_dir, "Current Unique Detections.png")
     plot_by_episode(
         common_df,
         "currentUniqueDetections",
@@ -349,20 +394,27 @@ def process_reports(_run_id_dir):
         "Episode",
         "Detection",
         pp_currentUniqueDetections,
-        _yalias="uniq. detection",
-        _discrete=True
+        _yalias="Uniq. Detection",
+        _discrete=True,
+        # _ema_line=True,
+        # _ma_line=True
     )
 
     # trajectory distribution
     plot_trajectoryDistribution(
         traj_freq_df,
-        os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Trajectory Distribution.png")
+        os.path.join(run_out_dir, "Trajectory Distribution.png"),
+        x_max=100
     )
     plot_trajectoryDistribution(
         traj_freq_df,
-        os.path.join(PLOT_RESULTS_DIR, _run_id_dir.split("\\")[-1], f"Trajectory Distribution (log scale).png"),
+        os.path.join(run_out_dir, "Trajectory Distribution (log scale).png"),
         logarithmic_x=True
     )
+
+    log.info(f"Finished processing run directory: {run_id}")
+    log.info(f"Saving common data to CSV file: {common_df_path}")
+    log.info(LINE_LENGTH * "=")
 
     return _run_summary
 
@@ -399,15 +451,17 @@ if __name__ == "__main__":
             log.error(f"No run-id directories found under {all_of_dir}. Checking for direct subdirectories instead.")
             run_dirs = glob.glob(os.path.join(all_of_dir, "*"))
 
+        log.info("Making sure the results directory exists: " + PLOT_RESULTS_DIR + f"/{args.all_of}/")
+        os.makedirs(os.path.join(PLOT_RESULTS_DIR, args.all_of), exist_ok=True)
+
         for run_dir in run_dirs:
             if os.path.isdir(run_dir):
                 log.info(f"Processing result directory: {run_dir}")
-                run_summary = process_reports(run_dir)
+                run_summary = process_reports(run_dir, args.all_of)
 
                 summary_df = pd.concat([summary_df, pd.DataFrame([run_summary])], ignore_index=True)
 
         log.info("Done processing all results.")
-        os.makedirs(os.path.join(PLOT_RESULTS_DIR, args.all_of), exist_ok=True)
         log.info("Saving summary to CSV file: " + os.path.join(PLOT_RESULTS_DIR, args.all_of, "summary.csv"))
         summary_df.to_csv(os.path.join(PLOT_RESULTS_DIR, args.all_of, "summary.csv"), index=False, sep=";", header=True)
 
