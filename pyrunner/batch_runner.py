@@ -16,6 +16,8 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, Tuple, Any
 
+from pyrunner.term_dictionary import KEY_ABBREVIATIONS, BEHAVIOR_PACKAGES, ALG_BASE_SETTINGS_PATH, ALG_ABBREVIATIONS
+
 # Allow running this file as a script (python pyrunner/batch_runner.py) while still
 # using absolute package imports (pyrunner.*).
 if __package__ in (None, ""):
@@ -38,86 +40,8 @@ log = logging.getLogger(__name__)
 # BATCH RUNNER CONFIGURATION
 # ------------------------------------------------------------------------------------------------------------------- #
 
-
 ID_LABEL = "ID_LABEL"
 ALG_LABEL = "ALG_LABEL"
-
-alg_base_settings = {
-    "ql": "settings/skripsi/randomsearch-qlearn.cfg",
-    "mc": "settings/skripsi/randomsearch-mc.cfg",
-    "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
-}
-
-alg_abbreviations = {
-    "ql": "QLearningMovement",
-    "mc": "MCMovement",
-    "lfe": "LevyFlightEpisodic",
-}
-
-behavior_packages = {
-    "epsilon": "movement.rl.behavior.EpsilonGreedyBehavior",
-    "ucb": "movement.rl.behavior.UCBBehavior",
-    "ts": "movement.rl.behavior.ThompsonSamplingBehavior"
-}
-
-key_abbreviations = {
-    # [ Agent movement settings ]
-    "amm": "Group1.movementModel",
-    "tmm": "Group2.movementModel",
-
-    # [ Report settings ]
-    "r_dir": "Report.reportDir",
-
-    # [ QLearningMovement settings ]
-    "qlm_bp": "QLearningMovement.behaviorPolicy",
-    "qlm_lr": "QLearningMovement.learningRate",
-    "qlm_df": "QLearningMovement.discountFactor",
-    "qlm_iq": "QLearningMovement.initialQValue",
-    "qlm_tp": "QLearningMovement.targetPrefix",
-    "qlm_sp": "QLearningMovement.stepPenalty",
-    "qlm_fr": "QLearningMovement.foundReward",
-    "qlm_as": "QLearningMovement.agentSpeed",
-
-    # [ Monte-Carlo Movement settings ]
-    "mcm_bp": "MCMovement.behaviorPolicy",
-    "mcm_lr": "MCMovement.learningRate",
-    "mcm_df": "MCMovement.discountFactor",
-    "mcm_iq": "MCMovement.initialQValue",
-    "mcm_tp": "MCMovement.targetPrefix",
-    "mcm_sp": "MCMovement.stepPenalty",
-    "mcm_fr": "MCMovement.foundReward",
-    "mcm_as": "MCMovement.agentSpeed",
-    "mcm_fv": "MCMovement.firstVisit",
-
-    # [ Lévy Flight Episodic Movement settings ]
-    "lfe_la": "LevyFlightEpisodic.levyAlpha",
-    "lfe_xm": "LevyFlightEpisodic.xm",
-    "lfe_tp": "LevyFlightEpisodic.targetPrefix",
-    "lfe_fs": "LevyFlightEpisodic.flightSpeed",
-    "lfe_sp": "LevyFlightEpisodic.stepPenalty",
-    "lfe_fr": "LevyFlightEpisodic.foundReward",
-
-    # [ EpsilonGreedyBehavior settings ]
-    "eg_ip": "BehaviorPolicy.epsilon",
-    "eg_ed": "BehaviorPolicy.epsilonDecay",
-    "eg_me": "BehaviorPolicy.minEpsilon",
-
-    # [ UCBBehavior settings ]
-    "ucb_ec": "BehaviorPolicy.UCB.explorationConstant",
-
-    # [ TSBehavior settings ]
-    "ts_iv": "BehaviorPolicy.TS.initialVariance",
-
-    # [ EpisodicPersistenceManager settings ]
-    "epm_ep": "EpisodicPersistenceManager.episodeNumber",
-    "epm_path": "EpisodicPersistenceManager.persistencePath",
-    "epm_saves": "EpisodicPersistenceManager.saveEpisodically",
-
-    # [ Movement model settings ]
-    "m_seed": "MovementModel.seed",
-    "m_ws": "MovementModel.worldSize",
-
-}
 
 S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
 
@@ -142,12 +66,12 @@ def create_config_setting_json(
         "alg": alg,
         "parent_dir_id": parent_dir_id,
 
-        "amm": alg_abbreviations[alg],
+        "amm": ALG_ABBREVIATIONS[alg],
     }
 
     bp_key = _get_bp_override_key(alg)
     if bp and bp_key:
-        config_setting_json[bp_key] = behavior_packages[bp]
+        config_setting_json[bp_key] = BEHAVIOR_PACKAGES[bp]
 
     for entry in overrides_list or []:
         key, value = entry.split("=", 1)
@@ -169,8 +93,8 @@ def parse_overrides(overrides_dict: dict[str, Any]) -> Tuple[list[str], list[str
     for key, value in overrides_dict.items():
 
         # Check if key is an abbreviation
-        if key in key_abbreviations:
-            full_key = key_abbreviations[key]
+        if key in KEY_ABBREVIATIONS:
+            full_key = KEY_ABBREVIATIONS[key]
         else:
             # Use the key as-is (assuming the real setting full key)
             full_key = key
@@ -210,11 +134,11 @@ def _order_abbreviated_overrides(abr_overrides: list[str]) -> list[str]:
 
 
 def expand_algorithm(alg: str) -> str:
-    if alg not in alg_base_settings:
+    if alg not in ALG_BASE_SETTINGS_PATH:
         raise ValueError(
-            f"Unknown algorithm '{alg}'. Valid options: {', '.join(alg_base_settings.keys())}"
+            f"Unknown algorithm '{alg}'. Valid options: {', '.join(ALG_BASE_SETTINGS_PATH.keys())}"
         )
-    return alg_base_settings[alg]
+    return ALG_BASE_SETTINGS_PATH[alg]
 
 
 def build_result_id_dir(
@@ -247,7 +171,7 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
         script.extend(["-d", overrides_string])
 
     # Add config file path
-    script.append(alg_base_settings[algo])
+    script.append(ALG_BASE_SETTINGS_PATH[algo])
 
     _start_time = None
 
@@ -448,9 +372,9 @@ def run_simulation(
     settings_file = expand_algorithm(alg)
 
     # Validate behavior policy if provided
-    if bp and bp not in behavior_packages:
+    if bp and bp not in BEHAVIOR_PACKAGES:
         raise ValueError(
-            f"Unknown behavior policy '{bp}'. Valid options: {', '.join(behavior_packages.keys())}"
+            f"Unknown behavior policy '{bp}'. Valid options: {', '.join(BEHAVIOR_PACKAGES.keys())}"
         )
 
     abr_overrides, full_overrides = [], []
@@ -464,7 +388,7 @@ def run_simulation(
         bp_entry_exists = overrides_list and bp_override_key in overrides_list
         if not bp_entry_exists:
             abr_overrides.append(f"{bp_override_key}@{bp}")
-            full_overrides.append(f"{key_abbreviations[bp_override_key]}={behavior_packages[bp]}")
+            full_overrides.append(f"{KEY_ABBREVIATIONS[bp_override_key]}={BEHAVIOR_PACKAGES[bp]}")
 
     result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id)
     validate_run_id(result_id_dir)
