@@ -684,6 +684,10 @@ if __name__ == "__main__":
     else:
         config_num = args.config
 
+        if not config_num:
+            log.error("No config specified. Use -c or --config to specify a config index.")
+            sys.exit(1)
+
         # Parse config indices supporting ranges with hyphens
         configs_to_run: list[int] = parse_config_indices(config_num)
 
