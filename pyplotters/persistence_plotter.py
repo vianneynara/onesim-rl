@@ -400,7 +400,7 @@ def plot_trajectoryDistribution(
         plt.close()
 
 
-def process_reports(_run_id_dir, _parent_dir: str = None):
+def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _describe: bool = False):
     """
     Common DF includes:
     episodeNumber, currentEpisodeReward, currentCumulativeReward, previousCumulativeRewards, currentTrueDetections,
@@ -449,30 +449,37 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     common_df_path = os.path.join(run_out_dir, "common_data.csv")
     common_df.to_csv(common_df_path, index=False, sep=";", header=True)
 
+    # Generate description if --describe flag is set
+    _description = parse_run_description(run_id) if _describe else None
+
     # currentEpisodeReward
     pp_currentEpisodeReward = os.path.join(run_out_dir, "Current Episode Reward.png")
     plot_by_episode(
         common_df,
         "currentEpisodeReward",
-        "Current Episode Reward",
+        _title,
         "Episode",
         "Reward",
         pp_currentEpisodeReward,
+        _subtitle="Current Episode Reward",
         _yalias="Reward",
+        _description=_description,
         # _ema_line=True,
         # _ma_line=True
     )
 
-    # currentEpisodeReward
+    # currentCumulativeReward
     pp_currentCumulativeReward = os.path.join(run_out_dir, "Current Cumulative Reward.png")
     plot_by_episode(
         common_df,
         "currentCumulativeReward",
-        "Current Cumulative Reward",
+        _title,
         "Episode",
         "Reward",
         pp_currentCumulativeReward,
+        _subtitle="Current Cumulative Reward",
         _yalias="Cumu. Reward",
+        _description=_description,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -482,12 +489,14 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     plot_by_episode(
         common_df,
         "currentTrueDetections",
-        "Current True Detections",
+        _title,
         "Episode",
         "Detection",
         pp_currentTrueDetections,
+        _subtitle="Current True Detections",
         _yalias="Detection",
         _discrete=True,
+        _description=_description,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -497,12 +506,14 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     plot_by_episode(
         common_df,
         "currentUniqueDetections",
-        "Current Unique Detections",
+        _title,
         "Episode",
         "Detection",
         pp_currentUniqueDetections,
+        _subtitle="Current Unique Detections",
         _yalias="Uniq. Detection",
         _discrete=True,
+        _description=_description,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -511,12 +522,18 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     plot_trajectoryDistribution(
         traj_freq_df,
         os.path.join(run_out_dir, "Trajectory Distribution.png"),
-        x_max=100
+        x_max=100,
+        _title=_title,
+        _subtitle="Trajectory Distribution (Probability Mass Function)",
+        _description=_description
     )
     plot_trajectoryDistribution(
         traj_freq_df,
         os.path.join(run_out_dir, "Trajectory Distribution (log scale).png"),
-        logarithmic_x=True
+        logarithmic_x=True,
+        _title=_title,
+        _subtitle="Logarithmic Trajectory Distribution (Probability Mass Function)",
+        _description=_description
     )
 
     log.info(f"Finished processing run directory: {run_id}")
@@ -539,6 +556,14 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-rid", "--run_id", type=str, help="The parent report source directory. (e.g. \"ql\")"
+    )
+
+    parser.add_argument(
+        "-t", "--title", type=str, help="Custom title for plots"
+    )
+
+    parser.add_argument(
+        "-d", "--describe", action="store_true", help="Parse run_id and add description to plots"
     )
 
     args = parser.parse_args()
@@ -564,7 +589,7 @@ if __name__ == "__main__":
         for run_dir in run_dirs:
             if os.path.isdir(run_dir):
                 log.info(f"Processing result directory: {run_dir}")
-                run_summary = process_reports(run_dir, args.all_of)
+                run_summary = process_reports(run_dir, args.all_of, args.title, args.describe)
 
                 summary_df = pd.concat([summary_df, pd.DataFrame([run_summary])], ignore_index=True)
 
@@ -589,4 +614,4 @@ if __name__ == "__main__":
         check_exists_source_dir(run_dir)
         log.info(f"Processing result directory: {run_dir}")
 
-        process_reports(run_dir)
+        process_reports(run_dir, None, args.title, args.describe)
