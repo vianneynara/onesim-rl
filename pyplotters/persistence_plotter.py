@@ -121,7 +121,7 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
     return episodic_rewards
 
 
-def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False):
+def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False, _subtitle: str = None, _description: str = None):
     plt.figure(figsize=(10, 6))
 
     if not _yalias:
@@ -163,7 +163,29 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
     plt.xticks(ticks)
 
     # Labels & title
-    plt.title(_title, fontweight='bold')
+    # Construct title with main title and optional subtitle
+    title_lines = []
+    if _title:
+        title_lines.append(_title)
+    if _subtitle:
+        title_lines.append(_subtitle)
+    
+    main_title = "\n".join(title_lines) if title_lines else ""
+    
+    # Add main title as suptitle (above plot area)
+    fig = plt.gcf()
+    fig.suptitle(main_title, fontweight='bold', fontsize=12, y=0.98)
+    
+    # Add description as lighter text if present
+    if _description:
+        fig.text(0.5, 0.91, _description, ha='center', va='top', 
+                fontsize=9, fontweight='light', style='italic', color='gray')
+        # Adjust top margin to accommodate both title and description
+        fig.subplots_adjust(top=0.88)
+    else:
+        # Adjust top margin for title only
+        fig.subplots_adjust(top=0.92)
+    
     plt.xlabel(_xlabel)
     plt.ylabel(_ylabel)
 
