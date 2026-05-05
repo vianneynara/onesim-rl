@@ -31,6 +31,12 @@ log = logging.getLogger(__name__)
 BASE_REPORTS_DIR = "reports\\skripsi"
 PLOT_RESULTS_DIR = "pyplotters\\plots"
 
+LIST_OF_IGNORED_OVERRIDES = [
+    "ql500",
+    "lfe500",
+    "cfg"
+]
+
 SUMMARY_KEYS = [
     "configuration_directory",
     "max_cumulative_reward",
@@ -41,6 +47,42 @@ SUMMARY_KEYS = [
 def check_exists_source_dir(dir_path):
     if not os.path.exists(dir_path):
         raise FileNotFoundError(f"The base source directory {dir_path} does not exist.")
+
+
+def parse_run_description(_run_id: str) -> str:
+    """
+    Parse run_id into key-value pairs formatted as a description string.
+    
+    Example: "ql-movseed@0-learnseed@1" -> "(ql; movseed=0; learnseed=1)"
+    If no @ delimiters found, returns empty string.
+    Filters out keys in LIST_OF_IGNORED_OVERRIDES.
+    
+    Args:
+        _run_id: The run identifier string
+        
+    Returns:
+        Formatted string like "(key1=val1; key2=val2; ...)" or empty string
+    """
+    tokens = _run_id.split("-")
+    parsed_tokens = []
+    has_pattern = False
+    
+    for token in tokens:
+        if "@" in token:
+            has_pattern = True
+            key, value = token.split("@", 1)
+            if key not in LIST_OF_IGNORED_OVERRIDES:
+                parsed_tokens.append(f"{key}={value}")
+        else:
+            # No @ in token, treat as standalone key
+            if token not in LIST_OF_IGNORED_OVERRIDES:
+                parsed_tokens.append(token)
+    
+    # Return empty string if no pattern found (no @ delimiters)
+    if not has_pattern:
+        return ""
+    
+    return f"({'; '.join(parsed_tokens)})"
 
 
 def read_json_file(file_path):
