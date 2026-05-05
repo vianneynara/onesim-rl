@@ -80,9 +80,11 @@ def parse_run_id_strict(run_id: str) -> ParsedRunId:
     tokens: dict[str, str] = {}
     for raw in parts[1:]:
         if raw.count("@") != 1:
-            _exit_with_warning(
+            log.warn(
                 f"Run-id '{run_id}' contains invalid token '{raw}'. Expected exactly one '@'."
             )
+            log.info(f"Skipping the token {raw}")
+            continue
         k, v = raw.split("@")
         if not k or not v:
             _exit_with_warning(
