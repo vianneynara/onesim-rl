@@ -250,7 +250,10 @@ def plot_trajectoryDistribution(
         _df: pd.DataFrame,
         file_path: str,
         logarithmic_x: bool = False,
-        x_max: int = 500
+        x_max: int = 500,
+        _title: str = None,
+        _subtitle: str = None,
+        _description: str = None
 ):
     """
     Plots both the probability mass function and probability density function of trajectories.
@@ -277,15 +280,35 @@ def plot_trajectoryDistribution(
         max_p = _df["probability"].max()
         mode_len = int(_df.loc[_df["probability"] == max_p, "trajectory"].min())
 
+    suptitle_y = 0.98
     if not logarithmic_x:
         # Plot both probability and PDF
         sns.lineplot(data=_df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
 
-        plt.title("Trajectory Distribution (Probability Mass Function)")
+        # Construct multi-line title
+        title_parts = [_title or "Trajectory Distribution (Probability Mass Function)"]
+        if _subtitle:
+            title_parts.append(_subtitle)
+        else:
+            suptitle_y -= 0.03
+        
+        final_title = "\n".join(title_parts)
+        
+        # Add main title as suptitle (above plot area)
+        fig = plt.gcf()
+        fig.suptitle(final_title, fontweight='bold', fontsize=12, y=suptitle_y)
+        
+        # Add description as lighter text if present
+        if _description:
+            fig.text(0.5, 0.91, _description, ha='center', va='top', 
+                    fontsize=9, fontweight='light', style='italic', color='gray')
+            fig.subplots_adjust(top=0.88)
+        else:
+            fig.subplots_adjust(top=0.92)
+        
+        ax = plt.gca()
         plt.xlabel("Trajectory Length")
         plt.ylabel("Probability / Density")
-
-        ax = plt.gca()
         ax.set_xlim(1, x_max)
 
         # Major tick every 200; minor tick every 50 (optional)
@@ -319,12 +342,32 @@ def plot_trajectoryDistribution(
         # Logarithmic X-axis
         sns.lineplot(data=_df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
 
-        plt.title("Trajectory Distribution (Probability Mass Function)")
+        # Construct multi-line title
+        title_parts = [_title or "Logarithmic Trajectory Distribution (Probability Mass Function)"]
+        if _subtitle:
+            title_parts.append(_subtitle)
+        else:
+            suptitle_y -= 0.03
+        
+        final_title = "\n".join(title_parts)
+        
+        # Add main title as suptitle (above plot area)
+        fig = plt.gcf()
+        fig.suptitle(final_title, fontweight='bold', fontsize=12, y=suptitle_y)
+        
+        # Add description as lighter text if present
+        if _description:
+            fig.text(0.5, 0.91, _description, ha='center', va='top', 
+                    fontsize=9, fontweight='light', style='italic', color='gray')
+            fig.subplots_adjust(top=0.88)
+        else:
+            fig.subplots_adjust(top=0.92)
+        
+        ax = plt.gca()
         plt.xlabel("Trajectory Length (log scale)")
         plt.ylabel("Probability / Density")
 
         # Set X-axis to logarithmic scale with dynamic range
-        ax = plt.gca()
         ax.set_xscale('log')
 
         # Set X-axis ticks from 10^0 to 10^3
