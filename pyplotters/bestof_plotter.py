@@ -321,7 +321,7 @@ def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = N
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
-        out_file = os.path.join(out_dir, _sanitize_filename(f"{title} (Best Of).png"))
+        out_file = os.path.join(out_dir, _sanitize_filename(f"{title} (Best-Of Comparison).png"))
         plot_bestof_by_episode(
             series_by_label=series_by_label,
             y_key=y_key,
