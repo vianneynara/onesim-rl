@@ -223,6 +223,7 @@ def plot_bestof_by_episode(
     xlabel: str,
     ylabel: str,
     out_file: str,
+    suptitle: str | None = None,
 ):
     if not series_by_label:
         _exit_with_warning("No best-of series to plot.")
@@ -253,7 +254,17 @@ def plot_bestof_by_episode(
         plt.xticks(ticks)
         plt.xlim(left=min_ep)
 
-    plt.title(title, fontweight="bold")
+    # Construct title with suptitle and subtitle
+    if suptitle:
+        # Multi-line title: suptitle on top, subtitle below
+        fig = plt.gcf()
+        fig.suptitle(suptitle, fontweight="bold", fontsize=12, y=0.99)
+        plt.title(title, fontweight="bold", fontsize=10)
+        fig.subplots_adjust(top=0.92)
+    else:
+        # Single title (backward compatible)
+        plt.title(title, fontweight="bold")
+
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.margins(x=0)
@@ -270,7 +281,7 @@ def plot_bestof_by_episode(
     plt.close()
 
 
-def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = None) -> None:
+def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = None, suptitle: str | None = None) -> None:
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
@@ -329,6 +340,7 @@ def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = N
             xlabel=xlabel,
             ylabel=ylabel,
             out_file=out_file,
+            suptitle=suptitle,
         )
         log.info(f"Saved: {out_file}")
 
@@ -357,6 +369,13 @@ def main(argv: list[str] | None = None) -> None:
         help="Comma-separated phantom parameters to inject into runs missing the group key (e.g. 'qlm_bp@lfe,other_key@value'). "
              "If a key already exists in a run-id, that injection is skipped with a warning.",
     )
+    parser.add_argument(
+        "-t",
+        "--title",
+        type=str,
+        required=False,
+        help="Custom title for plots (appears as main suptitle, with subplot titles as subtitles).",
+    )
 
     args = parser.parse_args(argv)
     
@@ -382,7 +401,7 @@ def main(argv: list[str] | None = None) -> None:
         addparams = dict(sorted(addparams.items()))
         log.info(f"Phantom addparams provided: {addparams}")
     
-    run_bestof(args.all_of, args.group, addparams)
+    run_bestof(args.all_of, args.group, addparams, args.title)
 
 
 if __name__ == "__main__":
