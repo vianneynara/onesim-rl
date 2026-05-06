@@ -125,7 +125,7 @@ def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
     items.sort(key=lambda t: t[0])
 
     overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
-    return f"{group_display} ({overrides_str})"
+    return f'{group_display} {"("+overrides_str+")" if overrides_str else ""}'
 
 
 def best_of_by_group(summary_df: pd.DataFrame, group_key: str) -> pd.DataFrame:
