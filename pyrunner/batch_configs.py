@@ -2,6 +2,8 @@
 The list of configurations for the batch runner. Starts from index 0.
 """
 
+from decimal import Decimal
+
 LIST_OF_CONFIGS = [
     # [ Q-Learning with Epsilon-Greedy
     {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
@@ -197,4 +199,62 @@ LIST_OF_CONFIGS = [
             "lfe_la": 2,
         }
     }, #0
+
+    # Additions #31
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.99999999999,
+            "eg_me": 0.1,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.999999999999,
+            "eg_me": 0.1,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.9999999999999,
+            "eg_me": 0.1,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.99999999999999,
+            "eg_me": 0.1,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.999999999999999,
+            "eg_me": 0.1,
+        }
+    },
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": 0.9999999999999999,
+            "eg_me": 0.1,
+        }
+    }, # 36
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": Decimal('0.99999999999999999'),
+            "eg_me": 0.1,
+        }
+    }, # 37 beyond this use Decimal
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
+        "overrides": {
+            "eg_ip": 1.0,
+            "eg_ed": Decimal('0.999999999999999999'),
+            "eg_me": 0.1,
+        }
+    }, #39
 ]
