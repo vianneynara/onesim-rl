@@ -53,8 +53,8 @@ public class StationaryClustered extends StationaryNodes {
 		if (s.contains(CLUSTER_S)) {
 			int[] clusterRange = s.getCsvInts(CLUSTER_S);
 			nrofCluster = Math.min(
-					clusterRange[1],
-					(int) Math.ceil(rng.nextDouble(clusterRange[0], clusterRange[1] + 1))
+				clusterRange[1],
+				(int) Math.ceil(rng.nextDouble(clusterRange[0], clusterRange[1] + 1))
 			);
 		} else nrofCluster = 3;
 
@@ -134,7 +134,7 @@ public class StationaryClustered extends StationaryNodes {
 
 	protected Coord randomCoord() {
 		return new Coord(rng.nextDouble() * getMaxX(),
-				rng.nextDouble() * getMaxY());
+			rng.nextDouble() * getMaxY());
 	}
 
 	/**
