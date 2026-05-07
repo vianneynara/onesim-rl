@@ -292,11 +292,11 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		double maxNextQ = getMaxQ(nextState, availableNextActions);
 
 		// Q-Learning update: Q(s,a) = Q(s,a) + α[r + λ max Q(s',a') - Q(s,a)]
-		double newQ = currentQ + alpha * (reward + lambda * maxNextQ - currentQ);
-		setQ(state, action, newQ);
+		double updatedQ = currentQ + alpha * (reward + lambda * maxNextQ - currentQ);
+		setQ(state, action, updatedQ);
 
 		// Update the behavior policy
-		behaviorPolicy.update(state, action, reward);
+		behaviorPolicy.update(state, action, reward, currentQ, maxNextQ, updatedQ);
 	}
 
 	/**

@@ -109,7 +109,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	 * @param reward      Observed reward from the action
 	 */
 	@Override
-	public void update(int stateId, Integer actionIndex, double reward) {
+	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
 		StateActionPair pair = StateActionPair.of(stateId, actionIndex);
 		TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0));
 
