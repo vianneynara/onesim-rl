@@ -16,3 +16,6 @@ __pycache__/
 
 # Any .env or subfolder sof envs file that may contain sensitive information
 .env
+
+telegram_config.json
+/pyplotters/plots
