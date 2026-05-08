@@ -39,10 +39,10 @@ python -m pyplotters.bestof_plotter -aof ql-p-ms@1 --group qlm_bp --addparams ql
 ## Merging LFE run ids to QL
 
 ```sh
-python -m pyplotters.summary_merger -mf lfe-c-ms@0 -mt ql-c-ms@0 -mvplot
-python -m pyplotters.summary_merger -mf lfe-c-ms@1 -mt ql-c-ms@1 -mvplot
-python -m pyplotters.summary_merger -mf lfe-p-ms@0 -mt ql-p-ms@0 -mvplot
-python -m pyplotters.summary_merger -mf lfe-p-ms@1 -mt ql-p-ms@1 -mvplot
+python -m pyplotters.summary_merger -mf lfe-c-ms@0 -mt ql-c-ms@0 --mvplots
+python -m pyplotters.summary_merger -mf lfe-c-ms@1 -mt ql-c-ms@1 --mvplots
+python -m pyplotters.summary_merger -mf lfe-p-ms@0 -mt ql-p-ms@0 --mvplots
+python -m pyplotters.summary_merger -mf lfe-p-ms@1 -mt ql-p-ms@1 --mvplots
 
 ```
 
