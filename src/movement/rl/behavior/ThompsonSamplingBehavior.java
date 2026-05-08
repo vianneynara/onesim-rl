@@ -19,12 +19,26 @@ import java.util.*;
 public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	private Random random;
+	private final double alpha;
 	private final double initialVariance;
 	private final Map<StateActionPair, TSProperty> tsProperties;
 
 	public static final String BEHAVIOR_NS = "BehaviorPolicy.TS";
-
-	public static final double DEFAULT_INITIAL_VARIANCE = 1.0;
+	/**
+	 * The "learning rate" for updating posterior mean toward the new reward (new Q).
+	 * Controlling how quick the mean tracks the Q-value from the Q-Table.
+	 * This is an adaptation for the RL environment, where Q value changes continuously during learning.
+	 * <p>
+	 * Note: Match the learning rate of Q-Learning or Monte Carlo being implemented.
+	 * </p>
+	 * */
+	public static final String ALPHA_S = "alpha";
+	/**
+	 * The initial uncertainty of the posterior distribution for each state-action.
+	 * Higher value means agent is more uncertain about all actions (more exploration).
+	 * As visit count increases, variance decays monotonically via Bayesian decay: σ²(n) = σ²₀ / (1 + n).
+	 * */
+	public static final String INITIAL_VARIANCE_S = "initialVariance";
 
 	/**
 	 * Constructor called reflectively by Settings. The {@code _settings} param is unused
@@ -41,12 +55,14 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			this.random = new Random();
 		}
 
-		this.initialVariance = behaviorSettings.getDouble("initialVariance", DEFAULT_INITIAL_VARIANCE);
+		this.alpha = behaviorSettings.getDouble(ALPHA_S, 0.01);
+		this.initialVariance = behaviorSettings.getDouble(INITIAL_VARIANCE_S, 1.0);
 		this.tsProperties = new HashMap<>();
 	}
 
 	public ThompsonSamplingBehavior(ThompsonSamplingBehavior proto) {
 		this.random = proto.random;
+		this.alpha = proto.alpha;
 		this.initialVariance = proto.initialVariance;
 		this.tsProperties = new HashMap<>(proto.tsProperties);
 	}
@@ -109,12 +125,12 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	 * @param reward      Observed reward from the action
 	 */
 	@Override
-	public void update(int stateId, Integer actionIndex, double reward) {
+	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
 		StateActionPair pair = StateActionPair.of(stateId, actionIndex);
 		TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0));
 
 		double currMean = prop.getMu();
-		double currVariance = prop.getSigma2();
+//		double currVariance = prop.getSigma2();
 		int currVisitCount = prop.getVisitCount();
 
 		// Increment visit count
@@ -122,7 +138,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		prop.incrementVisitCount();
 
 		// Update mean using incremental average: μ_new = μ_old + (r - μ_old) / n
-		double updatedMean = currMean + (reward - currMean) / newVisitCount;
+		double updatedMean = currMean + alpha * (updatedQ - currMean);
 
 		// Update variance using incremental formula for running variance
 		// σ²_new = σ²_old + (r - μ_old)(r - μ_new) / n
@@ -132,7 +148,9 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			// I don't know which variance is proper for initializing the Thompson Sampling yet
 			updatedVariance = initialVariance;
 		} else {
-			updatedVariance = currVariance + (reward - currMean) * (reward - updatedMean) / newVisitCount;
+//			updatedVariance = currVariance + (reward - currMean) * (reward - updatedMean) / newVisitCount;
+			// Variance: monotone Bayesian decay
+			updatedVariance = initialVariance / (1.0 + newVisitCount);
 		}
 
 		// This ensures variance to not exceed 0.000001, avoiding zero
