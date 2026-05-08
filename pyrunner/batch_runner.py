@@ -813,7 +813,7 @@ if __name__ == "__main__":
 
     end_time = datetime.now()
     sum_running_time = sum(running_times, timedelta())
-    avg_running_time = sum_running_time // len(running_times)
+    avg_running_time = (sum_running_time // len(running_times)) if len(running_times) > 1 else sum_running_time
 
     log.info("%s", "=" * LINE_LENGTH)
     log.info(

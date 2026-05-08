@@ -35,7 +35,7 @@ public interface BehaviorPolicy extends EpisodicPersistable, Serializable, Clone
      * @param actionIndex Action that was taken
      * @param reward Reward received
      */
-    void update(int stateId, Integer actionIndex, double reward);
+    void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ);
     
     /**
      * Create a copy of this policy

@@ -54,9 +54,9 @@ KEY_ABBREVIATIONS = {
     "lfe_fr": "LevyFlightEpisodic.foundReward",
 
     # [ EpsilonGreedyBehavior settings ]
-    "eg_ip": "BehaviorPolicy.epsilon",
-    "eg_ed": "BehaviorPolicy.epsilonDecay",
-    "eg_me": "BehaviorPolicy.minEpsilon",
+    "eg_ip": "BehaviorPolicy.EpsilonGreedy.epsilon",
+    "eg_ed": "BehaviorPolicy.EpsilonGreedy.epsilonDecay",
+    "eg_me": "BehaviorPolicy.EpsilonGreedy.minEpsilon",
 
     # [ UCBBehavior settings ]
     "ucb_ec": "BehaviorPolicy.UCB.explorationConstant",
