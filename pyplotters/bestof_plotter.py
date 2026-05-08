@@ -125,24 +125,59 @@ def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
     items.sort(key=lambda t: t[0])
 
     overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
-    return f"{group_display} ({overrides_str})"
+    return f'{group_display} {"("+overrides_str+")" if overrides_str else ""}'
 
 
-def best_of_by_group(summary_df: pd.DataFrame, group_key: str) -> pd.DataFrame:
-    """Return DF with the single best run per group value."""
+def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: dict[str, str] | None = None) -> pd.DataFrame:
+    """Return DF with the single best run per group value.
+    
+    Args:
+        summary_df: DataFrame with summary data
+        group_key: The key to group runs by (e.g., 'qlm_bp')
+        addparams: Optional dict of {key: value} phantom parameters to inject into runs
+                   that lack the group_key. If a key already exists in a run, it is skipped
+                   with a warning.
+    """
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
     if "max_cumulative_reward" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'max_cumulative_reward'.")
 
+    if addparams is None:
+        addparams = {}
+
     records: list[dict[str, str]] = []
+    injections_made = []
+    skipped_injections = []
+    
     for run_id in summary_df["configuration_directory"].astype(str).tolist():
         pr = parse_run_id_strict(run_id)
+        
+        # Check if group_key exists in tokens
         if group_key not in pr.tokens:
-            _exit_with_warning(
-                f"Run-id '{run_id}' does not contain required group key '{group_key}@...'."
-            )
-        group_value = pr.tokens[group_key]
+            # Try to inject from addparams
+            if group_key in addparams:
+                group_value = addparams[group_key]
+                injections_made.append((run_id, group_key, group_value))
+                log.info(f"Injecting phantom param '{group_key}@{group_value}' into run-id '{run_id}'")
+            else:
+                _exit_with_warning(
+                    f"Run-id '{run_id}' does not contain required group key '{group_key}@...' "
+                    f"and no addparam '{group_key}@...' was provided."
+                )
+        else:
+            group_value = pr.tokens[group_key]
+        
+        # Check for conflicts: if user tried to add a param that already exists, warn and skip
+        for add_key, add_value in addparams.items():
+            if add_key in pr.tokens and add_key != group_key:
+                existing_value = pr.tokens[add_key]
+                skipped_injections.append((run_id, add_key, add_value, existing_value))
+                log.warning(
+                    f"Run-id '{run_id}' already contains key '{add_key}@{existing_value}'; "
+                    f"skipping requested injection '{add_key}@{add_value}'."
+                )
+        
         overrides = {k: v for k, v in pr.tokens.items() if k != group_key}
         records.append(
             {
@@ -151,6 +186,12 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str) -> pd.DataFrame:
                 "legend_label": build_legend_label(group_value, overrides),
             }
         )
+    
+    # Log summary of injections
+    if injections_made:
+        log.info(f"Phantom parameter injections: {len(injections_made)} run(s) modified")
+    if skipped_injections:
+        log.info(f"Skipped conflicting injections: {len(skipped_injections)} param(s) already exist")
 
     parsed_df = pd.DataFrame(records)
     merged = summary_df.merge(parsed_df, on="configuration_directory", how="left")
@@ -182,6 +223,7 @@ def plot_bestof_by_episode(
     xlabel: str,
     ylabel: str,
     out_file: str,
+    suptitle: str | None = None,
 ):
     if not series_by_label:
         _exit_with_warning("No best-of series to plot.")
@@ -212,7 +254,17 @@ def plot_bestof_by_episode(
         plt.xticks(ticks)
         plt.xlim(left=min_ep)
 
-    plt.title(title, fontweight="bold")
+    # Construct title with suptitle and subtitle
+    if suptitle:
+        # Multi-line title: suptitle on top, subtitle below
+        fig = plt.gcf()
+        fig.suptitle(suptitle, fontweight="bold", fontsize=12, y=0.99)
+        plt.title(title, fontweight="bold", fontsize=10)
+        fig.subplots_adjust(top=0.92)
+    else:
+        # Single title (backward compatible)
+        plt.title(title, fontweight="bold")
+
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.margins(x=0)
@@ -229,7 +281,7 @@ def plot_bestof_by_episode(
     plt.close()
 
 
-def run_bestof(all_of: str, group_key: str) -> None:
+def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = None, suptitle: str | None = None) -> None:
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
@@ -243,7 +295,7 @@ def run_bestof(all_of: str, group_key: str) -> None:
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
-    winners = best_of_by_group(summary_df, group_key)
+    winners = best_of_by_group(summary_df, group_key, addparams)
 
     log.info(LINE_LENGTH * "-")
     log.info(f"Best-Of selection by group '{group_key}'")
@@ -280,7 +332,7 @@ def run_bestof(all_of: str, group_key: str) -> None:
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
-        out_file = os.path.join(out_dir, _sanitize_filename(f"{title} (Best Of).png"))
+        out_file = os.path.join(out_dir, _sanitize_filename(f"{title} (Best-Of Comparison).png"))
         plot_bestof_by_episode(
             series_by_label=series_by_label,
             y_key=y_key,
@@ -288,6 +340,7 @@ def run_bestof(all_of: str, group_key: str) -> None:
             xlabel=xlabel,
             ylabel=ylabel,
             out_file=out_file,
+            suptitle=suptitle,
         )
         log.info(f"Saved: {out_file}")
 
@@ -309,9 +362,46 @@ def main(argv: list[str] | None = None) -> None:
         required=True,
         help="Grouping key to compare best-of runs (e.g. qlm_bp).",
     )
+    parser.add_argument(
+        "--addparams",
+        type=str,
+        required=False,
+        help="Comma-separated phantom parameters to inject into runs missing the group key (e.g. 'qlm_bp@lfe,other_key@value'). "
+             "If a key already exists in a run-id, that injection is skipped with a warning.",
+    )
+    parser.add_argument(
+        "-t",
+        "--title",
+        type=str,
+        required=False,
+        help="Custom title for plots (appears as main suptitle, with subplot titles as subtitles).",
+    )
 
     args = parser.parse_args(argv)
-    run_bestof(args.all_of, args.group)
+    
+    # Parse and validate --addparams if provided
+    addparams: dict[str, str] | None = None
+    if args.addparams:
+        addparams = {}
+        params_list = args.addparams.split(",")
+        for param in params_list:
+            param = param.strip()
+            if "@" not in param or param.count("@") != 1:
+                _exit_with_warning(
+                    f"Invalid addparam format '{param}'. Expected format: 'key@value' (comma-separated for multiple)."
+                )
+            key, value = param.split("@")
+            if not key or not value:
+                _exit_with_warning(
+                    f"Invalid addparam '{param}': key or value is empty."
+                )
+            addparams[key] = value
+        
+        # Sort by key alphabetically for stable/deterministic injection order
+        addparams = dict(sorted(addparams.items()))
+        log.info(f"Phantom addparams provided: {addparams}")
+    
+    run_bestof(args.all_of, args.group, addparams, args.title)
 
 
 if __name__ == "__main__":

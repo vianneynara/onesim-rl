@@ -12,6 +12,8 @@ GROUP_VALUE_TERMS: dict[str, str] = {
     "epsilon": "Epsilon Greedy",
     "ts": "Thompson Sampling",
     "ucb": "Upper Confidence Bound",
+
+    "lfe": "Lévy Flight"
 }
 
 # Parameter abbreviation -> formal wording.
