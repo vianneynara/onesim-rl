@@ -239,7 +239,7 @@ LIST_OF_CONFIGS = [
     {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
-            "eg_ed": 0.9999999999999999,
+            "eg_ed": Decimal('0.9999999999999999'),
             "eg_me": 0.1,
         }
     }, # 36
@@ -256,5 +256,5 @@ LIST_OF_CONFIGS = [
             "eg_ed": Decimal('0.999999999999999999'),
             "eg_me": 0.1,
         }
-    }, #39
+    }, #38
 ]
