@@ -1,12 +1,12 @@
 ALG_BASE_SETTINGS_PATH = {
     "ql": "settings/skripsi/randomsearch-qlearn.cfg",
-    "mc": "settings/skripsi/randomsearch-mc.cfg",
+    "mcn": "settings/skripsi/randomsearch-mcn.cfg",
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
 }
 
 ALG_ABBREVIATIONS = {
     "ql": "QLearningMovement",
-    "mc": "MCMovement",
+    "mcn": "MCMovementEnd",
     "lfe": "LevyFlightEpisodic",
 }
 
@@ -35,15 +35,15 @@ KEY_ABBREVIATIONS = {
     "qlm_as": "QLearningMovement.agentSpeed",
 
     # [ Monte-Carlo Movement settings ]
-    "mcm_bp": "MCMovement.behaviorPolicy",
-    "mcm_lr": "MCMovement.learningRate",
-    "mcm_df": "MCMovement.discountFactor",
-    "mcm_iq": "MCMovement.initialQValue",
-    "mcm_tp": "MCMovement.targetPrefix",
-    "mcm_sp": "MCMovement.stepPenalty",
-    "mcm_fr": "MCMovement.foundReward",
-    "mcm_as": "MCMovement.agentSpeed",
-    "mcm_fv": "MCMovement.firstVisit",
+    "mcnm_bp": "MCMovementEnd.behaviorPolicy",
+    "mcnm_lr": "MCMovementEnd.learningRate",
+    "mcnm_df": "MCMovementEnd.discountFactor",
+    "mcnm_iq": "MCMovementEnd.initialQValue",
+    "mcnm_tp": "MCMovementEnd.targetPrefix",
+    "mcnm_sp": "MCMovementEnd.stepPenalty",
+    "mcnm_fr": "MCMovementEnd.foundReward",
+    "mcnm_as": "MCMovementEnd.agentSpeed",
+    "mcnm_fv": "MCMovementEnd.firstVisit",
 
     # [ Lévy Flight Episodic Movement settings ]
     "lfe_la": "LevyFlightEpisodic.levyAlpha",
