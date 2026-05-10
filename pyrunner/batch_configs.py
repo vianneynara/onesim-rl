@@ -3,7 +3,7 @@ The list of configurations for the batch runner. Starts from index 0.
 """
 
 LIST_OF_CONFIGS = [
-    # [ Q-Learning with Epsilon-Greedy ] (indices 0-14)
+    # [ Q-Learning with Epsilon-Greedy ] (indices 1-15)
     # Decay formula: epsilon = max(0.1, epsilon × d) | 500 episodes: 0.99x (fast), 0.994-0.996 (balanced), 0.997-0.999x (slow)
     {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
      "overrides": {
@@ -157,7 +157,7 @@ LIST_OF_CONFIGS = [
      }
      },
 
-    # [ Q-Learning with UCB ] (indices 15-26)
+    # [ Q-Learning with UCB ] (indices 16-27)
     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
      "overrides": {
          "ucb_ec": 0.5,
@@ -219,7 +219,7 @@ LIST_OF_CONFIGS = [
      }
      },
 
-    # [ Q-Learning with Thompson Sampling ] (indices 26-30)
+    # [ Q-Learning with Thompson Sampling ] (indices 28-32)
     {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 0.5,
@@ -246,7 +246,7 @@ LIST_OF_CONFIGS = [
      }
      },
 
-    # [ Episodic Lévy Flight ] (indices 31-38)
+    # [ Episodic Lévy Flight ] (indices 33-40)
     {"alg": "lfe", "runs": 500, "id": "lfe",
      "overrides": {
          "lfe_la": 0.25,
