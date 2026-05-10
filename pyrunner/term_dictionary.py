@@ -65,6 +65,7 @@ KEY_ABBREVIATIONS = {
     "eg_ip": "BehaviorPolicy.EpsilonGreedy.epsilon",
     "eg_ed": "BehaviorPolicy.EpsilonGreedy.epsilonDecay",
     "eg_me": "BehaviorPolicy.EpsilonGreedy.minEpsilon",
+    "eg_de": "BehaviorPolicy.EpsilonGreedy.decayEpisodically",
 
     # [ UCBBehavior settings ]
     "ucb_ec": "BehaviorPolicy.UCB.explorationConstant",
