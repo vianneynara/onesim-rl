@@ -1,5 +1,9 @@
 ALG_BASE_SETTINGS_PATH = {
     "ql": "settings/skripsi/randomsearch-qlearn.cfg",
+    "ql-c-ms@0": "settings/skripsi/randomsearch-qlearn-ql-c-ms@0.cfg",
+    "ql-c-ms@1": "settings/skripsi/randomsearch-qlearn-ql-c-ms@1.cfg",
+    "ql-p-ms@0": "settings/skripsi/randomsearch-qlearn-ql-p-ms@0.cfg",
+    "ql-p-ms@1": "settings/skripsi/randomsearch-qlearn-ql-p-ms@1.cfg",
     "mc": "settings/skripsi/randomsearch-mc.cfg",
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
 }
