@@ -101,10 +101,11 @@ def create_config_setting_json(
         runs: int,
         bp: Optional[str],
         result_dir_id: str = None,
-        overrides_list: list[str] = None
+        overrides_list: list[str] = None,
+        custom_cfg: Optional[str] = None
 ):
-    # Parse the algorithm's base config file
-    cfg_file_path = ALG_BASE_SETTINGS_PATH[alg]
+    # Parse the algorithm's base config file (or custom config if provided)
+    cfg_file_path = expand_algorithm(alg, custom_cfg)
     config_dict = parse_config_file(cfg_file_path)
     
     # Extract highlighted settings from the parsed config
@@ -196,7 +197,16 @@ def _order_abbreviated_overrides(abr_overrides: list[str]) -> list[str]:
     return ordered
 
 
-def expand_algorithm(alg: str) -> str:
+def expand_algorithm(alg: str, custom_cfg: Optional[str] = None) -> str:
+    """Just to make sure it's the same format"""
+    if custom_cfg:
+        # Use custom config file, ensuring it follows the same root directory structure
+        # Expected format: e.g., "custom-setting.cfg" or full path "settings/skripsi/custom-setting.cfg"
+        if custom_cfg.startswith("settings/skripsi/"):
+            return custom_cfg
+        else:
+            return f"settings/skripsi/{custom_cfg}"
+    
     if alg not in ALG_BASE_SETTINGS_PATH:
         raise ValueError(
             f"Unknown algorithm '{alg}'. Valid options: {', '.join(ALG_BASE_SETTINGS_PATH.keys())}"
@@ -222,7 +232,7 @@ def build_result_id_dir(
     return f"{prefix}-{suffix}" if suffix else prefix
 
 
-def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
+def run_script(algo: str, overrides_string: str = None, ep: int = -1, custom_cfg: Optional[str] = None) -> bool:
     script = [
         r".\one.bat",
         "-b",
@@ -233,8 +243,8 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1) -> bool:
     if overrides_string:
         script.extend(["-d", overrides_string])
 
-    # Add config file path
-    script.append(ALG_BASE_SETTINGS_PATH[algo])
+    # Add config file path (custom config or default)
+    script.append(expand_algorithm(algo, custom_cfg))
 
     _start_time = None
 
@@ -436,10 +446,11 @@ def run_simulation(
         overrides_list: Optional[dict[str, Any]] = None,
         verify: bool = False,
         do_continue: bool = False,
-        parent_dir_id: Optional[str] = None
+        parent_dir_id: Optional[str] = None,
+        custom_cfg: Optional[str] = None
 ) -> bool:
     # Validate algorithm
-    settings_file = expand_algorithm(alg)
+    settings_file = expand_algorithm(alg, custom_cfg)
 
     # Validate behavior policy if provided
     if bp and bp not in BEHAVIOR_PACKAGES:
@@ -492,7 +503,7 @@ def run_simulation(
     log.info("%s", "=" * LINE_LENGTH)
 
     # Create a JSON to log the current running simulation configuration
-    create_config_setting_json(alg, parent_dir_id_effective, runs, bp, result_id_dir, full_overrides)
+    create_config_setting_json(alg, parent_dir_id_effective, runs, bp, result_id_dir, full_overrides, custom_cfg)
 
     # Verification / continue pre-flight
     start_ep = 1
@@ -578,7 +589,7 @@ def run_simulation(
         ep_overrides.append(f"Report.reportDir={full_report_dir}/ep/{str(ep)}")
         ep_overrides.append(f"EpisodicPersistenceManager.episodeNumber={str(ep)}")
         running_overrides_string = "@@".join(ep_overrides)
-        if run_script(alg, running_overrides_string, ep):
+        if run_script(alg, running_overrides_string, ep, custom_cfg):
             succeeds += 1
         else:
             failed += 1
@@ -687,6 +698,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--runcfg", type=str, required=False,
+        help="Override the algorithm-based config file with a custom config file path (e.g., 'custom-setting.cfg' or 'settings/skripsi/custom-setting.cfg'). Uses the same root directory (settings/skripsi/) if only filename is provided."
+    )
+
+    parser.add_argument(
         "--verify", action="store_true",
         help="Verify that selected configurations have complete, uncorrupted episodic persistence up to their runs"
     )
@@ -748,7 +764,8 @@ if __name__ == "__main__":
                 overrides_list=overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
-                parent_dir_id=args.parent_dir_id
+                parent_dir_id=args.parent_dir_id,
+                custom_cfg=args.runcfg
             )
 
             _sim_end_time = datetime.now()
@@ -800,7 +817,8 @@ if __name__ == "__main__":
                 overrides_list=overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
-                parent_dir_id=args.parent_dir_id
+                parent_dir_id=args.parent_dir_id,
+                custom_cfg=args.runcfg
             )
 
             _sim_end_time = datetime.now()
