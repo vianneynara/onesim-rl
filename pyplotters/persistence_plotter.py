@@ -40,6 +40,7 @@ LIST_OF_IGNORED_OVERRIDES = [
 SUMMARY_KEYS = [
     "configuration_directory",
     "max_cumulative_reward",
+    "mean_cumulative_reward",
     "max_cumulative_true_detections",
     "max_trajectory_length",
 ]
@@ -419,6 +420,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
     COMMON_IDX = ["episodeNumber", "currentEpisodeReward", "currentCumulativeReward", "previousCumulativeReward",
                   "currentTrueDetections", "currentUniqueDetections", "currentCumulativeTrueDetections",
                   "previousCumulativeTrueDetections"]
+    # ADDITIONAL COLUMN: meanCumulativeReward
     common_df = pd.DataFrame(columns=COMMON_IDX)
 
     # Use the last episodic JSON file to determine the number of trajectories
@@ -441,10 +443,19 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         # Get highest "trajectoryFrequencies" by grabbing and selecting the highest int-casted
         _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"], max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))
 
+    # Adds a meanCumulativeReward column with expanded mean from currentCumulativeReward
+    common_df["meanCumulativeReward"] = common_df["currentCumulativeReward"].expanding().mean()
+
+    # Calculate mean cumulative reward after all episodes are processed
+    _run_summary["mean_cumulative_reward"] = common_df["currentCumulativeReward"].mean()
+
     # Output directory: pyplotters/plots[/<parent>]/<run_id>/
     _parent_results_dir = os.path.join(PLOT_RESULTS_DIR, _parent_dir) if _parent_dir else PLOT_RESULTS_DIR
     run_out_dir = os.path.join(_parent_results_dir, run_id)
     os.makedirs(run_out_dir, exist_ok=True)
+
+    # SORT common_df by episodeNumber, this wsa critical bruh.
+    common_df = common_df.sort_values(by=["episodeNumber"], ascending=True)
 
     common_df_path = os.path.join(run_out_dir, "common_data.csv")
     common_df.to_csv(common_df_path, index=False, sep=";", header=True)
@@ -479,6 +490,24 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         pp_currentCumulativeReward,
         _subtitle="Current Cumulative Reward",
         _yalias="Cumu. Reward",
+        _description=_description,
+        # _ema_line=True,
+        # _ma_line=True
+    )
+
+    # Mean Cumulative Reward (cumulative mean across episodes)
+    common_df_with_mean = common_df.copy()
+    common_df_with_mean["meanCumulativeReward"] = common_df_with_mean["currentCumulativeReward"].expanding().mean()
+    pp_meanCumulativeReward = os.path.join(run_out_dir, "Mean Cumulative Reward.png")
+    plot_by_episode(
+        common_df_with_mean,
+        "meanCumulativeReward",
+        _title,
+        "Episode",
+        "Reward",
+        pp_meanCumulativeReward,
+        _subtitle="Mean Cumulative Reward (across episodes)",
+        _yalias="Mean Cumu. Reward",
         _description=_description,
         # _ema_line=True,
         # _ma_line=True
