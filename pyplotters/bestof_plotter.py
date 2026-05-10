@@ -128,7 +128,7 @@ def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
     return f'{group_display} {"("+overrides_str+")" if overrides_str else ""}'
 
 
-def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: dict[str, str] | None = None) -> pd.DataFrame:
+def best_of_by_group(summary_df: pd.DataFrame, group_key: str, all_of_dir: str, addparams: dict[str, str] | None = None) -> pd.DataFrame:
     """Return DF with the single best run per group value.
     
     Args:
@@ -140,8 +140,6 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: dict[s
     """
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
-    if "max_cumulative_reward" not in summary_df.columns:
-        _exit_with_warning("summary.csv missing required column 'max_cumulative_reward'.")
 
     if addparams is None:
         addparams = {}
@@ -196,13 +194,34 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: dict[s
     parsed_df = pd.DataFrame(records)
     merged = summary_df.merge(parsed_df, on="configuration_directory", how="left")
 
+    # Read common_data.csv for each run and extract the last episode's currentCumulativeReward
+    last_episode_rewards = []
+    for _, row in merged.iterrows():
+        run_id = str(row["configuration_directory"])
+        # Construct path to common_data.csv
+        common_path = os.path.join(PLOT_RESULTS_DIR, all_of_dir.split("\\")[-1], run_id, "common_data.csv")
+        
+        if not os.path.exists(common_path):
+            _exit_with_warning(
+                f"Missing {common_path}. Generate it with persistence_plotter.py first."
+            )
+        
+        # Read the CSV and get the last episode's currentCumulativeReward
+        common_df = pd.read_csv(common_path, sep=";")
+        if "currentCumulativeReward" not in common_df.columns:
+            _exit_with_warning(f"{common_path} missing required column 'currentCumulativeReward'.")
+
+        # Make sure common_df SORTED by episodeNumber
+        common_df = common_df.sort_values(by="episodeNumber", ascending=True)
+
+        last_reward = float(common_df["currentCumulativeReward"].iloc[-1])
+        last_episode_rewards.append(last_reward)
+    
     merged = merged.copy()
-    merged["max_cumulative_reward"] = pd.to_numeric(merged["max_cumulative_reward"], errors="coerce")
-    if merged["max_cumulative_reward"].isna().any():
-        _exit_with_warning("summary.csv contains non-numeric max_cumulative_reward values; aborting.")
+    merged["last_episode_cumulative_reward"] = last_episode_rewards
 
     merged = merged.sort_values(
-        by=["group_value", "max_cumulative_reward", "configuration_directory"],
+        by=["group_value", "last_episode_cumulative_reward", "configuration_directory"],
         ascending=[True, False, True],
         kind="mergesort",
     )
@@ -295,7 +314,7 @@ def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = N
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
-    winners = best_of_by_group(summary_df, group_key, addparams)
+    winners = best_of_by_group(summary_df, group_key, all_of, addparams)
 
     log.info(LINE_LENGTH * "-")
     log.info(f"Best-Of selection by group '{group_key}'")
@@ -303,8 +322,9 @@ def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = N
         gv = str(row["group_value"])
         formal = GROUP_VALUE_TERMS.get(gv, "")
         formal_part = f" ({formal})" if formal else ""
+        last_reward = row['last_episode_cumulative_reward']
         log.info(
-            f"{gv}{formal_part}: {row['configuration_directory']} | max_cumulative_reward={row['max_cumulative_reward']}"
+            f"{gv}{formal_part}: {row['configuration_directory']} | last_episode_cumulative_reward={last_reward:.2f}"
         )
     log.info(LINE_LENGTH * "-")
 
