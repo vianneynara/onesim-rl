@@ -3,14 +3,14 @@
 ## Overall running with different ALG overriding
 
 ```sh
-python -m pyrunner.batch_runner -pid ql-c-ms@0 -c 0-30 -alg ql-c-ms@0
-python -m pyrunner.batch_runner -pid ql-c-ms@1 -c 0-30 -alg ql-c-ms@1
-python -m pyrunner.batch_runner -pid ql-p-ms@0 -c 0-30 -alg ql-p-ms@0
-python -m pyrunner.batch_runner -pid ql-p-ms@1 -c 0-30 -alg ql-p-ms@1
-python -m pyrunner.batch_runner -pid lfe-c-ms@0 -c 31-38 -alg lfe-c-ms@0
-python -m pyrunner.batch_runner -pid lfe-c-ms@1 -c 31-38 -alg lfe-c-ms@1
-python -m pyrunner.batch_runner -pid lfe-p-ms@0 -c 31-38 -alg lfe-p-ms@0
-python -m pyrunner.batch_runner -pid lfe-p-ms@1 -c 31-38 -alg lfe-p-ms@1
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 0-30 -alg ql-c-ms@0
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 0-30 -alg ql-c-ms@1
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 0-30 -alg ql-p-ms@0
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 0-30 -alg ql-p-ms@1
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 31-38 -alg lfe-c-ms@0
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 31-38 -alg lfe-c-ms@1
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 31-38 -alg lfe-p-ms@0
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 31-38 -alg lfe-p-ms@1
 
 ```
 
@@ -19,40 +19,40 @@ python -m pyrunner.batch_runner -pid lfe-p-ms@1 -c 31-38 -alg lfe-p-ms@1
 ### Running Epsilon Greedy Configs
 
 ```sh
-python -m pyrunner.batch_runner -pid ql-c-ms@0 -c 0-13
-python -m pyrunner.batch_runner -pid ql-c-ms@1 -c 0-13
-python -m pyrunner.batch_runner -pid ql-p-ms@0 -c 0-13
-python -m pyrunner.batch_runner -pid ql-p-ms@1 -c 0-13
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 0-13
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 0-13
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 0-13
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 0-13
 
 ```
 
 ### Running Upper Confidence Bound Configs
 
 ```sh
-python -m pyrunner.batch_runner -pid ql-c-ms@0 -c 14-25
-python -m pyrunner.batch_runner -pid ql-c-ms@1 -c 14-25
-python -m pyrunner.batch_runner -pid ql-p-ms@0 -c 14-25
-python -m pyrunner.batch_runner -pid ql-p-ms@1 -c 14-25
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 14-25
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 14-25
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 14-25
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 14-25
 
 ```
 
 ### Running Thompson Sampling Configs
 
 ```sh
-python -m pyrunner.batch_runner -pid ql-c-ms@0 -c 26-30
-python -m pyrunner.batch_runner -pid ql-c-ms@1 -c 26-30
-python -m pyrunner.batch_runner -pid ql-p-ms@0 -c 26-30
-python -m pyrunner.batch_runner -pid ql-p-ms@1 -c 26-30
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 26-30
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 26-30
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 26-30
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 26-30
 
 ```
 
 ### Running Lévy Flight Configs
 
 ```sh
-python -m pyrunner.batch_runner -pid lfe-c-ms@0 -c 31-38
-python -m pyrunner.batch_runner -pid lfe-c-ms@1 -c 31-38
-python -m pyrunner.batch_runner -pid lfe-p-ms@0 -c 31-38
-python -m pyrunner.batch_runner -pid lfe-p-ms@1 -c 31-38
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 31-38
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 31-38
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 31-38
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 31-38
 
 ```
 

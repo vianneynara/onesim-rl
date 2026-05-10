@@ -16,14 +16,15 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, Tuple, Any
 
-from pyrunner.term_dictionary import KEY_ABBREVIATIONS, BEHAVIOR_PACKAGES, ALG_BASE_SETTINGS_PATH, ALG_ABBREVIATIONS
-from pyrunner.config_parser import parse_config_file, extract_highlighted_settings
-
 # Allow running this file as a script (python pyrunner/batch_runner.py) while still
 # using absolute package imports (pyrunner.*).
+#
+# Important: this must run *before* importing pyrunner.*
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from pyrunner.term_dictionary import KEY_ABBREVIATIONS, BEHAVIOR_PACKAGES, ALG_BASE_SETTINGS_PATH, ALG_ABBREVIATIONS
+from pyrunner.config_parser import parse_config_file, extract_highlighted_settings
 from pyrunner.utils.fs import safe_int_dirnames
 from pyrunner.utils.jsonio import load_json_file
 from pyrunner.utils.path import validate_run_id
