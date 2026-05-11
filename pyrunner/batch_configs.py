@@ -3,7 +3,7 @@ The list of configurations for the batch runner. Starts from index 0.
 """
 
 LIST_OF_CONFIGS = [
-    # [ Q-Learning with Epsilon-Greedy ] (indices 1-15)
+    # [ Q-Learning with Epsilon-Greedy ] (indices 1-10)
     # Decay formula: epsilon = max(0.1, epsilon × d) | 500 episodes: 0.99x (fast), 0.994-0.996 (balanced), 0.997-0.999x (slow)
     {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
      "overrides": {
@@ -106,58 +106,8 @@ LIST_OF_CONFIGS = [
          # "eg_de": true,
      }
      },
-    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
-     "overrides": {
-         "eg_ip": 1.0,
-         # "eg_ed": 0.991       # Faster decay
-         "eg_ed": 0.9991,      # Alternative: fast decay
-         # "eg_ed": 0.99991,     # Alternative: slow decay
-         "eg_me": 0.1,
-         # "eg_de": true,
-     }
-     },
-    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
-     "overrides": {
-         "eg_ip": 1.0,
-         # "eg_ed": 0.992       # Faster decay
-         "eg_ed": 0.9992,      # Alternative: fast decay
-         # "eg_ed": 0.99992,     # Alternative: slow decay
-         "eg_me": 0.1,
-         # "eg_de": true,
-     }
-     },
-    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
-     "overrides": {
-         "eg_ip": 1.0,
-         # "eg_ed": 0.993       # Faster decay
-         "eg_ed": 0.9993,      # Alternative: fast decay
-         # "eg_ed": 0.99993,     # Alternative: slow decay
-         "eg_me": 0.1,
-         # "eg_de": true,
-     }
-     },
-    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
-     "overrides": {
-         "eg_ip": 1.0,
-         # "eg_ed": 0.994       # Faster decay
-         "eg_ed": 0.9994,      # Alternative: fast decay
-         # "eg_ed": 0.99994,     # Alternative: slow decay
-         "eg_me": 0.1,
-         # "eg_de": true,
-     }
-     },
-    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ql5-bp=epsilon",
-     "overrides": {
-         "eg_ip": 1.0,
-         # "eg_ed": 0.995       # Faster decay
-         "eg_ed": 0.9995,      # Alternative: fast decay
-         # "eg_ed": 0.99995,     # Alternative: slow decay
-         "eg_me": 0.1,
-         # "eg_de": true,
-     }
-     },
 
-    # [ Q-Learning with UCB ] (indices 16-27)
+    # [ Q-Learning with UCB ] (indices 11-22)
     {"alg": "ql", "runs": 500, "bp": "ucb", "id": "ql5-bp=ucb",
      "overrides": {
          "ucb_ec": 0.5,
@@ -219,7 +169,7 @@ LIST_OF_CONFIGS = [
      }
      },
 
-    # [ Q-Learning with Thompson Sampling ] (indices 28-32)
+    # [ Q-Learning with Thompson Sampling ] (indices 23-27)
     {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 0.5,
@@ -246,7 +196,7 @@ LIST_OF_CONFIGS = [
      }
      },
 
-    # [ Episodic Lévy Flight ] (indices 33-40)
+    # [ Episodic Lévy Flight ] (indices 28-35)
     {"alg": "lfe", "runs": 500, "id": "lfe",
      "overrides": {
          "lfe_la": 0.25,
