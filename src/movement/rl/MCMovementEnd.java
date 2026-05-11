@@ -245,7 +245,6 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 	 */
 	protected void update(int state, int action, double reward,
 						  int nextState, Set<Integer> availableNextActions) {
-		behaviorPolicy.update(state, action, reward);
 		episodeStates.add(new int[]{state, action});
 		episodeRewards.add(reward);
 	}
@@ -288,6 +287,7 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 			double oldQ = getQ(state, action);
 			double newQ = oldQ + (1.0 / N) * (G - oldQ);
 			setQ(state, action, newQ);
+			behaviorPolicy.update(state, action, reward, oldQ, 0.0, newQ);
 		}
 
 		episodeStates.clear();

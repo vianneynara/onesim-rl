@@ -136,7 +136,7 @@ public class UCBBehavior implements BehaviorPolicy {
 	 * @param actionIndex Action that was taken
 	 */
 	@Override
-	public void update(int stateId, Integer actionIndex, double reward) {
+	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
 		StateActionPair pair = StateActionPair.of(stateId, actionIndex);
 
 		/* Increment N(s,a) - state-action frequency by 1 */

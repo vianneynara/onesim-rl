@@ -78,7 +78,7 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	 * Parameters are unused for Epsilon Greedy.
 	 */
 	@Override
-	public void update(int stateId, Integer actionIndex, double reward) {
+	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
 		/* ε_t+1 = max(ε, ε • decay rate) */
 		epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
 	}

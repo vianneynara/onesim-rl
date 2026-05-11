@@ -1,0 +1,76 @@
+ALG_BASE_SETTINGS_PATH = {
+    "ql": "settings/skripsi/randomsearch-qlearn.cfg",
+    "mcn": "settings/skripsi/randomsearch-mcn.cfg",
+    "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
+}
+
+ALG_ABBREVIATIONS = {
+    "ql": "QLearningMovement",
+    "mcn": "MCMovementEnd",
+    "lfe": "LevyFlightEpisodic",
+}
+
+BEHAVIOR_PACKAGES = {
+    "epsilon": "movement.rl.behavior.EpsilonGreedyBehavior",
+    "ucb": "movement.rl.behavior.UCBBehavior",
+    "ts": "movement.rl.behavior.ThompsonSamplingBehavior"
+}
+
+KEY_ABBREVIATIONS = {
+    # [ Agent movement settings ]
+    "amm": "Group1.movementModel",
+    "tmm": "Group2.movementModel",
+
+    # [ Report settings ]
+    "r_dir": "Report.reportDir",
+
+    # [ QLearningMovement settings ]
+    "qlm_bp": "QLearningMovement.behaviorPolicy",
+    "qlm_lr": "QLearningMovement.learningRate",
+    "qlm_df": "QLearningMovement.discountFactor",
+    "qlm_iq": "QLearningMovement.initialQValue",
+    "qlm_tp": "QLearningMovement.targetPrefix",
+    "qlm_sp": "QLearningMovement.stepPenalty",
+    "qlm_fr": "QLearningMovement.foundReward",
+    "qlm_as": "QLearningMovement.agentSpeed",
+
+    # [ Monte-Carlo Movement settings ]
+    "mcnm_bp": "MCMovementEnd.behaviorPolicy",
+    "mcnm_lr": "MCMovementEnd.learningRate",
+    "mcnm_df": "MCMovementEnd.discountFactor",
+    "mcnm_iq": "MCMovementEnd.initialQValue",
+    "mcnm_tp": "MCMovementEnd.targetPrefix",
+    "mcnm_sp": "MCMovementEnd.stepPenalty",
+    "mcnm_fr": "MCMovementEnd.foundReward",
+    "mcnm_as": "MCMovementEnd.agentSpeed",
+    "mcnm_fv": "MCMovementEnd.firstVisit",
+
+    # [ Lévy Flight Episodic Movement settings ]
+    "lfe_la": "LevyFlightEpisodic.levyAlpha",
+    "lfe_xm": "LevyFlightEpisodic.xm",
+    "lfe_tp": "LevyFlightEpisodic.targetPrefix",
+    "lfe_fs": "LevyFlightEpisodic.flightSpeed",
+    "lfe_sp": "LevyFlightEpisodic.stepPenalty",
+    "lfe_fr": "LevyFlightEpisodic.foundReward",
+
+    # [ EpsilonGreedyBehavior settings ]
+    "eg_ip": "BehaviorPolicy.EpsilonGreedy.epsilon",
+    "eg_ed": "BehaviorPolicy.EpsilonGreedy.epsilonDecay",
+    "eg_me": "BehaviorPolicy.EpsilonGreedy.minEpsilon",
+
+    # [ UCBBehavior settings ]
+    "ucb_ec": "BehaviorPolicy.UCB.explorationConstant",
+
+    # [ TSBehavior settings ]
+    "ts_iv": "BehaviorPolicy.TS.initialVariance",
+
+    # [ EpisodicPersistenceManager settings ]
+    "epm_ep": "EpisodicPersistenceManager.episodeNumber",
+    "epm_path": "EpisodicPersistenceManager.persistencePath",
+    "epm_saves": "EpisodicPersistenceManager.saveEpisodically",
+
+    # [ Movement model settings ]
+    "m_seed": "MovementModel.seed",
+    "m_ws": "MovementModel.worldSize",
+
+}

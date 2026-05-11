@@ -31,6 +31,12 @@ log = logging.getLogger(__name__)
 BASE_REPORTS_DIR = "reports\\skripsi"
 PLOT_RESULTS_DIR = "pyplotters\\plots"
 
+LIST_OF_IGNORED_OVERRIDES = [
+    "ql500",
+    "lfe500",
+    "cfg"
+]
+
 SUMMARY_KEYS = [
     "configuration_directory",
     "max_cumulative_reward",
@@ -41,6 +47,42 @@ SUMMARY_KEYS = [
 def check_exists_source_dir(dir_path):
     if not os.path.exists(dir_path):
         raise FileNotFoundError(f"The base source directory {dir_path} does not exist.")
+
+
+def parse_run_description(_run_id: str) -> str:
+    """
+    Parse run_id into key-value pairs formatted as a description string.
+    
+    Example: "ql-movseed@0-learnseed@1" -> "(ql; movseed=0; learnseed=1)"
+    If no @ delimiters found, returns empty string.
+    Filters out keys in LIST_OF_IGNORED_OVERRIDES.
+    
+    Args:
+        _run_id: The run identifier string
+        
+    Returns:
+        Formatted string like "(key1=val1; key2=val2; ...)" or empty string
+    """
+    tokens = _run_id.split("-")
+    parsed_tokens = []
+    has_pattern = False
+    
+    for token in tokens:
+        if "@" in token:
+            has_pattern = True
+            key, value = token.split("@", 1)
+            if key not in LIST_OF_IGNORED_OVERRIDES:
+                parsed_tokens.append(f"{key}={value}")
+        else:
+            # No @ in token, treat as standalone key
+            if token not in LIST_OF_IGNORED_OVERRIDES:
+                parsed_tokens.append(token)
+    
+    # Return empty string if no pattern found (no @ delimiters)
+    if not has_pattern:
+        return ""
+    
+    return f"({'; '.join(parsed_tokens)})"
 
 
 def read_json_file(file_path):
@@ -79,7 +121,7 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
     return episodic_rewards
 
 
-def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False):
+def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False, _subtitle: str = None, _description: str = None):
     plt.figure(figsize=(10, 6))
 
     if not _yalias:
@@ -121,7 +163,29 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
     plt.xticks(ticks)
 
     # Labels & title
-    plt.title(_title, fontweight='bold')
+    # Construct title with main title and optional subtitle
+    title_lines = []
+    if _title:
+        title_lines.append(_title)
+    if _subtitle:
+        title_lines.append(_subtitle)
+    
+    main_title = "\n".join(title_lines) if title_lines else ""
+    
+    # Add main title as suptitle (above plot area)
+    fig = plt.gcf()
+    fig.suptitle(main_title, fontweight='bold', fontsize=12, y=0.98)
+    
+    # Add description as lighter text if present
+    if _description:
+        fig.text(0.5, 0.91, _description, ha='center', va='top', 
+                fontsize=9, fontweight='light', style='italic', color='gray')
+        # Adjust top margin to accommodate both title and description
+        fig.subplots_adjust(top=0.88)
+    else:
+        # Adjust top margin for title only
+        fig.subplots_adjust(top=0.92)
+    
     plt.xlabel(_xlabel)
     plt.ylabel(_ylabel)
 
@@ -186,7 +250,10 @@ def plot_trajectoryDistribution(
         _df: pd.DataFrame,
         file_path: str,
         logarithmic_x: bool = False,
-        x_max: int = 500
+        x_max: int = 500,
+        _title: str = None,
+        _subtitle: str = None,
+        _description: str = None
 ):
     """
     Plots both the probability mass function and probability density function of trajectories.
@@ -213,15 +280,35 @@ def plot_trajectoryDistribution(
         max_p = _df["probability"].max()
         mode_len = int(_df.loc[_df["probability"] == max_p, "trajectory"].min())
 
+    suptitle_y = 0.98
     if not logarithmic_x:
         # Plot both probability and PDF
         sns.lineplot(data=_df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
 
-        plt.title("Trajectory Distribution (Probability Mass Function)")
+        # Construct multi-line title
+        title_parts = [_title or "Trajectory Distribution (Probability Mass Function)"]
+        if _subtitle:
+            title_parts.append(_subtitle)
+        else:
+            suptitle_y -= 0.03
+        
+        final_title = "\n".join(title_parts)
+        
+        # Add main title as suptitle (above plot area)
+        fig = plt.gcf()
+        fig.suptitle(final_title, fontweight='bold', fontsize=12, y=suptitle_y)
+        
+        # Add description as lighter text if present
+        if _description:
+            fig.text(0.5, 0.91, _description, ha='center', va='top', 
+                    fontsize=9, fontweight='light', style='italic', color='gray')
+            fig.subplots_adjust(top=0.88)
+        else:
+            fig.subplots_adjust(top=0.92)
+        
+        ax = plt.gca()
         plt.xlabel("Trajectory Length")
         plt.ylabel("Probability / Density")
-
-        ax = plt.gca()
         ax.set_xlim(1, x_max)
 
         # Major tick every 200; minor tick every 50 (optional)
@@ -255,12 +342,32 @@ def plot_trajectoryDistribution(
         # Logarithmic X-axis
         sns.lineplot(data=_df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
 
-        plt.title("Trajectory Distribution (Probability Mass Function)")
+        # Construct multi-line title
+        title_parts = [_title or "Logarithmic Trajectory Distribution (Probability Mass Function)"]
+        if _subtitle:
+            title_parts.append(_subtitle)
+        else:
+            suptitle_y -= 0.03
+        
+        final_title = "\n".join(title_parts)
+        
+        # Add main title as suptitle (above plot area)
+        fig = plt.gcf()
+        fig.suptitle(final_title, fontweight='bold', fontsize=12, y=suptitle_y)
+        
+        # Add description as lighter text if present
+        if _description:
+            fig.text(0.5, 0.91, _description, ha='center', va='top', 
+                    fontsize=9, fontweight='light', style='italic', color='gray')
+            fig.subplots_adjust(top=0.88)
+        else:
+            fig.subplots_adjust(top=0.92)
+        
+        ax = plt.gca()
         plt.xlabel("Trajectory Length (log scale)")
         plt.ylabel("Probability / Density")
 
         # Set X-axis to logarithmic scale with dynamic range
-        ax = plt.gca()
         ax.set_xscale('log')
 
         # Set X-axis ticks from 10^0 to 10^3
@@ -293,7 +400,7 @@ def plot_trajectoryDistribution(
         plt.close()
 
 
-def process_reports(_run_id_dir, _parent_dir: str = None):
+def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _describe: bool = False):
     """
     Common DF includes:
     episodeNumber, currentEpisodeReward, currentCumulativeReward, previousCumulativeRewards, currentTrueDetections,
@@ -342,30 +449,37 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     common_df_path = os.path.join(run_out_dir, "common_data.csv")
     common_df.to_csv(common_df_path, index=False, sep=";", header=True)
 
+    # Generate description if --describe flag is set
+    _description = parse_run_description(run_id) if _describe else None
+
     # currentEpisodeReward
     pp_currentEpisodeReward = os.path.join(run_out_dir, "Current Episode Reward.png")
     plot_by_episode(
         common_df,
         "currentEpisodeReward",
-        "Current Episode Reward",
+        _title,
         "Episode",
         "Reward",
         pp_currentEpisodeReward,
+        _subtitle="Current Episode Reward",
         _yalias="Reward",
+        _description=_description,
         # _ema_line=True,
         # _ma_line=True
     )
 
-    # currentEpisodeReward
+    # currentCumulativeReward
     pp_currentCumulativeReward = os.path.join(run_out_dir, "Current Cumulative Reward.png")
     plot_by_episode(
         common_df,
         "currentCumulativeReward",
-        "Current Cumulative Reward",
+        _title,
         "Episode",
         "Reward",
         pp_currentCumulativeReward,
+        _subtitle="Current Cumulative Reward",
         _yalias="Cumu. Reward",
+        _description=_description,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -375,12 +489,14 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     plot_by_episode(
         common_df,
         "currentTrueDetections",
-        "Current True Detections",
+        _title,
         "Episode",
         "Detection",
         pp_currentTrueDetections,
+        _subtitle="Current True Detections",
         _yalias="Detection",
         _discrete=True,
+        _description=_description,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -390,12 +506,14 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     plot_by_episode(
         common_df,
         "currentUniqueDetections",
-        "Current Unique Detections",
+        _title,
         "Episode",
         "Detection",
         pp_currentUniqueDetections,
+        _subtitle="Current Unique Detections",
         _yalias="Uniq. Detection",
         _discrete=True,
+        _description=_description,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -404,12 +522,18 @@ def process_reports(_run_id_dir, _parent_dir: str = None):
     plot_trajectoryDistribution(
         traj_freq_df,
         os.path.join(run_out_dir, "Trajectory Distribution.png"),
-        x_max=100
+        x_max=100,
+        _title=_title,
+        _subtitle="Trajectory Distribution (Probability Mass Function)",
+        _description=_description
     )
     plot_trajectoryDistribution(
         traj_freq_df,
         os.path.join(run_out_dir, "Trajectory Distribution (log scale).png"),
-        logarithmic_x=True
+        logarithmic_x=True,
+        _title=_title,
+        _subtitle="Logarithmic Trajectory Distribution (Probability Mass Function)",
+        _description=_description
     )
 
     log.info(f"Finished processing run directory: {run_id}")
@@ -432,6 +556,14 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-rid", "--run_id", type=str, help="The parent report source directory. (e.g. \"ql\")"
+    )
+
+    parser.add_argument(
+        "-t", "--title", type=str, help="Custom title for plots"
+    )
+
+    parser.add_argument(
+        "-d", "--describe", action="store_true", help="Parse run_id and add description to plots"
     )
 
     args = parser.parse_args()
@@ -457,7 +589,7 @@ if __name__ == "__main__":
         for run_dir in run_dirs:
             if os.path.isdir(run_dir):
                 log.info(f"Processing result directory: {run_dir}")
-                run_summary = process_reports(run_dir, args.all_of)
+                run_summary = process_reports(run_dir, args.all_of, args.title, args.describe)
 
                 summary_df = pd.concat([summary_df, pd.DataFrame([run_summary])], ignore_index=True)
 
@@ -482,4 +614,4 @@ if __name__ == "__main__":
         check_exists_source_dir(run_dir)
         log.info(f"Processing result directory: {run_dir}")
 
-        process_reports(run_dir)
+        process_reports(run_dir, None, args.title, args.describe)
