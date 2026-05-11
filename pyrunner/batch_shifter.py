@@ -2,16 +2,20 @@
 Batch Shifter: Automatically rename cfg@N prefixed run-id folders when batch configs are reordered/commented.
 
 This module renames existing run-id folders to match the current active configs in LIST_OF_CONFIGS,
-accounting for gaps created by commented-out or deleted configs.
+accounting for changes created by commented-out/deleted configs (downward shifts) or new configs added (upward shifts).
 
-Example:
-  If configs 3-4 are commented out, cfg@5 becomes cfg@3, cfg@6 becomes cfg@4, etc.
+Supports both shift directions:
+  - DOWNWARD shift (configs removed): cfg@5 becomes cfg@3, cfg@6 becomes cfg@4
+  - UPWARD shift (configs added): cfg@2 becomes cfg@3, cfg@3 becomes cfg@4
+
+Smart matching groups configs by signature (alg+runs+behavior_policy) and matches by relative position within groups,
+enabling accurate remapping regardless of shift direction.
 
 Usage:
   python pyrunner/batch_shifter.py --parent-dir-id ql-p-ms@0 --dry-run
-  python pyrunner/batch_shifter.py --parent-dir-id ql-p-ms@0
+  python pyrunner/batch_shifter.py --parent-dir-id "ql-p-ms@0,ql-p-ms@1" --dry-run
   python pyrunner/batch_shifter.py --all --dry-run
-  python pyrunner/batch_shifter.py --all --indexonly --dry-run
+  python pyrunner/batch_shifter.py --all
 """
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -81,9 +85,48 @@ def extract_alg_and_runs(folder_name: str) -> Optional[Tuple[str, int]]:
     return None
 
 
-def build_config_signature(alg: str, runs: int) -> str:
-    """Build a signature from algorithm and runs (e.g., 'ql500')."""
-    return f"{alg}{runs}"
+def extract_behavior_policy(folder_name: str) -> Optional[str]:
+    """
+    Extract behavior policy from folder name by looking for patterns like:
+    - qlm_bp@ucb (UCB)
+    - qlm_bp@ts (Thompson Sampling)
+    - qlm_bp@epsilon (not typically used, but possible)
+    - absence of qlm_bp@ indicates epsilon-greedy (default for QL)
+    
+    Returns: behavior policy name (e.g., 'ucb', 'ts', 'epsilon') or None if not found.
+    Example: 'cfg@11-ql500-qlm_bp@ucb-ucb_ec@0.5' → 'ucb'
+    """
+    # Look for qlm_bp@<value> or mcm_bp@<value>
+    match = re.search(r"(?:qlm_bp|mcm_bp)@(\w+)", folder_name)
+    if match:
+        return match.group(1)
+    
+    # If no behavior policy marker found, it's likely epsilon-greedy (default for QL)
+    # Check if it's a QL config by looking for ql in the name
+    if re.search(r"cfg@\d+-ql\d+", folder_name):
+        return "epsilon"
+    
+    return None
+
+
+def build_config_signature(alg: str, runs: int, bp: Optional[str] = None) -> str:
+    """
+    Build a signature from algorithm, runs, and optional behavior policy.
+    
+    This ensures configs with different behavior policies are matched separately.
+    
+    Examples:
+      - ql500+epsilon (epsilon-greedy)
+      - ql500+ucb (UCB exploration)
+      - ql500+ts (Thompson Sampling)
+      - lfe500 (no behavior policy)
+    
+    Returns: signature string
+    """
+    sig = f"{alg}{runs}"
+    if bp:
+        sig = f"{sig}+{bp}"
+    return sig
 
 
 def get_active_configs_mapping() -> Dict[int, dict]:
@@ -97,30 +140,6 @@ def get_active_configs_mapping() -> Dict[int, dict]:
     for idx, config in enumerate(LIST_OF_CONFIGS, start=1):
         mapping[idx] = config
     return mapping
-
-
-def validate_config_match(
-        folder_sig: Tuple[str, int],
-        config_sig: str,
-        index_only: bool = False
-) -> bool:
-    """
-    Check if a folder signature matches a config signature.
-    
-    If index_only=False (default): validate alg + runs match the config signature.
-    If index_only=True: no validation, assume index-based matching.
-    """
-    if index_only:
-        return True
-    
-    # Extract from config signature (e.g., 'ql500')
-    config_alg_runs = config_sig
-    
-    # Build folder signature (e.g., 'ql500')
-    folder_alg, folder_runs = folder_sig
-    folder_sig_str = build_config_signature(folder_alg, folder_runs)
-    
-    return folder_sig_str == config_alg_runs
 
 
 def scan_run_id_folders(parent_dir_id: str) -> Dict[int, str]:
@@ -157,6 +176,17 @@ def build_rename_mapping(
     """
     Build a mapping from old cfg index to new cfg index, validating matches.
     
+    Smart matching that handles both UPWARD and DOWNWARD shifts by grouping
+    configs by signature (alg+runs+behavior_policy) and matching by relative position:
+    
+    - Downward shift: configs removed → cfg@5 → cfg@3
+    - Upward shift: configs added → cfg@2 → cfg@3
+    
+    Example:
+      Before: existing folders at indices [31, 32] (both QL Thompson Sampling)
+      After: active QL Thompson Sampling at [23, 24, 25, 26, 27]
+      Result: cfg@31 → 23, cfg@32 → 24 (matches by position, groups by alg+runs+bp)
+    
     Returns: (rename_mapping, problems)
     - rename_mapping: {old_index: new_index, ...}
     - problems: list of warning/info messages
@@ -173,12 +203,23 @@ def build_rename_mapping(
     log.info("Active config indices: %s", active_indices)
     log.info("Existing folder indices: %s", existing_indices)
     
-    # Try to match existing folders to active configs
-    # Strategy: iterate through existing folders and match them to active configs
-    # based on alg+runs signature (unless index_only is True)
+    # Build signature → indices mapping for active configs
+    # Groups configs by their algorithm+runs+behavior_policy signature
+    active_sig_to_indices = {}
+    for idx in active_indices:
+        config = active_configs[idx]
+        alg = config["alg"]
+        runs = config["runs"]
+        bp = config.get("bp")  # Extract behavior policy from config (epsilon, ucb, ts, or None)
+        sig = build_config_signature(alg, runs, bp)
+        if sig not in active_sig_to_indices:
+            active_sig_to_indices[sig] = []
+        active_sig_to_indices[sig].append(idx)
     
-    matched = set()
+    log.info("Active signature groups: %s", {sig: len(idxs) for sig, idxs in active_sig_to_indices.items()})
     
+    # Build signature → indices mapping for existing folders
+    existing_sig_to_indices = {}
     for old_idx in existing_indices:
         folder_name = existing_folders[old_idx]
         alg_runs_sig = extract_alg_and_runs(folder_name)
@@ -187,54 +228,100 @@ def build_rename_mapping(
             problems.append(f"Could not extract alg+runs from folder: {folder_name}")
             continue
         
-        # Find a matching active config
-        found = False
-        for new_idx in active_indices:
-            if new_idx in matched:
-                # Already assigned to another folder
+        alg, runs = alg_runs_sig
+        bp = extract_behavior_policy(folder_name)  # Extract behavior policy from folder name
+        sig = build_config_signature(alg, runs, bp)
+        
+        if sig not in existing_sig_to_indices:
+            existing_sig_to_indices[sig] = []
+        existing_sig_to_indices[sig].append(old_idx)
+    
+    log.info("Existing signature groups: %s", {sig: len(idxs) for sig, idxs in existing_sig_to_indices.items()})
+    
+    # Match existing folders to active configs by signature group
+    # Within each group, match by relative position (order-preserving)
+    # This works for both UPWARD shifts (adding configs) and DOWNWARD shifts (removing configs)
+    matched_active = set()
+    
+    for sig in sorted(existing_sig_to_indices.keys()):
+        existing_idx_list = sorted(existing_sig_to_indices[sig])
+        
+        if sig not in active_sig_to_indices:
+            for old_idx in existing_idx_list:
+                problems.append(
+                    f"No matching active config for existing index {old_idx} (signature={sig}). "
+                    f"This algorithm/runs/policy combination is no longer in the active configs."
+                )
+            continue
+        
+        active_idx_list = sorted(active_sig_to_indices[sig])
+        
+        # Get unmatched active indices for this signature
+        unmatched_active = [idx for idx in active_idx_list if idx not in matched_active]
+        
+        log.info("Signature group '%s': %d existing, %d active unmatched", sig, len(existing_idx_list), len(unmatched_active))
+        
+        if len(existing_idx_list) > len(unmatched_active):
+            problems.append(
+                f"Signature {sig}: {len(existing_idx_list)} existing folders but only "
+                f"{len(unmatched_active)} available active configs. Cannot match all folders."
+            )
+        
+        # First pass: Try to match by override parameters (more precise)
+        matched_by_params = {}
+        unmatched_existing = []
+        
+        for old_idx in existing_idx_list:
+            folder_name = existing_folders[old_idx]
+            folder_params = extract_override_params(folder_name)
+            
+            log.debug("  Checking old_idx %d: folder_params=%s", old_idx, folder_params)
+            
+            if not folder_params:
+                # No override params in folder, defer to position matching
+                unmatched_existing.append(old_idx)
                 continue
             
-            active_config = active_configs[new_idx]
-            active_alg = active_config["alg"]
-            active_runs = active_config["runs"]
-            active_sig = build_config_signature(active_alg, active_runs)
-            
-            # Validate match
-            if validate_config_match(alg_runs_sig, active_sig, index_only):
-                # Check if this is the same config (same alg+runs)
-                if index_only or extract_cfg_index(folder_name) == old_idx:
-                    # For now, match if signatures match or index_only
-                    # But we need to be smarter: match based on actual config content
-                    # For simplicity without full validation, use the order
-                    pass
-        
-        # If index_only, use sequential matching
-        if index_only and old_idx <= len(active_indices):
-            rename_mapping[old_idx] = old_idx
-            matched.add(old_idx)
-        else:
-            # Match by finding the next unmatched active config with same alg+runs
-            for new_idx in active_indices:
-                if new_idx in matched:
+            # Try to find an active config with matching params
+            found_match = False
+            for new_idx in unmatched_active:
+                if new_idx in matched_active:
                     continue
                 
                 active_config = active_configs[new_idx]
-                active_alg = active_config["alg"]
-                active_runs = active_config["runs"]
-                active_sig = build_config_signature(active_alg, active_runs)
+                config_params = config_to_override_params(active_config)
                 
-                folder_alg, folder_runs = alg_runs_sig
-                if folder_alg == active_alg and folder_runs == active_runs:
-                    rename_mapping[old_idx] = new_idx
-                    matched.add(new_idx)
-                    found = True
+                log.debug("    Comparing with new_idx %d: config_params=%s", new_idx, config_params)
+                
+                # Check if params match
+                if folder_params == config_params:
+                    matched_by_params[old_idx] = new_idx
+                    matched_active.add(new_idx)
+                    found_match = True
+                    log.info("  Matched: cfg@%02d → cfg@%02d (signature=%s, override params match)", old_idx, new_idx, sig)
                     break
             
-            if not found:
+            if not found_match:
+                unmatched_existing.append(old_idx)
+                log.debug("    No param match found for old_idx %d", old_idx)
+
+        # Second pass: Match remaining by position
+        unmatched_active_filtered = [idx for idx in unmatched_active if idx not in matched_active]
+        
+        for i, old_idx in enumerate(unmatched_existing):
+            if i < len(unmatched_active_filtered):
+                new_idx = unmatched_active_filtered[i]
+                rename_mapping[old_idx] = new_idx
+                matched_active.add(new_idx)
+                log.info("  Matched: cfg@%02d → cfg@%02d (signature=%s, position=%d)", old_idx, new_idx, sig, i)
+            else:
                 problems.append(
-                    f"No matching active config for folder index {old_idx} "
-                    f"(alg={alg_runs_sig[0]}, runs={alg_runs_sig[1]})"
+                    f"No available active config for existing index {old_idx} (signature={sig}). "
+                    f"Cannot match this folder ({len(existing_idx_list)} total needed, only {len(unmatched_active)} available)."
                 )
+        
+        # Add param-matched mappings to the final mapping
+        rename_mapping.update(matched_by_params)
     
     return rename_mapping, problems
 
@@ -242,6 +329,8 @@ def build_rename_mapping(
 def move_to_archive(src_path: str, archive_base: str) -> Tuple[bool, str]:
     """
     Move a folder to the _shifted archive directory.
+    
+    Preserves the folder name as-is (does not rename).
     
     Returns: (success, message)
     """
@@ -273,10 +362,13 @@ def move_to_archive(src_path: str, archive_base: str) -> Tuple[bool, str]:
         return False, f"Archive destination already exists: {dst_path}"
     
     try:
-        shutil.move(src_path, dst_path)
-        return True, f"Moved {src_path} → {dst_path}"
+        # Use shutil.copytree to copy (not move) for backup purposes
+        # This way we keep the original renamed folder in reports/skripsi/
+        import shutil
+        shutil.copytree(src_path, dst_path)
+        return True, f"Backed up to {dst_path}"
     except Exception as e:
-        return False, f"Failed to move {src_path}: {e}"
+        return False, f"Failed to backup {src_path}: {e}"
 
 
 def rename_folder(old_path: str, old_name: str, new_name: str) -> Tuple[bool, str]:
@@ -365,27 +457,27 @@ def execute_shift(
                 old_idx, new_idx, old_folder_name, new_folder_name
             )
             if not no_archive:
-                log.info("  (would archive to: %s)", os.path.join(REPORTS_SHIFTED, parent_dir_id, "run-id", old_folder_name))
+                log.info("  (would archive old to: %s)", os.path.join(REPORTS_SHIFTED, parent_dir_id, "run-id", old_folder_name))
             renamed_count += 1
         else:
-            # Archive old folder if not no_archive
+            # Step 1: Rename folder in-place in reports/skripsi/
+            ok, msg = rename_folder(old_path, old_folder_name, new_folder_name)
+            if not ok:
+                log.error("RENAME FAILED: %s", msg)
+                skipped_count += 1
+                continue
+            
+            log.info("RENAMED: %s", msg)
+            
+            # Step 2: Optionally archive old folder name as backup
             if not no_archive:
-                ok, msg = move_to_archive(old_path, REPORTS_SHIFTED)
+                ok, msg = move_to_archive(new_path, REPORTS_SHIFTED)
                 if ok:
-                    log.info("ARCHIVE: %s", msg)
+                    log.info("ARCHIVED BACKUP: %s (to %s)", new_folder_name, msg)
                 else:
-                    log.error("ARCHIVE FAILED: %s", msg)
-                    skipped_count += 1
-                    continue
-            else:
-                # In-place rename: just rename the old folder directly
-                ok, msg = rename_folder(old_path, old_folder_name, new_folder_name)
-                if ok:
-                    log.info("RENAMED: %s", msg)
-                    renamed_count += 1
-                else:
-                    log.error("RENAME FAILED: %s", msg)
-                    skipped_count += 1
+                    log.warning("ARCHIVE BACKUP FAILED: %s (but rename succeeded, so continuing)", msg)
+            
+            renamed_count += 1
     
     log.info("%s", "=" * LINE_LENGTH)
     log.info("Summary for %s: %d renamed, %d skipped", parent_dir_id, renamed_count, skipped_count)
@@ -406,6 +498,46 @@ def parse_parent_dir_ids(pid_string: str) -> List[str]:
     
     pids = [pid.strip() for pid in pid_string.split(",")]
     return [pid for pid in pids if pid]  # Filter out empty strings
+
+
+def extract_override_params(folder_name: str) -> Dict[str, str]:
+    """
+    Extract override parameters from folder name.
+    
+    Looks for patterns like:
+    - ts_iv@5.0
+    - ucb_ec@2.5
+    - eg_ed@0.99
+    - lfe_la@1.5
+    
+    Returns: {param_key: param_value, ...}
+    Example: 'cfg@31-ql500-qlm_bp@ts-ts_iv@5.0' → {'ts_iv': '5.0'}
+    """
+    params = {}
+    # Match patterns like key@value
+    matches = re.findall(r"(\w+)@([\d.]+)", folder_name)
+    for key, value in matches:
+        # Skip behavior policy keys (qlm_bp, mcm_bp) and cfg@ index as those are handled separately
+        if key not in ("qlm_bp", "mcm_bp", "cfg"):
+            params[key] = value
+    return params
+
+
+def config_to_override_params(config: dict) -> Dict[str, str]:
+    """
+    Convert config overrides dict to comparable format.
+    
+    Takes overrides from config and converts numeric values to strings for comparison.
+    
+    Returns: {param_key: param_value_as_string, ...}
+    """
+    params = {}
+    overrides = config.get("overrides", {})
+    if overrides:
+        for key, value in overrides.items():
+            params[key] = str(value)
+    return params
+
 
 
 # ------------------------------------------------------------------------------------------------------------------- #

@@ -2,26 +2,23 @@
 
 ## Overview
 
-`batch_shifter.py` is a utility module that automatically renames `cfg@N` prefixed run-id folders when batch configs in `batch_configs.py` are reordered, commented out, or deleted.
+`batch_shifter.py` is a utility module that automatically renames `cfg@N` prefixed run-id folders when batch configs in `batch_configs.py` are modified, accounting for both:
+- **Downward shifts:** When configs are removed/commented out (e.g., cfg@5 → cfg@3)
+- **Upward shifts:** When configs are added in between (e.g., cfg@2 → cfg@3)
 
-### Why You Need It
+### Smart Matching Strategy
 
-When you modify `batch_configs.py` (e.g., commenting out configs 3-4 to reduce epsilon profiles from 15 to 11), the existing run-id folders retain their old indices:
+The module uses **signature-based grouped matching** to intelligently handle both shift directions:
 
-```
-Before modification:
-cfg@1, cfg@2, cfg@3, cfg@4, cfg@5, cfg@6, ...
+1. Groups all configs by their **algorithm+runs signature** (e.g., all `ql500` configs together, all `lfe500` together)
+2. Within each group, matches existing folders to active configs **by relative position**
+3. This preserves order and works regardless of shift direction
 
-After commenting out indices 3-4:
-Active configs: 1, 2, 3, 4, 5, 6, ..., (gaps at old 3-4)
-Old folders still exist: cfg@1, cfg@2, cfg@3, cfg@4, cfg@5, cfg@6, ...
-                         (but cfg@5, cfg@6 now correspond to the NEW indices 3, 4)
-```
-
-**batch_shifter** automatically fixes this by:
-- Renaming `cfg@5` → `cfg@03` (new Thompson Sampling index)
-- Renaming `cfg@6` → `cfg@04` (new Thompson Sampling index)
-- Moving old folders to `reports/_shifted/` for archival
+**Why this matters:** A greedy first-match strategy would fail on upward shifts. For example:
+- If you add a new Thompson Sampling config at index 1
+- Old folders exist at indices [31, 32] (both Thompson Sampling)
+- Greedy matching would incorrectly map cfg@31 → index 1 (WRONG!)
+- Position-based matching correctly maps: cfg@31 → 31, cfg@32 → 32 (RIGHT!)
 
 ---
 
@@ -214,7 +211,78 @@ python pyrunner/batch_shifter.py --all
 
 ---
 
-### Scenario 3: In-Place Rename Without Archiving
+### Scenario 3: Add New Config in Between (UPWARD SHIFT)
+
+**batch_configs.py before (35 configs total):**
+```python
+LIST_OF_CONFIGS = [
+    # ... 30 configs (various algorithms) ...
+    # Indices 31-35: Thompson Sampling
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-1", ...},
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-2", ...},
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-3", ...},
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-4", ...},
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-5", ...},
+]
+```
+
+**Existing folders (from previous run):**
+```
+cfg@31-ql500-qlm_bp@ts-ts_iv@5.0
+cfg@32-ql500-qlm_bp@ts-ts_iv@10.0
+cfg@33-ql500-qlm_bp@ts-ts_iv@15.0
+cfg@34-ql500-qlm_bp@ts-ts_iv@20.0
+cfg@35-ql500-qlm_bp@ts-ts_iv@25.0
+```
+
+**Add a new Thompson Sampling at index 1 (now 36 configs total):**
+```python
+LIST_OF_CONFIGS = [
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-new", ...},  # NEW at index 1
+    # ... other 30 configs shift ...
+    # Indices 32-36: Thompson Sampling (shifted from 31-35)
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-1", ...},
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-2", ...},
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-3", ...},
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-4", ...},
+    {"alg": "ql", "runs": 500, "bp": "epsilon", "id": "ts-config-5", ...},
+]
+```
+
+**Run batch_shifter:**
+```bash
+python pyrunner/batch_shifter.py --parent-dir-id ql-p-ms@0 --dry-run
+```
+
+**Output:**
+```
+Active signature groups: {'ql500': 6, ...}
+Existing signature groups: {'ql500': 5}
+Signature group 'ql500': 5 existing, 6 active unmatched
+  Matched: cfg@31 → cfg@32 (signature=ql500, position=0)
+  Matched: cfg@32 → cfg@33 (signature=ql500, position=1)
+  Matched: cfg@33 → cfg@34 (signature=ql500, position=2)
+  Matched: cfg@34 → cfg@35 (signature=ql500, position=3)
+  Matched: cfg@35 → cfg@36 (signature=ql500, position=4)
+
+DRY RUN: Index 31 → 32: cfg@31-ql500-... → cfg@32-ql500-...
+DRY RUN: Index 32 → 33: cfg@32-ql500-... → cfg@33-ql500-...
+DRY RUN: Index 33 → 34: cfg@33-ql500-... → cfg@34-ql500-...
+DRY RUN: Index 34 → 35: cfg@34-ql500-... → cfg@35-ql500-...
+DRY RUN: Index 35 → 36: cfg@35-ql500-... → cfg@36-ql500-...
+```
+
+**Result:**
+- cfg@31 → cfg@32 (shifted up by 1)
+- cfg@32 → cfg@33 (shifted up by 1)
+- cfg@33 → cfg@34 (shifted up by 1)
+- cfg@34 → cfg@35 (shifted up by 1)
+- cfg@35 → cfg@36 (shifted up by 1)
+- Old folders moved to `reports/_shifted/ql-p-ms@0/run-id/`
+
+---
+
+### Scenario 4: In-Place Rename Without Archiving
 
 If you want to rename folders without moving them to `_shifted/`:
 
@@ -291,7 +359,7 @@ The module uses a greedy matching approach:
 
 ### Signature Format
 
-- **Folder signature:** Extracted from folder name like `cfg@31-ql500-...` → `(ql, 500)`
+- **Folder signature:** Extracted from folder name like `cfg@05-ql500-...` → `(ql, 500)`
 - **Config signature:** Built from active config: `ql` + `500` → `ql500`
 - **Match:** Folder signature's `alg+runs` == Config signature's format
 
@@ -344,4 +412,3 @@ python pyrunner/batch_shifter.py --all
 # Step 3: Continue with batch runner
 python pyrunner/batch_runner.py --all
 ```
-
