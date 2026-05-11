@@ -4,8 +4,13 @@ ALG_BASE_SETTINGS_PATH = {
     "ql-c-ms@1": "settings/skripsi/randomsearch-qlearn-ql-c-ms@1.cfg",
     "ql-p-ms@0": "settings/skripsi/randomsearch-qlearn-ql-p-ms@0.cfg",
     "ql-p-ms@1": "settings/skripsi/randomsearch-qlearn-ql-p-ms@1.cfg",
-    "mc": "settings/skripsi/randomsearch-mc.cfg",
+
     "mcn": "settings/skripsi/randomsearch-mcn.cfg",
+    "mcn-c-ms@0": "settings/skripsi/randomsearch-mcn-mc-c-ms@0.cfg",
+    "mcn-c-ms@1": "settings/skripsi/randomsearch-mcn-mc-c-ms@1.cfg",
+    "mcn-p-ms@0": "settings/skripsi/randomsearch-mcn-mc-p-ms@0.cfg",
+    "mcn-p-ms@1": "settings/skripsi/randomsearch-mcn-mc-p-ms@1.cfg",
+
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
     "lfe-c-ms@0": "settings/skripsi/randomsearch-lf-episodic-lfe-c-ms@0.cfg",
     "lfe-c-ms@1": "settings/skripsi/randomsearch-lf-episodic-lfe-c-ms@1.cfg",
