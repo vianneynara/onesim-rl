@@ -23,6 +23,7 @@ Usage:
 # ------------------------------------------------------------------------------------------------------------------- #
 
 import argparse
+import hashlib
 import logging
 import os
 import re
@@ -51,6 +52,7 @@ log = logging.getLogger(__name__)
 
 REPORTS_BASE = "reports/skripsi"
 REPORTS_SHIFTED = "reports/_shifted"
+REPORTS_ORPHANED = "reports/_orphaned"
 
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -385,14 +387,96 @@ def rename_folder(old_path: str, old_name: str, new_name: str) -> Tuple[bool, st
         return False, f"Failed to rename: {e}"
 
 
+def generate_folder_hash(folder_path: str) -> str:
+    """
+    Generate an 8-character MD5 hash for a folder path.
+    Used as a temporary suffix during two-pass rename to prevent collisions.
+    
+    Returns: 8-character hex string
+    """
+    hash_obj = hashlib.md5(folder_path.encode())
+    return hash_obj.hexdigest()[:8]
+
+
+def rename_with_temp_hash(old_path: str, old_name: str, temp_hash: str) -> Tuple[bool, str]:
+    """
+    Rename a folder by adding a temporary hash suffix.
+    
+    Pass 1 rename: cfg@05-ql500-... → cfg@05-a1b2c3d4-ql500-...
+    
+    Returns: (success, new_name_or_error_msg)
+    """
+    # Extract cfg@NN prefix
+    match = re.match(r"(cfg@\d+)", old_name)
+    if not match:
+        return False, f"Invalid folder name format (no cfg@N prefix): {old_name}"
+    
+    cfg_prefix = match.group(1)
+    rest = old_name[len(cfg_prefix):]  # Everything after cfg@NN
+    
+    # Build new name with hash: cfg@NN-hash-rest
+    new_name = f"{cfg_prefix}-{temp_hash}{rest}"
+    new_path = os.path.join(os.path.dirname(old_path), new_name)
+    
+    if os.path.exists(new_path):
+        return False, f"Hash temp destination already exists: {new_path}"
+    
+    try:
+        os.rename(old_path, new_path)
+        return True, new_name
+    except Exception as e:
+        return False, f"Failed to rename with temp hash: {e}"
+
+
+def rename_from_temp_hash(old_path: str, old_name: str, new_cfg_index: int, temp_hash: str) -> Tuple[bool, str]:
+    """
+    Rename a temporary hash-suffixed folder to its final name.
+    
+    Pass 2 rename: cfg@05-a1b2c3d4-ql500-... → cfg@03-ql500-...
+    
+    Returns: (success, new_name_or_error_msg)
+    """
+    # Pattern: cfg@NN-hash-rest, extract hash and rest
+    pattern = rf"^(cfg@\d+)-{re.escape(temp_hash)}(.*)$"
+    match = re.match(pattern, old_name)
+    
+    if not match:
+        return False, f"Invalid temp hash folder format: {old_name}"
+    
+    rest = match.group(2)  # Everything after the hash
+    
+    # Build final name: cfg@MM-rest
+    new_name = f"cfg@{new_cfg_index:02d}{rest}"
+    new_path = os.path.join(os.path.dirname(old_path), new_name)
+    
+    if os.path.exists(new_path):
+        return False, f"Destination already exists: {new_path}"
+    
+    try:
+        os.rename(old_path, new_path)
+        return True, new_name
+    except Exception as e:
+        return False, f"Failed to rename from temp hash: {e}"
+
+
+
 def execute_shift(
         parent_dir_id: str,
         index_only: bool = False,
         dry_run: bool = False,
-        no_archive: bool = False
+        no_archive: bool = False,
+        force: bool = False
 ) -> Tuple[int, int]:
     """
     Execute the shift operation for a specific parent_dir_id.
+    
+    Handles three types of folders:
+    1. Mapped folders: Renamed from old index to new index
+    2. Orphaned folders: Exist but don't match any active config (moved to _orphaned)
+    3. Skipped folders: No change needed (old_idx == new_idx)
+    
+    Orphaned folders are ALWAYS moved to reports/_orphaned regardless of --no-archive flag
+    (they represent obsolete runs that no longer match the batch_configs).
     
     Returns: (renamed_count, skipped_count)
     """
@@ -430,57 +514,134 @@ def execute_shift(
     
     renamed_count = 0
     skipped_count = 0
+    orphaned_count = 0
     
     if not rename_mapping:
         log.warning("No renames needed (or no valid mappings found)")
         return 0, len(existing_folders)
     
-    # Sort by old index for processing
-    for old_idx in sorted(rename_mapping.keys()):
-        new_idx = rename_mapping[old_idx]
-        old_folder_name = existing_folders[old_idx]
-        
-        if old_idx == new_idx:
-            log.info("✓ Index %02d: No change needed (%s)", old_idx, old_folder_name)
-            skipped_count += 1
-            continue
-        
-        # Build new folder name by replacing cfg@XX
-        new_folder_name = re.sub(r"cfg@\d+", f"cfg@{new_idx:02d}", old_folder_name)
-        
-        old_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", old_folder_name)
-        new_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", new_folder_name)
+    # ===== IDENTIFY AND HANDLE ORPHANED FOLDERS =====
+    # Orphaned folders exist but have no matching active config
+    # They MUST be moved to _orphaned to prevent future clashes
+    existing_indices_set = set(existing_folders.keys())
+    mapped_indices_set = set(rename_mapping.keys())
+    orphaned_indices = existing_indices_set - mapped_indices_set
+    
+    if orphaned_indices:
+        log.warning("Found %d orphaned folder(s) with no matching active configs:", len(orphaned_indices))
+        for orphaned_idx in sorted(orphaned_indices):
+            orphaned_name = existing_folders[orphaned_idx]
+            log.warning("  - cfg@%02d: %s (will be archived to prevent clash with future renamings)", 
+                       orphaned_idx, orphaned_name)
         
         if dry_run:
-            log.info(
-                "DRY RUN: Index %02d → %02d: %s → %s",
-                old_idx, new_idx, old_folder_name, new_folder_name
-            )
-            if not no_archive:
-                log.info("  (would archive old to: %s)", os.path.join(REPORTS_SHIFTED, parent_dir_id, "run-id", old_folder_name))
-            renamed_count += 1
+            log.info("DRY RUN: Would archive %d orphaned folder(s) to %s", len(orphaned_indices), REPORTS_ORPHANED)
+            orphaned_count = len(orphaned_indices)
         else:
-            # Step 1: Rename folder in-place in reports/skripsi/
-            ok, msg = rename_folder(old_path, old_folder_name, new_folder_name)
+            # Always archive orphaned folders, regardless of --no-archive flag
+            for orphaned_idx in sorted(orphaned_indices):
+                orphaned_name = existing_folders[orphaned_idx]
+                orphaned_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", orphaned_name)
+                
+                ok, msg = move_to_archive(orphaned_path, REPORTS_ORPHANED)
+                if ok:
+                    log.info("ARCHIVED ORPHANED: %s → %s", orphaned_name, msg)
+                    orphaned_count += 1
+                else:
+                    log.error("FAILED to archive orphaned %s: %s", orphaned_name, msg)
+    
+    
+    # When using --force, perform two-pass rename with temporary hashing
+    if force and not dry_run:
+        log.info("Using --force: Two-pass rename with temporary hashing (no archiving)")
+        
+        # ===== PASS 1: Add temporary hashes =====
+        temp_hashes = {}
+        for old_idx in sorted(rename_mapping.keys()):
+            old_folder_name = existing_folders[old_idx]
+            old_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", old_folder_name)
+            
+            temp_hash = generate_folder_hash(old_path)
+            ok, new_name = rename_with_temp_hash(old_path, old_folder_name, temp_hash)
+            
             if not ok:
-                log.error("RENAME FAILED: %s", msg)
+                log.error("PASS 1 FAILED (add hash): %s", new_name)
                 skipped_count += 1
                 continue
             
-            log.info("RENAMED: %s", msg)
+            temp_hashes[old_idx] = (temp_hash, new_name)
+            log.info("PASS 1 (add hash): Index %02d: %s → %s", old_idx, old_folder_name, new_name)
+        
+        # ===== PASS 2: Rename from temp hash to final name =====
+        for old_idx in sorted(temp_hashes.keys()):
+            new_idx = rename_mapping[old_idx]
+            temp_hash, hashed_folder_name = temp_hashes[old_idx]
             
-            # Step 2: Optionally archive old folder name as backup
-            if not no_archive:
-                ok, msg = move_to_archive(new_path, REPORTS_SHIFTED)
-                if ok:
-                    log.info("ARCHIVED BACKUP: %s (to %s)", new_folder_name, msg)
-                else:
-                    log.warning("ARCHIVE BACKUP FAILED: %s (but rename succeeded, so continuing)", msg)
+            hashed_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", hashed_folder_name)
+            ok, new_name = rename_from_temp_hash(hashed_path, hashed_folder_name, new_idx, temp_hash)
             
+            if not ok:
+                log.error("PASS 2 FAILED (remove hash): %s", new_name)
+                skipped_count += 1
+                continue
+            
+            log.info("PASS 2 (final): Index %02d → %02d: %s → %s", old_idx, new_idx, hashed_folder_name, new_name)
             renamed_count += 1
     
+    else:
+        # Standard single-pass rename (with optional archiving)
+        # Sort by old index for processing
+        for old_idx in sorted(rename_mapping.keys()):
+            new_idx = rename_mapping[old_idx]
+            old_folder_name = existing_folders[old_idx]
+            
+            if old_idx == new_idx:
+                log.info("✓ Index %02d: No change needed (%s)", old_idx, old_folder_name)
+                skipped_count += 1
+                continue
+            
+            # Build new folder name by replacing cfg@XX
+            new_folder_name = re.sub(r"cfg@\d+", f"cfg@{new_idx:02d}", old_folder_name)
+            
+            old_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", old_folder_name)
+            new_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", new_folder_name)
+            
+            if dry_run:
+                log.info(
+                    "DRY RUN: Index %02d → %02d: %s → %s",
+                    old_idx, new_idx, old_folder_name, new_folder_name
+                )
+                if force:
+                    log.info("  (would use --force: two-pass rename with temp hash, no archiving)")
+                elif not no_archive:
+                    log.info("  (would archive old to: %s)", os.path.join(REPORTS_SHIFTED, parent_dir_id, "run-id", old_folder_name))
+                renamed_count += 1
+            else:
+                # Step 1: Rename folder in-place in reports/skripsi/
+                ok, msg = rename_folder(old_path, old_folder_name, new_folder_name)
+                if not ok:
+                    log.error("RENAME FAILED: %s", msg)
+                    skipped_count += 1
+                    continue
+                
+                log.info("RENAMED: %s", msg)
+                
+                # Step 2: Optionally archive old folder name as backup (skip if force)
+                if not no_archive and not force:
+                    ok, msg = move_to_archive(new_path, REPORTS_SHIFTED)
+                    if ok:
+                        log.info("ARCHIVED BACKUP: %s (to %s)", new_folder_name, msg)
+                    else:
+                        log.warning("ARCHIVE BACKUP FAILED: %s (but rename succeeded, so continuing)", msg)
+                
+                renamed_count += 1
+    
     log.info("%s", "=" * LINE_LENGTH)
-    log.info("Summary for %s: %d renamed, %d skipped", parent_dir_id, renamed_count, skipped_count)
+    log.info("Summary for %s: %d renamed, %d skipped, %d orphaned", parent_dir_id, renamed_count, skipped_count, orphaned_count)
+    if force and not dry_run:
+        log.info("(--force: Two-pass rename completed, no archiving performed)")
+    if orphaned_count > 0:
+        log.info("(Orphaned folders archived to: %s)", REPORTS_ORPHANED)
     log.info("%s", "=" * LINE_LENGTH)
     
     return renamed_count, skipped_count
@@ -574,6 +735,11 @@ if __name__ == "__main__":
         help="Rename in-place without archiving old folders to _shifted"
     )
     
+    parser.add_argument(
+        "-f", "--force", action="store_true",
+        help="Use two-pass rename with temporary hashing to prevent collisions (skips archiving)"
+    )
+    
     args = parser.parse_args()
     
     # Validation
@@ -612,7 +778,8 @@ if __name__ == "__main__":
                 pid,
                 index_only=args.indexonly,
                 dry_run=args.dry_run,
-                no_archive=args.no_archive
+                no_archive=args.no_archive,
+                force=args.force
             )
             total_renamed += renamed
             total_skipped += skipped
@@ -631,7 +798,8 @@ if __name__ == "__main__":
                 pid,
                 index_only=args.indexonly,
                 dry_run=args.dry_run,
-                no_archive=args.no_archive
+                no_archive=args.no_archive,
+                force=args.force
             )
             total_renamed += renamed
             total_skipped += skipped
