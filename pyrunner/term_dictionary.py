@@ -67,12 +67,17 @@ KEY_ABBREVIATIONS = {
     "eg_ed": "BehaviorPolicy.EpsilonGreedy.epsilonDecay",
     "eg_me": "BehaviorPolicy.EpsilonGreedy.minEpsilon",
     "eg_de": "BehaviorPolicy.EpsilonGreedy.decayEpisodically",
+    "eg_reset": "BehaviorPolicy.EpsilonGreedy.resetEpisodically",
 
     # [ UCBBehavior settings ]
     "ucb_ec": "BehaviorPolicy.UCB.explorationConstant",
+    "ucb_reset": "BehaviorPolicy.UCB.resetEpisodically",
 
     # [ TSBehavior settings ]
+    "ts_lr": "BehaviorPolicy.TS.learningRate",
     "ts_iv": "BehaviorPolicy.TS.initialVariance",
+    "ts_bayesian": "BehaviorPolicy.TS.usingBayesian",
+    "ts_reset": "BehaviorPolicy.TS.resetEpisodically",
 
     # [ EpisodicPersistenceManager settings ]
     "epm_ep": "EpisodicPersistenceManager.episodeNumber",
