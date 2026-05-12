@@ -7,6 +7,7 @@ import lombok.Setter;
 import movement.MovementModel;
 import movement.rl.StateActionPair;
 import movement.rl.persistence.EpisodicPersistenceData;
+import org.apache.commons.math4.legacy.distribution.AbstractRealDistribution;
 
 import java.util.*;
 
@@ -19,8 +20,9 @@ import java.util.*;
 public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	private Random random;
-	private final double alpha;
+	private final double learningRate;
 	private final double initialVariance;
+	private final boolean usingBayesian;
 	private final Map<StateActionPair, TSProperty> tsProperties;
 
 	public static final String BEHAVIOR_NS = "BehaviorPolicy.TS";
@@ -31,14 +33,18 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	 * <p>
 	 * Note: Match the learning rate of Q-Learning or Monte Carlo being implemented.
 	 * </p>
-	 * */
-	public static final String ALPHA_S = "alpha";
+	 *
+	 */
+	public static final String LEARNING_RATE_S = "learningRate";
 	/**
 	 * The initial uncertainty of the posterior distribution for each state-action.
 	 * Higher value means agent is more uncertain about all actions (more exploration).
 	 * As visit count increases, variance decays monotonically via Bayesian decay: σ²(n) = σ²₀ / (1 + n).
-	 * */
+	 *
+	 */
 	public static final String INITIAL_VARIANCE_S = "initialVariance";
+
+	public static final String USING_BAYESIAN_S = "usingBayesian";
 
 	/**
 	 * Constructor called reflectively by Settings. The {@code _settings} param is unused
@@ -55,15 +61,17 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			this.random = new Random();
 		}
 
-		this.alpha = behaviorSettings.getDouble(ALPHA_S, 0.01);
+		this.learningRate = behaviorSettings.getDouble(LEARNING_RATE_S, 0.01);
 		this.initialVariance = behaviorSettings.getDouble(INITIAL_VARIANCE_S, 1.0);
+		this.usingBayesian = behaviorSettings.getBoolean(USING_BAYESIAN_S, false);
 		this.tsProperties = new HashMap<>();
 	}
 
 	public ThompsonSamplingBehavior(ThompsonSamplingBehavior proto) {
 		this.random = proto.random;
-		this.alpha = proto.alpha;
+		this.learningRate = proto.learningRate;
 		this.initialVariance = proto.initialVariance;
+		this.usingBayesian = proto.usingBayesian;
 		this.tsProperties = new HashMap<>(proto.tsProperties);
 	}
 
@@ -94,7 +102,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		for (Integer action : actionArray) {
 			StateActionPair pair = StateActionPair.of(stateId, action);
 
-			final TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0));
+			final TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0, 0, 0));
 
 			double mean = prop.getMu();
 			double variance = prop.getSigma2();
@@ -127,40 +135,73 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	@Override
 	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
 		StateActionPair pair = StateActionPair.of(stateId, actionIndex);
-		TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0));
+		TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0, 0, 0));
 
-		double currMean = prop.getMu();
-//		double currVariance = prop.getSigma2();
-		int currVisitCount = prop.getVisitCount();
+		/* Gaussian Thompson Sampling (with learning rate) */
+		if (!usingBayesian) {
+			/* Gaussian Thompson Sampling (with learning rate) */
+			double currMean = prop.getMu();
+//			double currVariance = prop.getSigma2();
+			int currVisitCount = prop.getVisitCount();
 
-		// Increment visit count
-		int newVisitCount = currVisitCount + 1;
-		prop.incrementVisitCount();
+			// Increment visit count
+			int newVisitCount = currVisitCount + 1;
+			prop.incrementVisitCount();
 
-		// Update mean using incremental average: μ_new = μ_old + (r - μ_old) / n
-		double updatedMean = currMean + alpha * (updatedQ - currMean);
+			/* Gaussian Thompson Sampling (with learning rate) */
+			// Update mean using incremental average: μ_new = μ_old + (r - μ_old) / n
+			double updatedMean = currMean + learningRate * (updatedQ - currMean);
 
-		// Update variance using incremental formula for running variance
-		// σ²_new = σ²_old + (r - μ_old)(r - μ_new) / n
-		double updatedVariance;
-		if (newVisitCount == 1) {
-			// First observation: initialize variance to a small value or based on reward
-			// I don't know which variance is proper for initializing the Thompson Sampling yet
-			updatedVariance = initialVariance;
-		} else {
-//			updatedVariance = currVariance + (reward - currMean) * (reward - updatedMean) / newVisitCount;
-			// Variance: monotone Bayesian decay
-			updatedVariance = initialVariance / (1.0 + newVisitCount);
+			// Update variance using incremental formula for running variance
+			// σ²_new = σ²_old + (r - μ_old)(r - μ_new) / n
+			double updatedVariance;
+			if (newVisitCount == 1) {
+				// First observation: initialize variance to a small value or based on reward
+				updatedVariance = initialVariance;
+			} else {
+				/* Variance: Welford's Algorithm */
+//				updatedVariance = currVariance + (reward - currMean) * (reward - updatedMean) / newVisitCount;
+
+				/* Variance: Monotone Bayesian decay */
+				updatedVariance = initialVariance / (1.0 + newVisitCount);
+			}
+
+			// This ensures variance to not exceed 0.000001, avoiding zero
+			updatedVariance = Math.max(updatedVariance, 1e-6);
+
+			prop.setMu(updatedMean);
+			prop.setSigma2(updatedVariance);
+
+			// Update or insert back into the map
+			tsProperties.put(pair, prop);
 		}
 
-		// This ensures variance to not exceed 0.000001, avoiding zero
-		updatedVariance = Math.max(updatedVariance, 1e-6);
+		/* Bayesian? Thompson Sampling */
+		else {
+			double alpha = 1 + prop.getSuccessCount();
+			double beta = 1 + prop.getFailureCount();
 
-		prop.setMu(updatedMean);
-		prop.setSigma2(updatedVariance);
+			/* If the reward is plus, count as success and increase alpha. Beta otherwise. */
+			if (reward > 0) {
+				alpha++;
+			} else {
+				beta++;
+			}
 
-		// Update or insert back into the map
-		tsProperties.put(pair, prop);
+			/* Calculate mean from Alpha and Beta */
+			double updatedMean = alpha / (alpha + beta);
+			double updatedVariance = (alpha * beta) / (Math.pow((alpha + beta), 2) * (alpha + beta + 1));
+
+			/* Ensures variance to not exceed 0.000001, avoiding zero */
+			updatedVariance = Math.max(updatedVariance, 1e-6);
+
+			/* Update the state-action pair wise TS properties */
+			prop.setMu(updatedMean);
+			prop.setSigma2(updatedVariance);
+
+			// Update or insert back into the map
+			tsProperties.put(pair, prop);
+		}
 	}
 
 	@Override
@@ -242,21 +283,31 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		@Getter
 		@Setter
 		private int visitCount;
+		@Getter
+		@Setter
+		private int successCount;
+		@Getter
+		@Setter
+		private int failureCount;
 
 		public TSProperty() {
 			this.mu = 0.0;
 			this.sigma2 = 0.0;
 			this.visitCount = 0;
+			this.successCount = 0;
+			this.failureCount = 0;
 		}
 
-		public TSProperty(double mu, double sigma2, int visitCount) {
+		public TSProperty(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
 			this.mu = mu;
 			this.sigma2 = sigma2;
 			this.visitCount = visitCount;
+			this.successCount = successCount;
+			this.failureCount = failureCount;
 		}
 
-		public static TSProperty of(double mu, double sigma2, int visitCount) {
-			return new TSProperty(mu, sigma2, visitCount);
+		public static TSProperty of(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
+			return new TSProperty(mu, sigma2, visitCount, successCount, failureCount);
 		}
 
 		/**
@@ -269,8 +320,10 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			double mu = Double.parseDouble(valueParts[0]);
 			double sigma2 = Double.parseDouble(valueParts[1]);
 			int visitCount = Integer.parseInt(valueParts[2]);
+			int successCount = Integer.parseInt(valueParts[3]);
+			int failureCount = Integer.parseInt(valueParts[4]);
 
-			return new TSProperty(mu, sigma2, visitCount);
+			return new TSProperty(mu, sigma2, visitCount, successCount, failureCount);
 		}
 
 		/**
@@ -278,7 +331,11 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		 *
 		 */
 		public String toJsonValue() {
-			return mu + "," + sigma2 + "," + visitCount;
+			return mu + ","
+				+ sigma2 + ","
+				+ visitCount + ","
+				+ successCount + ","
+				+ failureCount;
 		}
 
 		public int incrementVisitCount() {
