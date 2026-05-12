@@ -7,6 +7,9 @@ import lombok.Setter;
 import movement.MovementModel;
 import movement.rl.StateActionPair;
 import movement.rl.persistence.EpisodicPersistenceData;
+import movement.util.AdaptedJavaRandom;
+import org.apache.commons.math3.distribution.BetaDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
 
 import java.util.*;
 
@@ -19,6 +22,10 @@ import java.util.*;
 public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	private Random random;
+	/**
+	 * Commons-Math RNG adapter backed by {@link #random} to keep sampling reproducible.
+	 */
+	private RandomGenerator apacheRNG;
 	private final double learningRate;
 	private final double initialVariance;
 	private final boolean usingBayesian;
@@ -59,6 +66,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			System.out.println("Warning: MovementModel random not initialized, using new Random() for ThompsonSamplingBehavior");
 			this.random = new Random();
 		}
+		initApacheRng();
 
 		this.learningRate = behaviorSettings.getDouble(LEARNING_RATE_S, 0.01);
 		this.initialVariance = behaviorSettings.getDouble(INITIAL_VARIANCE_S, 1.0);
@@ -68,10 +76,16 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	public ThompsonSamplingBehavior(ThompsonSamplingBehavior proto) {
 		this.random = proto.random;
+		initApacheRng();
 		this.learningRate = proto.learningRate;
 		this.initialVariance = proto.initialVariance;
 		this.usingBayesian = proto.usingBayesian;
 		this.tsProperties = new HashMap<>(proto.tsProperties);
+	}
+
+	private void initApacheRng() {
+		// Delegate to the simulator RNG so Commons-Math sampling is reproducible.
+		this.apacheRNG = new AdaptedJavaRandom(this.random);
 	}
 
 	/**
@@ -113,7 +127,20 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 				sampledValue = retrieveNormalSample(mean, variance);
 			}
 
-			double sampledValue = retrieveNormalSample(mean, variance);
+			/* Bayesian Thompson Sampling */
+			else {
+				// (Defensive) ensure RNG is initialized even if setRandom() wasn't called through ctor.
+				if (apacheRNG == null) {
+					initApacheRng();
+				}
+				BetaDistribution betaDist = new BetaDistribution(
+					apacheRNG,
+					prop.getSuccessCount() + 1,
+					prop.getFailureCount() + 1
+				);
+
+				sampledValue = betaDist.sample();
+			}
 
 			if (sampledValue > maxSample) {
 				/* Clear all previous similar sample-value and use the better one */
@@ -202,8 +229,8 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			updatedVariance = Math.max(updatedVariance, 1e-6);
 
 			/* Update the state-action pair wise TS properties */
-			prop.setSuccessCount(alpha - 1);	// decrement by one for consistency
-			prop.setFailureCount(beta - 1);		// decrement by one for consistency
+			prop.setSuccessCount(alpha - 1);    // decrement by one for consistency
+			prop.setFailureCount(beta - 1);        // decrement by one for consistency
 			prop.setMu(updatedMean);
 			prop.setSigma2(updatedVariance);
 
@@ -225,6 +252,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	@Override
 	public void setRandom(Random random) {
 		this.random = random;
+		initApacheRng();
 	}
 
 	@Override
