@@ -517,7 +517,7 @@ def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indice
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
-        out_file = os.path.join(out_dir, _sanitize_filename(f"{title} (Compare-All).png"))
+        out_file = os.path.join(out_dir, _sanitize_filename(f"Bulk Comparison of {title}.png"))
         plot_bestof_by_episode(
             series_by_label=series_by_label,
             y_key=y_key,
@@ -588,7 +588,7 @@ def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], Non
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
-        out_file = os.path.join(out_dir, _sanitize_filename(f"{title} (Best-Of Comparison).png"))
+        out_file = os.path.join(out_dir, _sanitize_filename(f"Best-Of Comparison of {title}.png"))
         plot_bestof_by_episode(
             series_by_label=series_by_label,
             y_key=y_key,
