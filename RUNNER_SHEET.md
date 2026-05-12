@@ -39,20 +39,20 @@ python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 11-22
 ### Running Thompson Sampling Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 23-27
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 23-27
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 23-27
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 23-27
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 23-28
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 23-28
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 23-28
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 23-28
 
 ```
 
 ### Running Lévy Flight Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 28-35
-python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 28-35
-python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 28-35
-python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 28-35
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 29-36
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 29-36
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 29-36
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 29-36
 
 ```
 
