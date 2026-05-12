@@ -29,6 +29,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	private final double learningRate;
 	private final double initialVariance;
 	private final boolean usingBayesian;
+	private final boolean resetEpisodically;
 	private final Map<StateActionPair, TSProperty> tsProperties;
 
 	public static final String BEHAVIOR_NS = "BehaviorPolicy.TS";
@@ -52,6 +53,8 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	public static final String USING_BAYESIAN_S = "usingBayesian";
 
+	public static final String RESET_EPISODICALLY_S = "resetEpisodically";
+
 	/**
 	 * Constructor called reflectively by Settings. The {@code _settings} param is unused
 	 * because this policy reads its own sub-namespace ({@value #BEHAVIOR_NS}).
@@ -71,6 +74,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		this.learningRate = behaviorSettings.getDouble(LEARNING_RATE_S, 0.01);
 		this.initialVariance = behaviorSettings.getDouble(INITIAL_VARIANCE_S, 1.0);
 		this.usingBayesian = behaviorSettings.getBoolean(USING_BAYESIAN_S, false);
+		this.resetEpisodically = behaviorSettings.getBoolean(RESET_EPISODICALLY_S, false);
 		this.tsProperties = new HashMap<>();
 	}
 
@@ -80,6 +84,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		this.learningRate = proto.learningRate;
 		this.initialVariance = proto.initialVariance;
 		this.usingBayesian = proto.usingBayesian;
+		this.resetEpisodically = proto.resetEpisodically;
 		this.tsProperties = new HashMap<>(proto.tsProperties);
 	}
 
@@ -274,16 +279,22 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	@Override
 	public void loadFrom(EpisodicPersistenceData epd) {
-		// Load Thompson Sampling state variables from persistence data
-		tsProperties.clear();
+		if (!resetEpisodically) {
+			// Load Thompson Sampling state variables from persistence data
+			tsProperties.clear();
 
-		if (epd.tsProperties != null) {
-			for (var entry : epd.tsProperties.entrySet()) {
-				StateActionPair pair = StateActionPair.fromJsonKey(entry.getKey());
-				TSProperty prop = TSProperty.fromJsonValue(entry.getValue());
+			if (epd.tsProperties != null) {
+				for (var entry : epd.tsProperties.entrySet()) {
+					StateActionPair pair = StateActionPair.fromJsonKey(entry.getKey());
+					TSProperty prop = TSProperty.fromJsonValue(entry.getValue());
 
-				tsProperties.put(pair, prop);
+					tsProperties.put(pair, prop);
+				}
 			}
+		} else {
+			tsProperties.clear();
+
+			System.out.println("[ThompsonSamplingBehavior] Episodic data is not loaded. Reset episodically is TRUE.");
 		}
 	}
 
