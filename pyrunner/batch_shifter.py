@@ -37,6 +37,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from pyrunner.batch_configs import LIST_OF_CONFIGS
+from pyrunner.utils.path import normalize_report_base
 
 LINE_LENGTH = 100
 logging.basicConfig(
@@ -144,14 +145,18 @@ def get_active_configs_mapping() -> Dict[int, dict]:
     return mapping
 
 
-def scan_run_id_folders(parent_dir_id: str) -> Dict[int, str]:
+def scan_run_id_folders(parent_dir_id: str, reports_base: str = REPORTS_BASE) -> Dict[int, str]:
     """
     Scan run-id directory and extract all cfg@N folders.
+    
+    Args:
+        parent_dir_id: Parent directory identifier
+        reports_base: Base reports directory path
     
     Returns: {cfg_index: folder_name, ...}
     Example: {31: 'cfg@31-ql500-qlm_bp@ts-ts_iv@5.0', 32: 'cfg@32-ql500-...'}
     """
-    run_id_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id")
+    run_id_path = os.path.join(reports_base, parent_dir_id, "run-id")
     
     if not os.path.isdir(run_id_path):
         log.warning("Run-id directory not found: %s", run_id_path)
@@ -308,9 +313,41 @@ def build_rename_mapping(
                 log.debug("    No param match found for old_idx %d", old_idx)
 
         # Second pass: Match remaining by position
+        # BUT first, filter out folders whose parameters don't exist in ANY active config
+        # These should NOT be force-matched by position - let them be orphaned instead
         unmatched_active_filtered = [idx for idx in unmatched_active if idx not in matched_active]
         
-        for i, old_idx in enumerate(unmatched_existing):
+        valid_unmatched_existing = []
+        for old_idx in unmatched_existing:
+            folder_name = existing_folders[old_idx]
+            folder_params = extract_override_params(folder_name)
+            
+            # Check if this folder has parameters
+            if folder_params:
+                # Check if these exact parameters exist in ANY active config of this signature
+                param_exists_in_active = False
+                for active_idx in active_idx_list:
+                    active_config = active_configs[active_idx]
+                    config_params = config_to_override_params(active_config)
+                    if folder_params == config_params:
+                        param_exists_in_active = True
+                        break
+                
+                if not param_exists_in_active:
+                    # This folder's parameters don't match ANY active config
+                    # Don't force-match by position - let orphaned handler take care of it
+                    log.info("  Skipping position match for cfg@%02d (signature=%s): params %s don't exist in any active config", 
+                            old_idx, sig, folder_params)
+                    problems.append(
+                        f"Folder cfg@{old_idx:02d} (signature={sig}, params={folder_params}) has no matching active config. "
+                        f"Will be archived as orphaned."
+                    )
+                    continue  # Don't add to valid_unmatched_existing
+            
+            # This folder is valid for position matching (no params or params exist)
+            valid_unmatched_existing.append(old_idx)
+        
+        for i, old_idx in enumerate(valid_unmatched_existing):
             if i < len(unmatched_active_filtered):
                 new_idx = unmatched_active_filtered[i]
                 rename_mapping[old_idx] = new_idx
@@ -462,6 +499,7 @@ def rename_from_temp_hash(old_path: str, old_name: str, new_cfg_index: int, temp
 
 def execute_shift(
         parent_dir_id: str,
+        reports_base: str = REPORTS_BASE,
         index_only: bool = False,
         dry_run: bool = False,
         no_archive: bool = False,
@@ -485,7 +523,7 @@ def execute_shift(
     log.info("=" * LINE_LENGTH)
     
     # Verify parent_dir_id exists
-    pid_path = os.path.join(REPORTS_BASE, parent_dir_id)
+    pid_path = os.path.join(reports_base, parent_dir_id)
     if not os.path.isdir(pid_path):
         log.warning("Parent dir not found: %s", pid_path)
         return 0, 0
@@ -494,7 +532,7 @@ def execute_shift(
     active_configs = get_active_configs_mapping()
     
     # Scan existing folders
-    existing_folders = scan_run_id_folders(parent_dir_id)
+    existing_folders = scan_run_id_folders(parent_dir_id, reports_base)
     
     if not existing_folders:
         log.warning("No cfg@N folders found in %s", parent_dir_id)
@@ -541,12 +579,19 @@ def execute_shift(
             # Always archive orphaned folders, regardless of --no-archive flag
             for orphaned_idx in sorted(orphaned_indices):
                 orphaned_name = existing_folders[orphaned_idx]
-                orphaned_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", orphaned_name)
+                orphaned_path = os.path.join(reports_base, parent_dir_id, "run-id", orphaned_name)
                 
                 ok, msg = move_to_archive(orphaned_path, REPORTS_ORPHANED)
                 if ok:
                     log.info("ARCHIVED ORPHANED: %s → %s", orphaned_name, msg)
-                    orphaned_count += 1
+                    
+                    # Remove original folder after archiving (move semantics)
+                    try:
+                        shutil.rmtree(orphaned_path)
+                        log.info("REMOVED ORPHANED: %s from original location", orphaned_name)
+                        orphaned_count += 1
+                    except Exception as e:
+                        log.error("FAILED to remove orphaned %s: %s", orphaned_name, e)
                 else:
                     log.error("FAILED to archive orphaned %s: %s", orphaned_name, msg)
     
@@ -559,7 +604,7 @@ def execute_shift(
         temp_hashes = {}
         for old_idx in sorted(rename_mapping.keys()):
             old_folder_name = existing_folders[old_idx]
-            old_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", old_folder_name)
+            old_path = os.path.join(reports_base, parent_dir_id, "run-id", old_folder_name)
             
             temp_hash = generate_folder_hash(old_path)
             ok, new_name = rename_with_temp_hash(old_path, old_folder_name, temp_hash)
@@ -577,7 +622,7 @@ def execute_shift(
             new_idx = rename_mapping[old_idx]
             temp_hash, hashed_folder_name = temp_hashes[old_idx]
             
-            hashed_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", hashed_folder_name)
+            hashed_path = os.path.join(reports_base, parent_dir_id, "run-id", hashed_folder_name)
             ok, new_name = rename_from_temp_hash(hashed_path, hashed_folder_name, new_idx, temp_hash)
             
             if not ok:
@@ -603,8 +648,8 @@ def execute_shift(
             # Build new folder name by replacing cfg@XX
             new_folder_name = re.sub(r"cfg@\d+", f"cfg@{new_idx:02d}", old_folder_name)
             
-            old_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", old_folder_name)
-            new_path = os.path.join(REPORTS_BASE, parent_dir_id, "run-id", new_folder_name)
+            old_path = os.path.join(reports_base, parent_dir_id, "run-id", old_folder_name)
+            new_path = os.path.join(reports_base, parent_dir_id, "run-id", new_folder_name)
             
             if dry_run:
                 log.info(
@@ -712,12 +757,17 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "-pid", "--parent-dir-id", type=str, required=False,
-        help="Process specific parent_dir_id(s) separated by comma (e.g., 'ql-p-ms@0' or 'ql-p-ms@0,ql-p-ms@1')"
+        help="Process specific parent_dir_id(s) separated by comma (e.g., 'ql-p-ms@0' or 'ql-p-ms@0,ql-p-ms@1'). Located under report base directory."
     )
     
     parser.add_argument(
         "-a", "--all", action="store_true",
-        help="Process all parent_dir_ids in reports/skripsi/"
+        help="Process all parent_dir_ids in report base directory"
+    )
+
+    parser.add_argument(
+        "-srp", "--setreportspath", type=str, required=False,
+        help="Override base report directory path. Accepts absolute paths (e.g., 'D:/test/newdir') or relative paths from current working directory (e.g., 'custom/reports'). Default: 'reports/skripsi'"
     )
     
     parser.add_argument(
@@ -751,9 +801,12 @@ if __name__ == "__main__":
         log.error("Cannot specify both --all and --parent-dir-id")
         sys.exit(1)
     
+    # Normalize report_base (handles both absolute and relative paths)
+    normalized_report_base = normalize_report_base(args.setreportspath or REPORTS_BASE)
+    
     # Check if reports directory exists
-    if not os.path.isdir(REPORTS_BASE):
-        log.error("Reports directory not found: %s", REPORTS_BASE)
+    if not os.path.isdir(normalized_report_base):
+        log.error("Reports directory not found: %s", normalized_report_base)
         sys.exit(1)
     
     total_renamed = 0
@@ -762,13 +815,13 @@ if __name__ == "__main__":
     if args.all:
         # Find all parent_dir_ids
         parent_dir_ids = []
-        for item in os.listdir(REPORTS_BASE):
-            item_path = os.path.join(REPORTS_BASE, item)
+        for item in os.listdir(normalized_report_base):
+            item_path = os.path.join(normalized_report_base, item)
             if os.path.isdir(item_path):
                 parent_dir_ids.append(item)
         
         if not parent_dir_ids:
-            log.warning("No parent_dir_ids found in %s", REPORTS_BASE)
+            log.warning("No parent_dir_ids found in %s", normalized_report_base)
             sys.exit(0)
         
         log.info("Found %d parent_dir_ids: %s", len(parent_dir_ids), parent_dir_ids)
@@ -776,6 +829,7 @@ if __name__ == "__main__":
         for pid in sorted(parent_dir_ids):
             renamed, skipped = execute_shift(
                 pid,
+                reports_base=normalized_report_base,
                 index_only=args.indexonly,
                 dry_run=args.dry_run,
                 no_archive=args.no_archive,
@@ -796,6 +850,7 @@ if __name__ == "__main__":
         for pid in parent_dir_ids:
             renamed, skipped = execute_shift(
                 pid,
+                reports_base=normalized_report_base,
                 index_only=args.indexonly,
                 dry_run=args.dry_run,
                 no_archive=args.no_archive,
