@@ -103,8 +103,15 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 			final TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0, 0, 0));
 
-			double mean = prop.getMu();
-			double variance = prop.getSigma2();
+
+			double sampledValue;
+
+			/* Gaussian Thompson Sampling */
+			if (!usingBayesian) {
+				double mean = prop.getMu();
+				double variance = prop.getSigma2();
+				sampledValue = retrieveNormalSample(mean, variance);
+			}
 
 			double sampledValue = retrieveNormalSample(mean, variance);
 
