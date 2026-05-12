@@ -169,7 +169,7 @@ LIST_OF_CONFIGS = [
      }
      },
 
-    # [ Q-Learning with Thompson Sampling ] (indices 23-27)
+    # [ Q-Learning with Thompson Sampling ] (indices 23-28)
     {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 0.5,
@@ -190,13 +190,21 @@ LIST_OF_CONFIGS = [
          "ts_iv": 5.0,
      }
      },
+    ## Additional Thompson Sampling that use purer bayesian (alpha-beta) with BetaDistribution sampling
     {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
      "overrides": {
-         "ts_iv": 10.0,
+         "ts_bayesian": True,
+         "ts_reset": True,
+     }
+     },
+    {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+     "overrides": {
+         "ts_bayesian": True,
+         "ts_reset": False,
      }
      },
 
-    # [ Episodic Lévy Flight ] (indices 28-35)
+    # [ Episodic Lévy Flight ] (indices 29-36)
     {"alg": "lfe", "runs": 500, "id": "lfe",
      "overrides": {
          "lfe_la": 0.25,
