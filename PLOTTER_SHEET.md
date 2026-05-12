@@ -46,6 +46,16 @@ python pyplotters/bestof_plotter.py -aof ql-p-ms@1 --group qlm_bp --addparams ql
 
 ```
 
+## Best of Plotters Compare All
+
+```sh
+python pyplotters/bestof_plotter.py -aof ql-c-ms@0 --compareall --title "LF vs Q-Learning (Clustered Distributed, Resampled Locations)"
+python pyplotters/bestof_plotter.py -aof ql-c-ms@1 --compareall --title "LF vs Q-Learning (Clustered Distributed, Fixed Locations)"
+python pyplotters/bestof_plotter.py -aof ql-p-ms@0 --compareall --title "LF vs Q-Learning (Poisson Distributed, Resampled Locations)"
+python pyplotters/bestof_plotter.py -aof ql-p-ms@1 --compareall --title "LF vs Q-Learning (Poisson Distributed, Fixed Locations)"
+
+```
+
 # How Plotter Works
 
 ## Persistence Plotter

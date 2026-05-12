@@ -187,9 +187,19 @@ LIST_OF_CONFIGS = [
      },
     {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
      "overrides": {
-         "ts_iv": 5.0,
+         "ts_iv": 3.0,
      }
      },
+    # {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    #  "overrides": {
+    #      "ts_iv": 4.0,
+    #  }
+    #  },
+    # {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    #  "overrides": {
+    #      "ts_iv": 5.0,
+    #  }
+    #  },
     ## Additional Thompson Sampling that use purer bayesian (alpha-beta) with BetaDistribution sampling
     {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
      "overrides": {
