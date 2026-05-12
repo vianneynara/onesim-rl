@@ -49,6 +49,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 PLOT_RESULTS_DIR = "pyplotters\\plots"
+# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 
 @dataclass(frozen=True)
