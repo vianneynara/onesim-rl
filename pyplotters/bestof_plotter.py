@@ -57,6 +57,22 @@ if __package__ in (None, ""):
     
 from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 
+# PLOT_RESULTS_DIR = "pyplotters\\plots"
+PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+
+# CURR_CMAP = "Set1"
+# CURR_CMAP = "Set2"
+# CURR_CMAP = "Set3"
+# CURR_CMAP = "Spectral"
+# CURR_CMAP = "PuOr"
+CURR_CMAP = "gist_rainbow"
+# CURR_CMAP = "gist_ncar"
+# CURR_CMAP = "gist_heat"
+# CURR_CMAP = "gist_stern"
+# CURR_CMAP = "hsv"
+# CURR_CMAP = "cool"
+# CURR_CMAP = "winter"
+
 LINE_LENGTH = 100
 logging.basicConfig(
     level=logging.INFO,
@@ -64,9 +80,6 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 log = logging.getLogger(__name__)
-
-PLOT_RESULTS_DIR = "pyplotters\\plots"
-# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 
 @dataclass(frozen=True)
@@ -362,7 +375,7 @@ def plot_bestof_by_episode(
         max_ep = int(df["episodeNumber"].max()) if max_ep is None else max(max_ep, int(df["episodeNumber"].max()))
         min_ep = int(df["episodeNumber"].min()) if min_ep is None else min(min_ep, int(df["episodeNumber"].min()))
 
-    palette = sns.color_palette(n_colors=len(series_by_label))
+    palette = sns.color_palette(CURR_CMAP or "Set1", n_colors=len(series_by_label))
     for (label, df), color in zip(series_by_label, palette):
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
