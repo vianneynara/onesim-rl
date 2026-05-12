@@ -7,7 +7,6 @@ import lombok.Setter;
 import movement.MovementModel;
 import movement.rl.StateActionPair;
 import movement.rl.persistence.EpisodicPersistenceData;
-import org.apache.commons.math4.legacy.distribution.AbstractRealDistribution;
 
 import java.util.*;
 
@@ -189,8 +188,8 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			}
 
 			/* Calculate mean from Alpha and Beta */
-			double updatedMean = alpha / (alpha + beta);
-			double updatedVariance = (alpha * beta) / (Math.pow((alpha + beta), 2) * (alpha + beta + 1));
+			double updatedMean = (double) alpha / (alpha + beta);
+			double updatedVariance = (double) (alpha * beta) / (Math.pow((alpha + beta), 2) * (alpha + beta + 1));
 
 			/* Ensures variance to not exceed 0.000001, avoiding zero */
 			updatedVariance = Math.max(updatedVariance, 1e-6);
