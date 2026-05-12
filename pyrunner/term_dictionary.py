@@ -1,7 +1,21 @@
 ALG_BASE_SETTINGS_PATH = {
     "ql": "settings/skripsi/randomsearch-qlearn.cfg",
+    "ql-c-ms@0": "settings/skripsi/randomsearch-qlearn-ql-c-ms@0.cfg",
+    "ql-c-ms@1": "settings/skripsi/randomsearch-qlearn-ql-c-ms@1.cfg",
+    "ql-p-ms@0": "settings/skripsi/randomsearch-qlearn-ql-p-ms@0.cfg",
+    "ql-p-ms@1": "settings/skripsi/randomsearch-qlearn-ql-p-ms@1.cfg",
+
     "mcn": "settings/skripsi/randomsearch-mcn.cfg",
+    "mcn-c-ms@0": "settings/skripsi/randomsearch-mcn-mc-c-ms@0.cfg",
+    "mcn-c-ms@1": "settings/skripsi/randomsearch-mcn-mc-c-ms@1.cfg",
+    "mcn-p-ms@0": "settings/skripsi/randomsearch-mcn-mc-p-ms@0.cfg",
+    "mcn-p-ms@1": "settings/skripsi/randomsearch-mcn-mc-p-ms@1.cfg",
+
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
+    "lfe-c-ms@0": "settings/skripsi/randomsearch-lf-episodic-lfe-c-ms@0.cfg",
+    "lfe-c-ms@1": "settings/skripsi/randomsearch-lf-episodic-lfe-c-ms@1.cfg",
+    "lfe-p-ms@0": "settings/skripsi/randomsearch-lf-episodic-lfe-p-ms@0.cfg",
+    "lfe-p-ms@1": "settings/skripsi/randomsearch-lf-episodic-lfe-p-ms@1.cfg",
 }
 
 ALG_ABBREVIATIONS = {
@@ -57,6 +71,7 @@ KEY_ABBREVIATIONS = {
     "eg_ip": "BehaviorPolicy.EpsilonGreedy.epsilon",
     "eg_ed": "BehaviorPolicy.EpsilonGreedy.epsilonDecay",
     "eg_me": "BehaviorPolicy.EpsilonGreedy.minEpsilon",
+    "eg_de": "BehaviorPolicy.EpsilonGreedy.decayEpisodically",
 
     # [ UCBBehavior settings ]
     "ucb_ec": "BehaviorPolicy.UCB.explorationConstant",

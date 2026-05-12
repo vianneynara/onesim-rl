@@ -140,8 +140,8 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: dict[s
     """
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
-    if "max_cumulative_reward" not in summary_df.columns:
-        _exit_with_warning("summary.csv missing required column 'max_cumulative_reward'.")
+    if "last_episode_cumulative_reward" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'last_episode_cumulative_reward'.")
 
     if addparams is None:
         addparams = {}
@@ -197,12 +197,12 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: dict[s
     merged = summary_df.merge(parsed_df, on="configuration_directory", how="left")
 
     merged = merged.copy()
-    merged["max_cumulative_reward"] = pd.to_numeric(merged["max_cumulative_reward"], errors="coerce")
-    if merged["max_cumulative_reward"].isna().any():
-        _exit_with_warning("summary.csv contains non-numeric max_cumulative_reward values; aborting.")
+    merged["last_episode_cumulative_reward"] = pd.to_numeric(merged["last_episode_cumulative_reward"], errors="coerce")
+    if merged["last_episode_cumulative_reward"].isna().any():
+        _exit_with_warning("summary.csv contains non-numeric last_episode_cumulative_reward values; aborting.")
 
     merged = merged.sort_values(
-        by=["group_value", "max_cumulative_reward", "configuration_directory"],
+        by=["group_value", "last_episode_cumulative_reward", "configuration_directory"],
         ascending=[True, False, True],
         kind="mergesort",
     )
@@ -303,8 +303,9 @@ def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = N
         gv = str(row["group_value"])
         formal = GROUP_VALUE_TERMS.get(gv, "")
         formal_part = f" ({formal})" if formal else ""
+        last_reward = row['last_episode_cumulative_reward']
         log.info(
-            f"{gv}{formal_part}: {row['configuration_directory']} | max_cumulative_reward={row['max_cumulative_reward']}"
+            f"{gv}{formal_part}: {row['configuration_directory']} | last_episode_cumulative_reward={last_reward:.2f}"
         )
     log.info(LINE_LENGTH * "-")
 

@@ -19,12 +19,14 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	private double epsilon;
 	private final double epsilonDecay;
 	private final double minEpsilon;
+	private final boolean decayEpisodically;
 	private Random random;
 
 	public static final String BEHAVIOR_NS = "BehaviorPolicy.EpsilonGreedy";
 	public static final String EPSILON_S = "epsilon";
 	public static final String DECAY_S = "epsilonDecay";
 	public static final String MIN_EPSILON_S = "minEpsilon";
+	public static final String DECAY_EPISODICALLY_S = "decayEpisodically";
 
 	/**
 	 * Constructor called reflectively by Settings. The {@code _settings} param is unused
@@ -36,6 +38,7 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 		this.epsilon = behaviorSettings.getDouble(EPSILON_S, 0.9);
 		this.epsilonDecay = behaviorSettings.getDouble(DECAY_S, 0.995);
 		this.minEpsilon = behaviorSettings.getDouble(MIN_EPSILON_S, 0.01);
+		this.decayEpisodically = behaviorSettings.getBoolean(DECAY_EPISODICALLY_S, true);
 
 		// use seed from MovementModel for reproducibility
 		this.random = MovementModel.getRandom();
@@ -50,6 +53,7 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 		this.epsilon = proto.epsilon;
 		this.epsilonDecay = proto.epsilonDecay;
 		this.minEpsilon = proto.minEpsilon;
+		this.decayEpisodically = proto.decayEpisodically;
 		this.random = proto.random;
 	}
 
@@ -79,8 +83,10 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	 */
 	@Override
 	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
-		/* ε_t+1 = max(ε, ε • decay rate) */
-		epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
+		if (!decayEpisodically) {
+			/* ε_t+1 = max(ε, ε • decay rate) */
+			epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
+		}
 	}
 
 	/**
@@ -146,6 +152,10 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 
 	@Override
 	public void saveTo(EpisodicPersistenceData epd) {
+		if (decayEpisodically) {
+			/* ε_t+1 = max(ε, ε • decay rate) */
+			this.epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
+		}
 		epd.epsilon = this.epsilon;
 		System.out.println("[EpsilonGreedyBehavior] Saved epsilon of: " + epd.epsilon);
 	}

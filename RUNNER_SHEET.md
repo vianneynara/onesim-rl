@@ -1,44 +1,58 @@
 # RUNNER SHEET
 
+## Overall running with different ALG overriding
+
+```sh
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 1-32 -alg ql-c-ms@0
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 1-32 -alg ql-c-ms@1
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 1-32 -alg ql-p-ms@0
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 1-32 -alg ql-p-ms@1
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 33-40 -alg lfe-c-ms@0
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 33-40 -alg lfe-c-ms@1
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 33-40 -alg lfe-p-ms@0
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 33-40 -alg lfe-p-ms@1
+
+```
+
 ## Simulation runs with Batch Runner
 
 ### Running Epsilon Greedy Configs
 
 ```sh
-python -m pyrunner.batch_runner -pid ql-c-ms@0 -c 1-6,31-38
-python -m pyrunner.batch_runner -pid ql-c-ms@1 -c 1-6,31-38
-python -m pyrunner.batch_runner -pid ql-p-ms@0 -c 1-6,31-38
-python -m pyrunner.batch_runner -pid ql-p-ms@1 -c 1-6,31-38
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 1-15
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 1-15
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 1-15
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 1-15
 
 ```
 
 ### Running Upper Confidence Bound Configs
 
 ```sh
-python -m pyrunner.batch_runner -pid ql-c-ms@0 -c 7-18
-python -m pyrunner.batch_runner -pid ql-c-ms@1 -c 7-18
-python -m pyrunner.batch_runner -pid ql-p-ms@0 -c 7-18
-python -m pyrunner.batch_runner -pid ql-p-ms@1 -c 7-18
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 16-27
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 16-27
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 16-27
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 16-27
 
 ```
 
 ### Running Thompson Sampling Configs
 
 ```sh
-python -m pyrunner.batch_runner -pid ql-c-ms@0 -c 19-22
-python -m pyrunner.batch_runner -pid ql-c-ms@1 -c 19-22
-python -m pyrunner.batch_runner -pid ql-p-ms@0 -c 19-22
-python -m pyrunner.batch_runner -pid ql-p-ms@1 -c 19-22
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 28-32
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 28-32
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 28-32
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 28-32
 
 ```
 
 ### Running Lévy Flight Configs
 
 ```sh
-python -m pyrunner.batch_runner -pid lfe-c-ms@0 -c 23-30
-python -m pyrunner.batch_runner -pid lfe-c-ms@1 -c 23-30
-python -m pyrunner.batch_runner -pid lfe-p-ms@0 -c 23-30
-python -m pyrunner.batch_runner -pid lfe-p-ms@1 -c 23-30
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 33-40
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 33-40
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 33-40
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 33-40
 
 ```
 
@@ -64,15 +78,17 @@ The runner generates:
 
 ## Arguments
 
-| Argument                | Type | Description                                                                                                      |
-|-------------------------|------|------------------------------------------------------------------------------------------------------------------|
-| `-c, --config`          | str  | Config index(es) to run. Supports single values (e.g., `1`), ranges (e.g., `1-6`), or mixed (e.g., `1-3,5,7-10`) |
-| `-a, --all`             | flag | Run all configurations defined in `LIST_OF_CONFIGS` from `batch_configs.py`                                      |
-| `-r, --runs`            | int  | Override number of episodes for all selected configs (if not set, uses config's `runs` value)                    |
-| `-pid, --parent-dir-id` | str  | Custom name for report directory under `reports/skripsi/` (default: algorithm key like `ql`, `lfe`)              |
-| `--verify`              | flag | Verify each config's episodes are complete and uncorrupted before running                                        |
-| `--continue`            | flag | Verify and resume from last good episode by rebuilding `_persistence.json` from that episode                     |
-| `-vc`                   | flag | Shortcut for `--verify --continue` combined                                                                      |
-| `-cc, --count-configs`  | flag | Display total number of configs and exit (useful for checking config range limits)                               |
+| Argument                | Type | Description                                                                                                                                                 |
+|-------------------------|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `-c, --config`          | str  | Config index(es) to run. Supports single values (e.g., `1`), ranges (e.g., `1-6`), or mixed (e.g., `1-3,5,7-10`)                                            |
+| `-a, --all`             | flag | Run all configurations defined in `LIST_OF_CONFIGS` from `batch_configs.py`                                                                                 |
+| `-r, --runs`            | int  | Override number of episodes for all selected configs (if not set, uses config's `runs` value)                                                               |
+| `-pid, --parent-dir-id` | str  | Custom name for report directory under `reports/skripsi/` (default: algorithm key like `ql`, `lfe`)                                                         |
+| `-alg`, `--algorithm`   | str  | Override algorithm config file using ALG_BASE_SETTINGS_PATH key (e.g., `ql`, `lfe`, `mc`). Lower priority than `--runcfg`                                   |
+| `-rcfg` `--runcfg`      | str  | Override algorithm config file with custom config path (e.g., `custom-setting.cfg` or `settings/skripsi/custom-setting.cfg`). Takes precedence over `--alg` |
+| `--verify`              | flag | Verify each config's episodes are complete and uncorrupted before running                                                                                   |
+| `--continue`            | flag | Verify and resume from last good episode by rebuilding `_persistence.json` from that episode                                                                |
+| `-vc`                   | flag | Shortcut for `--verify --continue` combined                                                                                                                 |
+| `-cc, --count-configs`  | flag | Display total number of configs and exit (useful for checking config range limits)                                                                          |
 
 **Note**: `-c` and `-a` are mutually exclusive. If neither is specified, the runner shows help text.
