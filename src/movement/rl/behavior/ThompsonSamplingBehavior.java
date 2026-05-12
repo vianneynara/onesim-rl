@@ -178,8 +178,8 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 		/* Bayesian? Thompson Sampling */
 		else {
-			double alpha = 1 + prop.getSuccessCount();
-			double beta = 1 + prop.getFailureCount();
+			int alpha = 1 + prop.getSuccessCount();
+			int beta = 1 + prop.getFailureCount();
 
 			/* If the reward is plus, count as success and increase alpha. Beta otherwise. */
 			if (reward > 0) {
@@ -196,6 +196,8 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			updatedVariance = Math.max(updatedVariance, 1e-6);
 
 			/* Update the state-action pair wise TS properties */
+			prop.setSuccessCount(alpha - 1);	// decrement by one for consistency
+			prop.setFailureCount(beta - 1);		// decrement by one for consistency
 			prop.setMu(updatedMean);
 			prop.setSigma2(updatedVariance);
 
