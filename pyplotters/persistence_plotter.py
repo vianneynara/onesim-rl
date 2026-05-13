@@ -35,9 +35,10 @@ PLOT_RESULTS_DIR = r"pyplotters\\plots"
 # PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 LIST_OF_IGNORED_OVERRIDES = [
-    "ql500",
-    "lfe500",
-    "cfg"
+    "cfg",  # config index
+    "cg",   # config group
+    "ql500",  # Q-Learning with 500 runs
+    "lfe500"  # Lévy Flight with 500 runs
 ]
 
 SUMMARY_KEYS = [

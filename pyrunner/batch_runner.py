@@ -240,9 +240,16 @@ def build_result_id_dir(
         runs: int,
         config_index: int,
         overrides: list[str],
-        run_id: Optional[str]
+        run_id: Optional[str],
+        group: Optional[str] = None
 ) -> str:
-    prefix = f"cfg@{config_index:02}-{alg}{runs}"
+    prefix = f"cfg@{config_index:02}"
+    
+    # Insert group right after cfg@N prefix, before alg+runs
+    if group:
+        prefix = f"{prefix}-cg@{group}"
+    
+    prefix = f"{prefix}-{alg}{runs}"
     ordered_overrides = _order_abbreviated_overrides(overrides)
 
     if ordered_overrides:
@@ -475,6 +482,7 @@ def run_simulation(
         bp: Optional[str] = None,
         run_id: Optional[str] = None,
         overrides_list: Optional[dict[str, Any]] = None,
+        group: Optional[str] = None,
         verify: bool = False,
         do_continue: bool = False,
         parent_dir_id: Optional[str] = None,
@@ -507,7 +515,7 @@ def run_simulation(
             abr_overrides.append(f"{bp_override_key}@{bp}")
             full_overrides.append(f"{KEY_ABBREVIATIONS[bp_override_key]}={BEHAVIOR_PACKAGES[bp]}")
 
-    result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id)
+    result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id, group)
     validate_run_id(result_id_dir)
 
     # Allow overriding the {alg} portion of the report path
@@ -796,6 +804,7 @@ if __name__ == "__main__":
 
             bp = config["bp"] if "bp" in config else None
             id = config["id"]
+            group = config.get("group")
             overrides = config.get("overrides")
 
             _sim_start_time = datetime.now()
@@ -807,6 +816,7 @@ if __name__ == "__main__":
                 config_index=LIST_OF_CONFIGS.index(config) + 1,
                 bp=bp,
                 run_id=id,
+                group=group,
                 overrides_list=overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
@@ -851,6 +861,7 @@ if __name__ == "__main__":
 
             bp = config["bp"] if "bp" in config else None
             id = config["id"]
+            group = config.get("group")
             overrides = config.get("overrides")
 
             _sim_start_time = datetime.now()
@@ -862,6 +873,7 @@ if __name__ == "__main__":
                 config_index=config_num,
                 bp=bp,
                 run_id=id,
+                group=group,
                 overrides_list=overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
