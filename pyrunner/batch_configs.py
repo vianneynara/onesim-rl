@@ -169,7 +169,7 @@ LIST_OF_CONFIGS = [
      }
      },
 
-    # [ Q-Learning with Thompson Sampling ] (indices 23-35)
+    # [ Q-Learning with Thompson Sampling ] (indices 23-33 (34,35 uses Bayesian))
     {"alg": "ql", "runs": 500, "bp": "ts", "group": "ql_ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 0.5,
