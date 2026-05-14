@@ -28,8 +28,11 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-BASE_REPORTS_DIR = "reports\\skripsi"
-PLOT_RESULTS_DIR = "pyplotters\\plots"
+BASE_REPORTS_DIR = r"reports\\skripsi"
+PLOT_RESULTS_DIR = r"pyplotters\\plots"
+
+# BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
+# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 LIST_OF_IGNORED_OVERRIDES = [
     "ql500",

@@ -27,7 +27,7 @@ from pyrunner.term_dictionary import KEY_ABBREVIATIONS, BEHAVIOR_PACKAGES, ALG_B
 from pyrunner.config_parser import parse_config_file, extract_highlighted_settings
 from pyrunner.utils.fs import safe_int_dirnames
 from pyrunner.utils.jsonio import load_json_file
-from pyrunner.utils.path import validate_run_id
+from pyrunner.utils.path import validate_run_id, normalize_report_base
 from pyrunner.utils.timefmt import format_timedelta
 
 LINE_LENGTH = 100
@@ -42,10 +42,13 @@ log = logging.getLogger(__name__)
 # BATCH RUNNER CONFIGURATION
 # ------------------------------------------------------------------------------------------------------------------- #
 
+# Default base directory for all report outputs
+REPORTS_BASE = "reports/skripsi"
+
 ID_LABEL = "ID_LABEL"
 ALG_LABEL = "ALG_LABEL"
 
-S_REPORT_DIR = f"Report.reportDir=reports/skripsi/{ALG_LABEL}/run-id/{ID_LABEL}"
+S_REPORT_DIR = f"Report.reportDir={REPORTS_BASE}/{ALG_LABEL}/run-id/{ID_LABEL}"
 
 PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcm_bp"]
 
@@ -104,7 +107,8 @@ def create_config_setting_json(
         result_dir_id: str = None,
         overrides_list: list[str] = None,
         custom_cfg: Optional[str] = None,
-        alg_override: Optional[str] = None
+        alg_override: Optional[str] = None,
+        reports_base: str = REPORTS_BASE
 ):
     # Parse the algorithm's base config file (or custom config if provided)
     cfg_file_path = expand_algorithm(alg, custom_cfg, alg_override)
@@ -143,12 +147,12 @@ def create_config_setting_json(
     config_setting_json["highlighted_settings"] = _highlighted_settings
     config_setting_json["overridden_settings"] = _overridden_settings
 
-    # Create the directory first
-    dir_path = f"reports/skripsi/{parent_dir_id}/run-id/{result_dir_id}"
+    # Create the directory first using reports_base
+    dir_path = os.path.join(reports_base, parent_dir_id, "run-id", result_dir_id)
     os.makedirs(dir_path, exist_ok=True)
 
     # Save the JSON to the report directory
-    with open(f"reports/skripsi/{parent_dir_id}/run-id/{result_dir_id}/config_setting.json", "w") as json_file:
+    with open(os.path.join(dir_path, "config_setting.json"), "w") as json_file:
         json.dump(config_setting_json, json_file, indent=4)
 
 
@@ -291,16 +295,21 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1, custom_cfg
         log.info("%s", "-" * LINE_LENGTH)
 
 
-def find_next_version_number(parent_dir_id: str, base_result_id_dir: str) -> int:
+def find_next_version_number(parent_dir_id: str, base_result_id_dir: str, reports_base: str = REPORTS_BASE) -> int:
     """
     Find the next available version number for a run directory.
     
     Checks if base_result_id_dir exists, and if so, finds the highest version number (N) where
     base_result_id_dir(N) exists, then returns N+1. If base_result_id_dir doesn't exist, returns 1.
     
+    Args:
+        parent_dir_id: Parent directory identifier
+        base_result_id_dir: Base result directory name
+        reports_base: Base reports directory path
+    
     Returns: Next version number (1-based, or 1 if no versioned directory exists yet)
     """
-    base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
+    base_path = os.path.join(reports_base, parent_dir_id, "run-id", base_result_id_dir)
 
     # If base directory doesn't exist yet, no versioning needed
     if not os.path.isdir(base_path):
@@ -335,23 +344,28 @@ def find_next_version_number(parent_dir_id: str, base_result_id_dir: str) -> int
     return highest_version + 1
 
 
-def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str) -> str:
+def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str, reports_base: str = REPORTS_BASE) -> str:
     """
     Get the versioned result_id_dir if needed.
     
     If the base result_id_dir directory doesn't exist, returns it as-is.
     If it exists, appends (N) where N is the next available version number.
     
+    Args:
+        parent_dir_id: Parent directory identifier
+        base_result_id_dir: Base result directory name
+        reports_base: Base reports directory path
+    
     Returns: result_id_dir, possibly with (N) suffix
     """
-    base_path = f"reports/skripsi/{parent_dir_id}/run-id/{base_result_id_dir}"
+    base_path = os.path.join(reports_base, parent_dir_id, "run-id", base_result_id_dir)
 
     if not os.path.isdir(base_path):
         # No existing run, use base as-is
         return base_result_id_dir
 
     # Existing run detected, find next version
-    next_version = find_next_version_number(parent_dir_id, base_result_id_dir)
+    next_version = find_next_version_number(parent_dir_id, base_result_id_dir, reports_base)
     versioned_id = f"{base_result_id_dir}({next_version})"
 
     WAIT_TIME = 10
@@ -465,10 +479,14 @@ def run_simulation(
         do_continue: bool = False,
         parent_dir_id: Optional[str] = None,
         custom_cfg: Optional[str] = None,
-        alg_override: Optional[str] = None
+        alg_override: Optional[str] = None,
+        report_base: str = REPORTS_BASE
 ) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg, custom_cfg, alg_override)
+
+    # Normalize report_base (handles both absolute and relative paths)
+    normalized_report_base = normalize_report_base(report_base)
 
     # Validate behavior policy if provided
     if bp and bp not in BEHAVIOR_PACKAGES:
@@ -492,15 +510,15 @@ def run_simulation(
     result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id)
     validate_run_id(result_id_dir)
 
-    # Allow overriding the {alg} portion of reports/skripsi/{alg}/run-id/{result_id_dir}
+    # Allow overriding the {alg} portion of the report path
     parent_dir_id_effective = (parent_dir_id or alg).strip()
     validate_run_id(parent_dir_id_effective)
 
     # Check if we need versioning (only when NOT in verify or continue mode)
     if not verify and not do_continue:
-        result_id_dir = get_versioned_result_id_dir(parent_dir_id_effective, result_id_dir)
+        result_id_dir = get_versioned_result_id_dir(parent_dir_id_effective, result_id_dir, normalized_report_base)
 
-    full_report_dir = f"reports/skripsi/{parent_dir_id_effective}/run-id/{result_id_dir}"
+    full_report_dir = os.path.join(normalized_report_base, parent_dir_id_effective, "run-id", result_id_dir)
 
     persistence_override = f"EpisodicPersistenceManager.persistencePath={full_report_dir}/_persistence.json"
     full_overrides.append(persistence_override)
@@ -513,15 +531,15 @@ def run_simulation(
     log.info("Algorithm: %s (%s), Behavior Policy: %s", alg, settings_file, bp)
     log.info("Run ID: %s, Number of episodes: %s", run_id, runs)
     log.info(
-        "Report parent dir id: %s (reports/skripsi/%s/...)",
+        "Report parent dir id: %s (under base: %s)",
         parent_dir_id_effective,
-        parent_dir_id_effective,
+        normalized_report_base,
     )
     log.info("Overrides: %s", overrides_string if overrides_string else "None")
     log.info("%s", "=" * LINE_LENGTH)
 
     # Create a JSON to log the current running simulation configuration
-    create_config_setting_json(alg, parent_dir_id_effective, runs, bp, result_id_dir, full_overrides, custom_cfg, alg_override)
+    create_config_setting_json(alg, parent_dir_id_effective, runs, bp, result_id_dir, full_overrides, custom_cfg, alg_override, normalized_report_base)
 
     # Verification / continue pre-flight
     start_ep = 1
@@ -712,7 +730,12 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "-pid", "--parent-dir-id", type=str, required=False,
-        help="Override script report dir base folder name under reports/skripsi/. Default uses algorithm key (e.g., 'ql')."
+        help="Override script report dir base folder name under report base directory. Default uses algorithm key (e.g., 'ql')."
+    )
+
+    parser.add_argument(
+        "-srp", "--setreportspath", type=str, required=False,
+        help="Override base report directory path. Accepts absolute paths (e.g., 'D:/test/newdir') or relative paths from current working directory (e.g., 'custom/reports'). Default: 'reports/skripsi'"
     )
 
     parser.add_argument(
@@ -789,7 +812,8 @@ if __name__ == "__main__":
                 do_continue=args.do_continue,
                 parent_dir_id=args.parent_dir_id,
                 custom_cfg=args.runcfg,
-                alg_override=args.algorithm
+                alg_override=args.algorithm,
+                report_base=args.setreportspath or REPORTS_BASE
             )
 
             _sim_end_time = datetime.now()
@@ -843,7 +867,8 @@ if __name__ == "__main__":
                 do_continue=args.do_continue,
                 parent_dir_id=args.parent_dir_id,
                 custom_cfg=args.runcfg,
-                alg_override=args.algorithm
+                alg_override=args.algorithm,
+                report_base=args.setreportspath or REPORTS_BASE
             )
 
 

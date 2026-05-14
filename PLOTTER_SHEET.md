@@ -14,6 +14,16 @@ python pyplotters/persistence_plotter.py -aof ql-p-ms@1 --title "Q-Learning on F
 
 ```
 
+## Merging LFE run ids to QL
+
+```sh
+python pyplotters/summary_merger.py -mf lfe-c-ms@0 -mt ql-c-ms@0 --mvplots
+python pyplotters/summary_merger.py -mf lfe-c-ms@1 -mt ql-c-ms@1 --mvplots
+python pyplotters/summary_merger.py -mf lfe-p-ms@0 -mt ql-p-ms@0 --mvplots
+python pyplotters/summary_merger.py -mf lfe-p-ms@1 -mt ql-p-ms@1 --mvplots
+
+```
+
 ## Best of Plotters
 
 ### Levy Flight Episodic
@@ -29,20 +39,20 @@ python pyplotters/bestof_plotter.py -aof lfe-p-ms@1 --group lfe_la
 ### Q-Learning
 
 ```sh
-python pyplotters/bestof_plotter.py -aof ql-c-ms@0 --group qlm_bp --addparams qlm_bp@lfe --title "Lévy Flight vs Q-Learning with Behavior Policy Comparison"
-python pyplotters/bestof_plotter.py -aof ql-c-ms@1 --group qlm_bp --addparams qlm_bp@lfe --title "Lévy Flight vs Q-Learning with Behavior Policy Comparison"
-python pyplotters/bestof_plotter.py -aof ql-p-ms@0 --group qlm_bp --addparams qlm_bp@lfe --title "Lévy Flight vs Q-Learning with Behavior Policy Comparison"
-python pyplotters/bestof_plotter.py -aof ql-p-ms@1 --group qlm_bp --addparams qlm_bp@lfe --title "Lévy Flight vs Q-Learning with Behavior Policy Comparison"
+python pyplotters/bestof_plotter.py -aof ql-c-ms@0 --group qlm_bp --addparams qlm_bp@lfe --title "LF vs Q-Learning (Clustered Distributed, Resampled Locations)"
+python pyplotters/bestof_plotter.py -aof ql-c-ms@1 --group qlm_bp --addparams qlm_bp@lfe --title "LF vs Q-Learning (Clustered Distributed, Fixed Locations)"
+python pyplotters/bestof_plotter.py -aof ql-p-ms@0 --group qlm_bp --addparams qlm_bp@lfe --title "LF vs Q-Learning (Poisson Distributed, Resampled Locations)"
+python pyplotters/bestof_plotter.py -aof ql-p-ms@1 --group qlm_bp --addparams qlm_bp@lfe --title "LF vs Q-Learning (Poisson Distributed, Fixed Locations)"
 
 ```
 
-## Merging LFE run ids to QL
+## Best of Plotters Compare All
 
 ```sh
-python pyplotters/summary_merger.py -mf lfe-c-ms@0 -mt ql-c-ms@0 --mvplots
-python pyplotters/summary_merger.py -mf lfe-c-ms@1 -mt ql-c-ms@1 --mvplots
-python pyplotters/summary_merger.py -mf lfe-p-ms@0 -mt ql-p-ms@0 --mvplots
-python pyplotters/summary_merger.py -mf lfe-p-ms@1 -mt ql-p-ms@1 --mvplots
+python pyplotters/bestof_plotter.py -aof ql-c-ms@0 --compareall --title "LF vs Q-Learning (Clustered Distributed, Resampled Locations)"
+python pyplotters/bestof_plotter.py -aof ql-c-ms@1 --compareall --title "LF vs Q-Learning (Clustered Distributed, Fixed Locations)"
+python pyplotters/bestof_plotter.py -aof ql-p-ms@0 --compareall --title "LF vs Q-Learning (Poisson Distributed, Resampled Locations)"
+python pyplotters/bestof_plotter.py -aof ql-p-ms@1 --compareall --title "LF vs Q-Learning (Poisson Distributed, Fixed Locations)"
 
 ```
 
