@@ -40,7 +40,7 @@ public class UCBBehavior implements BehaviorPolicy {
     public UCBBehavior(Settings _settings) {
         Settings behaviorSettings = new Settings(BEHAVIOR_NS);
         this.explorationConstant = behaviorSettings.getDouble(EXPLORATION_CONSTANT_S, 1.0);
-        this.resetEpisodically = behaviorSettings.getBoolean(RESET_EPISODICALLY_S, true);
+        this.resetEpisodically = behaviorSettings.getBoolean(RESET_EPISODICALLY_S, false);
 
         this.stateActionFrequencies = new HashMap<>();
         this.stateFrequencies = new HashMap<>();
