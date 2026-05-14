@@ -2,23 +2,24 @@
 
 """
 
-import os
-import sys
+import argparse
 import glob
 import json
 import logging
-from pathlib import Path
+import os
+import sys
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import datetime as dt
-import argparse
-import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 
-from typing import List, Tuple, Union
-from scipy.stats import gaussian_kde
-from matplotlib.ticker import LogLocator, LogFormatter, LogFormatterMathtext, FormatStrFormatter, MultipleLocator
+# Import parse_parent_dir_ids from batch_shifter
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from pyrunner.batch_shifter import parse_parent_dir_ids
 
 LINE_LENGTH = 100
 logging.basicConfig(
@@ -28,15 +29,15 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-BASE_REPORTS_DIR = r"reports\\skripsi"
-PLOT_RESULTS_DIR = r"pyplotters\\plots"
+# BASE_REPORTS_DIR = r"reports\\skripsi"
+# PLOT_RESULTS_DIR = r"pyplotters\\plots"
 
-# BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
-# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
+PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 LIST_OF_IGNORED_OVERRIDES = [
     "cfg",  # config index
-    "cg",   # config group
+    "cg",  # config group
     "ql500",  # Q-Learning with 500 runs
     "lfe500"  # Lévy Flight with 500 runs
 ]
@@ -49,6 +50,7 @@ SUMMARY_KEYS = [
     "max_cumulative_true_detections",
     "max_trajectory_length",
 ]
+
 
 def check_exists_source_dir(dir_path):
     if not os.path.exists(dir_path):
@@ -72,7 +74,7 @@ def parse_run_description(_run_id: str) -> str:
     tokens = _run_id.split("-")
     parsed_tokens = []
     has_pattern = False
-    
+
     for token in tokens:
         if "@" in token:
             has_pattern = True
@@ -83,11 +85,11 @@ def parse_run_description(_run_id: str) -> str:
             # No @ in token, treat as standalone key
             if token not in LIST_OF_IGNORED_OVERRIDES:
                 parsed_tokens.append(token)
-    
+
     # Return empty string if no pattern found (no @ delimiters)
     if not has_pattern:
         return ""
-    
+
     return f"({'; '.join(parsed_tokens)})"
 
 
@@ -127,12 +129,13 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
     return episodic_rewards
 
 
-def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str, _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False, _subtitle: str = None, _description: str = None):
+def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str,
+                    _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False,
+                    _subtitle: str = None, _description: str = None):
     plt.figure(figsize=(10, 6))
 
     if not _yalias:
         _yalias = _ylabel
-
 
     max_episodes = _df["episodeNumber"].max()
     min_episodes = _df["episodeNumber"].min()
@@ -175,23 +178,23 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
         title_lines.append(_title)
     if _subtitle:
         title_lines.append(_subtitle)
-    
+
     main_title = "\n".join(title_lines) if title_lines else ""
-    
+
     # Add main title as suptitle (above plot area)
     fig = plt.gcf()
     fig.suptitle(main_title, fontweight='bold', fontsize=12, y=0.98)
-    
+
     # Add description as lighter text if present
     if _description:
-        fig.text(0.5, 0.91, _description, ha='center', va='top', 
-                fontsize=9, fontweight='light', style='italic', color='gray')
+        fig.text(0.5, 0.91, _description, ha='center', va='top',
+                 fontsize=9, fontweight='light', style='italic', color='gray')
         # Adjust top margin to accommodate both title and description
         fig.subplots_adjust(top=0.88)
     else:
         # Adjust top margin for title only
         fig.subplots_adjust(top=0.92)
-    
+
     plt.xlabel(_xlabel)
     plt.ylabel(_ylabel)
 
@@ -297,21 +300,21 @@ def plot_trajectoryDistribution(
             title_parts.append(_subtitle)
         else:
             suptitle_y -= 0.03
-        
+
         final_title = "\n".join(title_parts)
-        
+
         # Add main title as suptitle (above plot area)
         fig = plt.gcf()
         fig.suptitle(final_title, fontweight='bold', fontsize=12, y=suptitle_y)
-        
+
         # Add description as lighter text if present
         if _description:
-            fig.text(0.5, 0.91, _description, ha='center', va='top', 
-                    fontsize=9, fontweight='light', style='italic', color='gray')
+            fig.text(0.5, 0.91, _description, ha='center', va='top',
+                     fontsize=9, fontweight='light', style='italic', color='gray')
             fig.subplots_adjust(top=0.88)
         else:
             fig.subplots_adjust(top=0.92)
-        
+
         ax = plt.gca()
         plt.xlabel("Trajectory Length")
         plt.ylabel("Probability / Density")
@@ -354,21 +357,21 @@ def plot_trajectoryDistribution(
             title_parts.append(_subtitle)
         else:
             suptitle_y -= 0.03
-        
+
         final_title = "\n".join(title_parts)
-        
+
         # Add main title as suptitle (above plot area)
         fig = plt.gcf()
         fig.suptitle(final_title, fontweight='bold', fontsize=12, y=suptitle_y)
-        
+
         # Add description as lighter text if present
         if _description:
-            fig.text(0.5, 0.91, _description, ha='center', va='top', 
-                    fontsize=9, fontweight='light', style='italic', color='gray')
+            fig.text(0.5, 0.91, _description, ha='center', va='top',
+                     fontsize=9, fontweight='light', style='italic', color='gray')
             fig.subplots_adjust(top=0.88)
         else:
             fig.subplots_adjust(top=0.92)
-        
+
         ax = plt.gca()
         plt.xlabel("Trajectory Length (log scale)")
         plt.ylabel("Probability / Density")
@@ -419,7 +422,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
     log.info(LINE_LENGTH * "-")
     log.info(f"Processing run directory: {run_id}")
 
-    _run_summary = {key:float("-inf") for key in SUMMARY_KEYS}
+    _run_summary = {key: float("-inf") for key in SUMMARY_KEYS}
     _run_summary["configuration_directory"] = _run_id_dir.split("\\")[-1]
 
     COMMON_IDX = ["episodeNumber", "currentEpisodeReward", "currentCumulativeReward", "previousCumulativeReward",
@@ -442,11 +445,14 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         common_df = pd.concat([common_df, pd.DataFrame([row_data])], ignore_index=True)
 
         # Update summary values
-        _run_summary["max_cumulative_reward"] = max(_run_summary["max_cumulative_reward"], json_data["currentCumulativeReward"])
-        _run_summary["max_cumulative_true_detections"] = max(_run_summary["max_cumulative_true_detections"], json_data["currentCumulativeTrueDetections"])
+        _run_summary["max_cumulative_reward"] = max(_run_summary["max_cumulative_reward"],
+                                                    json_data["currentCumulativeReward"])
+        _run_summary["max_cumulative_true_detections"] = max(_run_summary["max_cumulative_true_detections"],
+                                                             json_data["currentCumulativeTrueDetections"])
 
         # Get highest "trajectoryFrequencies" by grabbing and selecting the highest int-casted
-        _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"], max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))
+        _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"],
+                                                    max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))
 
     # SORT common_df by episodeNumber, this wsa critical bruh.
     common_df = common_df.sort_values(by=["episodeNumber"], ascending=True)
@@ -456,7 +462,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
 
     # Calculate mean cumulative reward after all episodes are processed
     _run_summary["mean_cumulative_reward"] = common_df["currentCumulativeReward"].mean()
-    
+
     # Calculate last episode's cumulative reward (final performance)
     _run_summary["last_episode_cumulative_reward"] = common_df["currentCumulativeReward"].iloc[-1]
 
@@ -588,7 +594,8 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-aof", "--all_of", type=str, help="The parent report source directory. (e.g. \"ql\")"
+        "-pid", "--parent-id", type=str,
+        help="Parent report source directory/directories, comma-separated. (e.g. \"ql\" or \"ql-p-ms@0,ql-p-ms@1\")"
     )
 
     parser.add_argument(
@@ -605,34 +612,47 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not args.all_of and not args.run_id:
+    if not args.parent_id and not args.run_id:
         parser.print_help()
         sys.exit()
 
     # Delegate to loopers to retrieve all episodic JSON data
-    if args.all_of:
-        all_of_dir = os.path.join(BASE_REPORTS_DIR, args.all_of)
-        check_exists_source_dir(all_of_dir)
-        summary_df = pd.DataFrame(columns=SUMMARY_KEYS)
+    if args.parent_id:
+        # Parse comma-separated parent_dir_ids
+        parent_dir_ids = parse_parent_dir_ids(args.parent_id)
 
-        run_dirs = glob.glob(os.path.join(all_of_dir, "run-id", "*"))
-        if not run_dirs:
-            log.error(f"No run-id directories found under {all_of_dir}. Checking for direct subdirectories instead.")
-            run_dirs = glob.glob(os.path.join(all_of_dir, "*"))
+        if not parent_dir_ids:
+            log.error("No valid parent_dir_id(s) provided")
+            sys.exit(1)
 
-        log.info("Making sure the results directory exists: " + PLOT_RESULTS_DIR + f"/{args.all_of}/")
-        os.makedirs(os.path.join(PLOT_RESULTS_DIR, args.all_of), exist_ok=True)
+        log.info(f"Processing {len(parent_dir_ids)} parent_dir_id(s): {parent_dir_ids}")
 
-        for run_dir in run_dirs:
-            if os.path.isdir(run_dir):
-                log.info(f"Processing result directory: {run_dir}")
-                run_summary = process_reports(run_dir, args.all_of, args.title, args.describe)
+        # Process each parent_dir_id
+        for parent_id in parent_dir_ids:
+            parent_id_dir = os.path.join(BASE_REPORTS_DIR, parent_id)
+            check_exists_source_dir(parent_id_dir)
+            summary_df = pd.DataFrame(columns=SUMMARY_KEYS)
 
-                summary_df = pd.concat([summary_df, pd.DataFrame([run_summary])], ignore_index=True)
+            run_dirs = glob.glob(os.path.join(parent_id_dir, "run-id", "*"))
+            if not run_dirs:
+                log.error(
+                    f"No run-id directories found under {parent_id_dir}. Checking for direct subdirectories instead.")
+                run_dirs = glob.glob(os.path.join(parent_id_dir, "*"))
 
-        log.info("Done processing all results.")
-        log.info("Saving summary to CSV file: " + os.path.join(PLOT_RESULTS_DIR, args.all_of, "summary.csv"))
-        summary_df.to_csv(os.path.join(PLOT_RESULTS_DIR, args.all_of, "summary.csv"), index=False, sep=";", header=True)
+            log.info("Making sure the results directory exists: " + PLOT_RESULTS_DIR + f"/{parent_id}/")
+            os.makedirs(os.path.join(PLOT_RESULTS_DIR, parent_id), exist_ok=True)
+
+            for run_dir in run_dirs:
+                if os.path.isdir(run_dir):
+                    log.info(f"Processing result directory: {run_dir}")
+                    run_summary = process_reports(run_dir, parent_id, args.title, args.describe)
+
+                    summary_df = pd.concat([summary_df, pd.DataFrame([run_summary])], ignore_index=True)
+
+            log.info(f"Done processing all results for parent_id: {parent_id}")
+            log.info("Saving summary to CSV file: " + os.path.join(PLOT_RESULTS_DIR, parent_id, "summary.csv"))
+            summary_df.to_csv(os.path.join(PLOT_RESULTS_DIR, parent_id, "summary.csv"), index=False, sep=";",
+                              header=True)
 
     elif args.run_id:
         # Finds the args.run_id directory under BASE_REPORTS_DIR and store it in run_dir if found
