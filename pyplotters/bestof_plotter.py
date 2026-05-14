@@ -10,7 +10,7 @@ It supports two modes:
    sorted by reward (highest first). Legend shows cfg@N and parameter overrides.
 
 Assumptions / constraints (by design):
-- Must be invoked with `-aof/--all_of`.
+- Must be invoked with `-pid/--parent_id`.
 - Requires `pyplotters/plots/<aof>/summary.csv` to exist.
 - Requires each referenced `common_data.csv` to exist.
 - Run-directory names must be parseable as: <prefix>-<k>@<v>-<k>@<v>-...
@@ -18,16 +18,16 @@ Assumptions / constraints (by design):
 
 Examples:
   # Best-of mode: compare best run per behavior policy
-  python -m pyplotters.bestof_plotter -aof ql-c-ms@0-ls@0 --group qlm_bp
+  python -m pyplotters.bestof_plotter -pid ql-c-ms@0-ls@0 --group qlm_bp
   
   # Best-of mode with config filtering
-  python -m pyplotters.bestof_plotter -aof ql-c-ms@0-ls@0 --group qlm_bp -c 1-5
+  python -m pyplotters.bestof_plotter -pid ql-c-ms@0-ls@0 --group qlm_bp -c 1-5
   
   # Compare-all mode: plot all configs sorted by reward
-  python -m pyplotters.bestof_plotter -aof ql-p-ms@1 --title "LF vs Q-Learning" --compareall
+  python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --title "LF vs Q-Learning" --compareall
   
   # Compare-all with config filtering
-  python -m pyplotters.bestof_plotter -aof ql-p-ms@1 --title "LF vs Q-Learning" --compareall -c 1-5,18-23,29-32
+  python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --title "LF vs Q-Learning" --compareall -c 1-5,18-23,29-32
 
 Outputs:
   Saves best-of comparison plots into `pyplotters/plots/<aof>/` adjacent to
@@ -81,6 +81,13 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# Keys to ignore in legend labels (algorithm, runs count, config index, config group)
+LIST_OF_IGNORED_OVERRIDES = [
+    "cfg",  # config index (e.g., cfg@01)
+    "cg",   # config group (e.g., cg@ql_epsilon)
+    "ql500",  # Q-Learning with 500 runs
+    "lfe500"  # Lévy Flight with 500 runs
+]
 
 @dataclass(frozen=True)
 class ParsedRunId:
@@ -314,7 +321,8 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: Union[
                     f"skipping requested injection '{add_key}@{add_value}'."
                 )
         
-        overrides = {k: v for k, v in pr.tokens.items() if k != group_key}
+        overrides = {k: v for k, v in pr.tokens.items() 
+                    if k != group_key and k not in LIST_OF_IGNORED_OVERRIDES}
         records.append(
             {
                 "configuration_directory": run_id,
@@ -439,11 +447,11 @@ def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indice
 
     if not os.path.exists(out_dir):
         _exit_with_warning(
-            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -aof first?"
+            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -pid first?"
         )
     if not os.path.exists(summary_path):
         _exit_with_warning(
-            f"Missing {summary_path}. Did you run persistence_plotter.py -aof first?"
+            f"Missing {summary_path}. Did you run persistence_plotter.py -pid first?"
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
@@ -488,13 +496,15 @@ def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indice
         try:
             pr = parse_run_id_strict(run_id)
             # Build legend label: cfg@N (abbr=value, abbr=value, ...)
+            # Filter out ignored keys (cfg, cg, alg+runs)
             if pr.tokens:
                 items: list[tuple[str, str]] = []
                 for k, v in pr.tokens.items():
-                    items.append((key_to_abbr(k), str(v)))
+                    if k not in LIST_OF_IGNORED_OVERRIDES:
+                        items.append((key_to_abbr(k), str(v)))
                 items.sort(key=lambda t: t[0])
                 overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
-                legend_label = f'{cfg_str} ({overrides_str})'
+                legend_label = f'{cfg_str} ({overrides_str})' if overrides_str else cfg_str
             else:
                 legend_label = cfg_str
         except SystemExit:
@@ -550,11 +560,11 @@ def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], Non
 
     if not os.path.exists(out_dir):
         _exit_with_warning(
-            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -aof first?"
+            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -pid first?"
         )
     if not os.path.exists(summary_path):
         _exit_with_warning(
-            f"Missing {summary_path}. Did you run persistence_plotter.py -aof first?"
+            f"Missing {summary_path}. Did you run persistence_plotter.py -pid first?"
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
@@ -619,11 +629,11 @@ def main(argv: Union[list[str], None] = None) -> None:
         description="Best-of comparison plotter for ONE-Sim runs (uses pyplotters/plots outputs)."
     )
     parser.add_argument(
-        "-aof",
-        "--all_of",
+        "-pid",
+        "--parent_id",
         type=str,
         required=True,
-        help="Parent results directory under pyplotters/plots (same value used in persistence_plotter.py -aof).",
+        help="Parent results directory under pyplotters/plots (same value used in persistence_plotter.py -pid).",
     )
     parser.add_argument(
         "--compareall",
@@ -702,9 +712,9 @@ def main(argv: Union[list[str], None] = None) -> None:
     
     # Route to appropriate function
     if args.compareall:
-        run_compareall(args.all_of, args.title, config_indices)
+        run_compareall(args.parent_id, args.title, config_indices)
     else:
-        run_bestof(args.all_of, args.group, addparams, args.title, config_indices)
+        run_bestof(args.parent_id, args.group, addparams, args.title, config_indices)
 
 
 if __name__ == "__main__":
