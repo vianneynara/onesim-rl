@@ -69,6 +69,12 @@ from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 # PLOT_RESULTS_DIR = "pyplotters\\plots"
 PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
+# BESTOF_CMAP = "viridis"
+# BESTOF_CMAP = "magma"
+# BESTOF_CMAP = "plasma"
+# BESTOF_CMAP = "gnuplot2"
+BESTOF_CMAP = "inferno"
+
 # CURR_CMAP = "Set1"
 # CURR_CMAP = "Set2"
 # CURR_CMAP = "Set3"
@@ -419,6 +425,7 @@ def plot_bestof_by_episode(
     out_file: str,
     suptitle: SuptitleFormat = None,
     legend_outside: bool = False,
+    cmap: str = None,
 ):
     if not series_by_label:
         _exit_with_warning("No best-of series to plot.")
@@ -433,7 +440,9 @@ def plot_bestof_by_episode(
         max_ep = int(df["episodeNumber"].max()) if max_ep is None else max(max_ep, int(df["episodeNumber"].max()))
         min_ep = int(df["episodeNumber"].min()) if min_ep is None else min(min_ep, int(df["episodeNumber"].min()))
 
-    palette = sns.color_palette(CURR_CMAP or "Set1", n_colors=len(series_by_label))
+    if not cmap:
+        cmap = 'gist_rainbow'
+    palette = sns.color_palette(cmap, n_colors=len(series_by_label))
     for (label, df), color in zip(series_by_label, palette):
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
@@ -615,7 +624,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
         log.info(f"Saved: {out_file}")
 
 
-def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
+def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
@@ -634,10 +643,10 @@ def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], Non
     if config_indices is not None:
         summary_df = filter_summary_by_configs(summary_df, config_indices)
     
-    winners = best_of_by_group(summary_df, group_key, addparams)
+    winners = best_of_by_group(summary_df, comparison_key, addparams)
 
     log.info(LINE_LENGTH * "-")
-    log.info(f"Best-Of selection by group '{group_key}'")
+    log.info(f"Best-Of selection by group '{comparison_key}'")
     for _, row in winners.iterrows():
         gv = str(row["group_value"])
         formal = GROUP_VALUE_TERMS.get(gv, "")
@@ -681,6 +690,7 @@ def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], Non
             ylabel=ylabel,
             out_file=out_file,
             suptitle=suptitle,
+            cmap=BESTOF_CMAP
         )
         log.info(f"Saved: {out_file}")
 
