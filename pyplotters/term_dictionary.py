@@ -10,7 +10,7 @@ from __future__ import annotations
 # Behavior-policy / group-value names.
 GROUP_VALUE_TERMS: dict[str, str] = {
     "epsilon": "Epsilon Greedy",
-    "ts": "Thompson Sampling",
+    "ts": "Posterior Sampling",
     "ucb": "Upper Confidence Bound",
 
     "lfe": "Lévy Flight"
