@@ -23,9 +23,9 @@ KEY_TRANSLATOR = {
     "eg_me": "Minimum Epsilon Threshold",
     "eg_ed": "Epsilon Decay",
     "ucb_ec": "Exploration Constant",
-    "ts_iv": "Initial Variance",
-    "ts_bayesian": "Using Beta-Binomial",
-    "ts_lr": "Q-Tracking Learning Rate",
+    "ts_lr": "Q-Tracking PS Learning Rate",
+    "ts_iv": "Q-Tracking PS Initial Variance",
+    "ts_bayesian": "Using Beta-Bernoulli Sampling",
     "ts_reset": "Reset Episodes",
     "lfe_la": "Lévy Alpha",
 }
