@@ -417,7 +417,7 @@ def plot_bestof_by_episode(
     xlabel: str,
     ylabel: str,
     out_file: str,
-    suptitle: Union[str, None] = None,
+    suptitle: SuptitleFormat = None,
     legend_outside: bool = False,
 ):
     if not series_by_label:
@@ -450,12 +450,23 @@ def plot_bestof_by_episode(
         plt.xlim(left=min_ep)
 
     # Construct title with suptitle and subtitle
-    if suptitle:
-        # Multi-line title: suptitle on top, subtitle below
+    if suptitle.title != "":
         fig = plt.gcf()
-        fig.suptitle(suptitle, fontweight="bold", fontsize=12, y=0.99)
+
+        fig.suptitle(
+            suptitle.title,
+            fontweight="bold",
+            fontsize=12,
+            y=0.99
+        )
+
         plt.title(title, fontweight="bold", fontsize=10)
-        fig.subplots_adjust(top=0.92)
+
+        extra_lines = max(0, suptitle.newline_gap - 1)
+
+        fig.subplots_adjust(
+            top=0.92 - (0.04 * extra_lines)
+        )
     else:
         # Single title (backward compatible)
         plt.title(title, fontweight="bold")
@@ -481,7 +492,7 @@ def plot_bestof_by_episode(
     plt.close()
 
 
-def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indices: Union[list[int], None] = None) -> None:
+def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
     """Compare all available configurations (no grouping, no best-of selection).
     
     Plots all configs with legend labels showing cfg@N and parameter overrides.
@@ -604,7 +615,7 @@ def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indice
         log.info(f"Saved: {out_file}")
 
 
-def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], None] = None, suptitle: Union[str, None] = None, config_indices: Union[list[int], None] = None) -> None:
+def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
@@ -674,7 +685,7 @@ def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], Non
         log.info(f"Saved: {out_file}")
 
 
-def run_configgroup(all_of: str, cg_key: str, suptitle: Union[str, None] = None, config_indices: Union[list[int], None] = None) -> None:
+def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
     """Compare all runs matching a config-group key.
     
     Filters runs by cg@KEY, plots all matching runs sorted by reward (descending).
@@ -893,15 +904,32 @@ def main(argv: Union[list[str], None] = None) -> None:
         # Sort by key alphabetically for stable/deterministic injection order
         addparams = dict(sorted(addparams.items()))
         log.info(f"Phantom addparams provided: {addparams}")
+
+    ftitle = SuptitleFormat("", 1)
+
+    if args.title:
+        # Replacing special newline escape character and \\t for latex equation
+        args.title = (
+            args.title
+            .replace(r"\n", "\n")
+            .replace(r"\\t", "\\t")
+        )
+        line_count = args.title.count("\n") + 1
+        ftitle = SuptitleFormat(args.title, line_count)
     
     # Route to appropriate function
     if args.compareall:
-        run_compareall(args.parent_id, args.title, config_indices)
+        run_compareall(args.parent_id, ftitle, config_indices)
     elif args.configgroup:
-        run_configgroup(args.parent_id, args.configgroup, args.title, config_indices)
+        run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices)
     else:
-        run_bestof(args.parent_id, args.group, addparams, args.title, config_indices)
+        run_bestof(args.parent_id, args.group, addparams, ftitle, config_indices)
 
+
+class SuptitleFormat:
+    def __init__(self, title: str, newline_gap: int = 1):
+        self.title = title
+        self.newline_gap = newline_gap
 
 if __name__ == "__main__":
     main()
