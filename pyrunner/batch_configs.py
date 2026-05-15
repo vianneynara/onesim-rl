@@ -190,37 +190,37 @@ LIST_OF_CONFIGS = [
          "ts_iv": 3.0,
      }
      },
-    {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    {"alg": "ql", "runs": 500, "bp": "ts", "group": "ql_ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 4.0,
      }
      },
-    {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    {"alg": "ql", "runs": 500, "bp": "ts", "group": "ql_ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 5.0,
      }
      },
-    {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    {"alg": "ql", "runs": 500, "bp": "ts", "group": "ql_ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 6.0,
      }
      },
-    {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    {"alg": "ql", "runs": 500, "bp": "ts", "group": "ql_ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 7.0,
      }
      },
-    {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    {"alg": "ql", "runs": 500, "bp": "ts", "group": "ql_ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 8.0,
      }
      },
-    {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    {"alg": "ql", "runs": 500, "bp": "ts", "group": "ql_ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 9.0,
      }
      },
-    {"alg": "ql", "runs": 500, "bp": "ts", "id": "ql5-bp=ts",
+    {"alg": "ql", "runs": 500, "bp": "ts", "group": "ql_ts", "id": "ql5-bp=ts",
      "overrides": {
          "ts_iv": 10.0,
      }
