@@ -834,7 +834,7 @@ def main(argv: Union[list[str], None] = None) -> None:
         help="Compare all available configs instead of selecting best-of per group. --group becomes optional when this flag is set.",
     )
     parser.add_argument(
-        "--group",
+        "--comparekey",
         type=str,
         required=False,
         help="Grouping key to compare best-of runs (e.g. qlm_bp). Mutually exclusive with --compareall and --configgroup.",
@@ -871,7 +871,7 @@ def main(argv: Union[list[str], None] = None) -> None:
     args = parser.parse_args(argv)
     
     # Count how many modes are specified (exactly one must be set)
-    modes_specified = sum([bool(args.compareall), bool(args.group), bool(args.configgroup)])
+    modes_specified = sum([bool(args.compareall), bool(args.comparekey), bool(args.configgroup)])
     
     if modes_specified != 1:
         _exit_with_warning(
@@ -895,7 +895,7 @@ def main(argv: Union[list[str], None] = None) -> None:
     
     # Parse and validate --addparams if provided (only used in best-of mode)
     addparams: Union[dict[str, str], None] = None
-    if args.addparams and args.group:
+    if args.addparams and args.comparekey:
         addparams = {}
         params_list = args.addparams.split(",")
         for param in params_list:
@@ -933,7 +933,7 @@ def main(argv: Union[list[str], None] = None) -> None:
     elif args.configgroup:
         run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices)
     else:
-        run_bestof(args.parent_id, args.group, addparams, ftitle, config_indices)
+        run_bestof(args.parent_id, args.comparekey, addparams, ftitle, config_indices)
 
 
 class SuptitleFormat:

@@ -29,20 +29,20 @@ python pyplotters/summary_merger.py -mf lfe-p-ms@1 -mt ql-p-ms@1 --mvplots
 ### Levy Flight Episodic
 
 ```sh
-python pyplotters/bestof_plotter.py -pid lfe-c-ms@0 --group lfe_la
-python pyplotters/bestof_plotter.py -pid lfe-c-ms@1 --group lfe_la
-python pyplotters/bestof_plotter.py -pid lfe-p-ms@0 --group lfe_la
-python pyplotters/bestof_plotter.py -pid lfe-p-ms@1 --group lfe_la
+python pyplotters/bestof_plotter.py -pid lfe-c-ms@0 --comparekey lfe_la
+python pyplotters/bestof_plotter.py -pid lfe-c-ms@1 --comparekey lfe_la
+python pyplotters/bestof_plotter.py -pid lfe-p-ms@0 --comparekey lfe_la
+python pyplotters/bestof_plotter.py -pid lfe-p-ms@1 --comparekey lfe_la
 
 ```
 
 ### Q-Learning
 
 ```sh
-python pyplotters/bestof_plotter.py -pid ql-c-ms@0 --group qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Resampled Locations)}$'
-python pyplotters/bestof_plotter.py -pid ql-c-ms@1 --group qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Fixed Locations)}$'
-python pyplotters/bestof_plotter.py -pid ql-p-ms@0 --group qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$'
-python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --group qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$'
+python pyplotters/bestof_plotter.py -pid ql-c-ms@0 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Resampled Locations)}$'
+python pyplotters/bestof_plotter.py -pid ql-c-ms@1 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Fixed Locations)}$'
+python pyplotters/bestof_plotter.py -pid ql-p-ms@0 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$'
+python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$'
 
 ```
 
@@ -135,7 +135,7 @@ Useful for comparing algorithm variants or behavior policy effectiveness.
 | Argument            | Type | Description                                                                                                                                                                                      |
 |---------------------|------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `-pid, --parent_id` | str  | **Required.** Parent results directory under `pyplotters/plots/` (same value used in persistence_plotter `-pid`). Must already exist with `summary.csv`.                                         |
-| `--group`           | str  | **Required.** Grouping key for selecting best runs (e.g., `qlm_bp` groups by behavior policy, `qlm_ucb_ec` groups by UCB exploration constant). One best run per unique group value is selected. |
+| `--comparekey`           | str  | **Required.** Grouping key for selecting best runs (e.g., `qlm_bp` groups by behavior policy, `qlm_ucb_ec` groups by UCB exploration constant). One best run per unique group value is selected. |
 | `--addparams`       | str  | *(Optional)* Additional parameters to filter or annotate runs (not commonly used in current workflow)                                                                                            |
 | `--title`           | str  | *(Optional)* Custom title for generated plots (e.g., "Behavior Policy Comparison")                                                                                                               |
 
