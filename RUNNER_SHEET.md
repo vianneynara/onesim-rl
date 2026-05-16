@@ -56,7 +56,24 @@ python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 36-43
 
 ```
 
-# How Batch Runner
+# Episode Extender Module
+
+This module provides a way to set up the existing run_id directories which already have alg+runs set with config_setting.json
+containing respective `runner_id` and `runner_nrof_episodes`. As mixing this module into batch_runner will cause confusion of
+goal, we separate it into a separate module.
+
+```shell
+py pyrunner\episode_extender.py -pid ql-c-ms@0 -fs ql500 --toepisodes 750 -c 1-35 --overwrite -ack
+py pyrunner\episode_extender.py -pid ql-c-ms@1 -fs ql500 --toepisodes 750 -c 1-35 --overwrite -ack
+py pyrunner\episode_extender.py -pid ql-p-ms@0 -fs ql500 --toepisodes 750 -c 1-35 --overwrite -ack
+py pyrunner\episode_extender.py -pid ql-p-ms@1 -fs ql500 --toepisodes 750 -c 1-35 --overwrite -ack
+py pyrunner\episode_extender.py -pid lfe-c-ms@0 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+py pyrunner\episode_extender.py -pid lfe-c-ms@1 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+py pyrunner\episode_extender.py -pid lfe-p-ms@0 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+py pyrunner\episode_extender.py -pid lfe-p-ms@1 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+```
+
+# How Batch Runner Works
 
 ## Overview
 
