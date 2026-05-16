@@ -274,7 +274,8 @@ def replace_alg_runs_in_runner_id(runner_id: str, alg: str, old_runs: int, new_r
     """
     Replace the alg+runs token inside a runner_id string.
 
-    Example:  cfg@03-lfe500-bp@ts  →  cfg@03-lfe750-bp@ts
+    Example:    cfg@03-lfe500-bp@ts  →  cfg@03-lfe750-bp@ts
+    Or:         cfg@03-cg@lf-lfe500-bp@ts  →  cfg@03-cg@lf-lfe750-bp@ts
     """
     pattern     = rf"\b{re.escape(alg)}{old_runs}\b"
     replacement = f"{alg}{new_runs}"
