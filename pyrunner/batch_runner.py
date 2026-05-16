@@ -127,7 +127,7 @@ def create_config_setting_json(
         "parent_dir_id": parent_dir_id,
         "runner_id": result_dir_id,
         "runner_algorithm": alg,
-        "runner_nrof_episodes:": runs,
+        "runner_nrof_episodes": runs,
     }
 
     # Add behavior policy override if specified
