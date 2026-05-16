@@ -43,8 +43,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# REPORTS_BASE = r"reports/skripsi"
-REPORTS_BASE = r"D:\Developments+\Java\onesim-rl-data\reports"
+REPORTS_BASE = r"reports/skripsi"
+# REPORTS_BASE = r"D:\Developments+\Java\onesim-rl-data\reports"
 
 def extract_cfg_index(folder_name: str) -> Optional[int]:
     """Extract cfg index from folder name like 'cfg@05-ql500-...'."""
