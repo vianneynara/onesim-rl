@@ -606,7 +606,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
         ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
         ("currentCumulativeReward", "Current Cumulative Reward", "Episode", "Reward"),
         ("currentTrueDetections", "Current True Detections", "Episode", "Detection"),
-        ("currentUniqueDetections", "Current Unique Detections", "Episode", "Detection"),
+        ("currentUniqueDetections", "Current Unique True Detections", "Episode", "Detection"),
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
@@ -677,7 +677,7 @@ def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str]
         ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
         ("currentCumulativeReward", "Current Cumulative Reward", "Episode", "Reward"),
         ("currentTrueDetections", "Current True Detections", "Episode", "Detection"),
-        ("currentUniqueDetections", "Current Unique Detections", "Episode", "Detection"),
+        ("currentUniqueDetections", "Current Unique True Detections", "Episode", "Detection"),
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
@@ -799,7 +799,7 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
         ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
         ("currentCumulativeReward", "Current Cumulative Reward", "Episode", "Reward"),
         ("currentTrueDetections", "Current True Detections", "Episode", "Detection"),
-        ("currentUniqueDetections", "Current Unique Detections", "Episode", "Detection"),
+        ("currentUniqueDetections", "Current Unique True Detections", "Episode", "Detection"),
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:

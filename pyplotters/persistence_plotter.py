@@ -545,7 +545,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
     )
 
     # currentUniqueDetections
-    pp_currentUniqueDetections = os.path.join(run_out_dir, "Current Unique Detections.png")
+    pp_currentUniqueDetections = os.path.join(run_out_dir, "Current Unique True Detections.png")
     plot_by_episode(
         common_df,
         "currentUniqueDetections",
@@ -553,7 +553,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         "Episode",
         "Detection",
         pp_currentUniqueDetections,
-        _subtitle="Current Unique Detections",
+        _subtitle="Current Unique True Detections",
         _yalias="Uniq. Detection",
         _discrete=True,
         _description=_description,
