@@ -14,14 +14,14 @@ import org.apache.commons.math3.random.RandomGenerator;
 import java.util.*;
 
 /**
- * Thompson Sampling (TS) behavior policy implementing two distinct exploration strategies:
+ * Posterior Sampling (PS) behavior policy implementing two distinct exploration strategies:
  * <ul>
- *     <li><b>Bayesian Beta-Binomial Thompson Sampling</b> ({@code usingBayesian = true}):
+ *     <li><b>Bayesian Beta-Binomial Thompson Sampling</b> ({@code betaBinomial = true}):
  *         A true Bayesian approach using Beta-Binomial conjugate priors. Maintains success/failure counts
  *         for each state-action pair and samples from the posterior Beta distribution. Theoretically grounded
  *         with proper uncertainty quantification that decreases as evidence accumulates.
  *     </li>
- *     <li><b>Q-Tracking Posterior Sampling</b> ({@code usingBayesian = false}):
+ *     <li><b>Q-Tracking Posterior Sampling</b> ({@code betaBinomial = false}):
  *         An ad-hoc approach designed to track continuously-updating Q-values from the learning algorithm.
  *         Uses exponential moving average (EMA) with a learning rate to update the posterior mean,
  *         making it adaptive to non-stationary Q-estimates. Variance decays artificially to control exploration.
@@ -30,7 +30,7 @@ import java.util.*;
  *
  * @author narwa
  */
-public class ThompsonSamplingBehavior implements BehaviorPolicy {
+public class PosteriorSamplingBehavior implements BehaviorPolicy {
 
 	private Random random;
 	/**
@@ -39,15 +39,15 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	private RandomGenerator apacheRNG;
 	private final double learningRate;
 	private final double initialVariance;
-	private final boolean usingBayesian;
+	private final boolean betaBinomial;
 	private final boolean resetEpisodically;
 	private final Map<StateActionPair, PSProperty> tsProperties;
 
-	public static final String BEHAVIOR_NS = "BehaviorPolicy.TS";
+	public static final String BEHAVIOR_NS = "BehaviorPolicy.PS";
 	/**
 	 * The "learning rate" for updating posterior mean toward the new reward (new Q).
 	 * <p>
-	 * <b>Used only in Q-Tracking mode ({@code usingBayesian = false})</b>:
+	 * <b>Used only in Q-Tracking mode ({@code betaBinomial = false})</b>:
 	 * Controls how quickly the posterior mean adapts to Q-value changes from the Q-Table.
 	 * This is an adaptation for the RL environment where Q-values change continuously during learning.
 	 * Higher values make the mean track Q more aggressively; lower values smooth changes.
@@ -60,12 +60,12 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	/**
 	 * The initial uncertainty of the posterior distribution for each state-action.
 	 * <p>
-	 * <b>In Q-Tracking mode ({@code usingBayesian = false}):</b>
+	 * <b>In Q-Tracking mode ({@code betaBinomial = false}):</b>
 	 * Controls initial variance for Gaussian sampling. Higher value = more uncertain (more exploration).
 	 * Variance monotonically decays via artificial decay: σ²(n) = σ²₀ / (1 + n) as visit count increases.
 	 * </p>
 	 * <p>
-	 * <b>In Bayesian mode ({@code usingBayesian = true}):</b>
+	 * <b>In Bayesian mode ({@code betaBinomial = true}):</b>
 	 * Not directly used in parameter updates, as posterior variance derives from Beta distribution.
 	 * Primarily serves as a reference or unused legacy parameter in this mode.
 	 * </p>
@@ -82,7 +82,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	 *       Q-estimates.</li>
 	 * </ul>
 	 */
-	public static final String USING_BAYESIAN_S = "usingBayesian";
+	public static final String BETA_BINOMIAL_S = "betaBinomial";
 
 	public static final String RESET_EPISODICALLY_S = "resetEpisodically";
 
@@ -90,31 +90,31 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	 * Constructor called reflectively by Settings. The {@code _settings} param is unused
 	 * because this policy reads its own sub-namespace ({@value #BEHAVIOR_NS}).
 	 */
-	public ThompsonSamplingBehavior(Settings _settings) {
+	public PosteriorSamplingBehavior(Settings _settings) {
 		Settings behaviorSettings = new Settings(BEHAVIOR_NS);
 
 		// use seed from MovementModel for reproducibility
 		this.random = MovementModel.getRandom();
 		// failsafe in case MovementModel's random is not properly initialized
 		if (this.random == null) {
-			System.out.println("Warning: MovementModel random not initialized, using new Random() for ThompsonSamplingBehavior");
+			System.out.println("Warning: MovementModel random not initialized, using new Random() for PosteriorSamplingBehavior");
 			this.random = new Random();
 		}
 		initApacheRng();
 
 		this.learningRate = behaviorSettings.getDouble(LEARNING_RATE_S, 0.01);
 		this.initialVariance = behaviorSettings.getDouble(INITIAL_VARIANCE_S, 1.0);
-		this.usingBayesian = behaviorSettings.getBoolean(USING_BAYESIAN_S, false);
+		this.betaBinomial = behaviorSettings.getBoolean(BETA_BINOMIAL_S, false);
 		this.resetEpisodically = behaviorSettings.getBoolean(RESET_EPISODICALLY_S, false);
 		this.tsProperties = new HashMap<>();
 	}
 
-	public ThompsonSamplingBehavior(ThompsonSamplingBehavior proto) {
+	public PosteriorSamplingBehavior(PosteriorSamplingBehavior proto) {
 		this.random = proto.random;
 		initApacheRng();
 		this.learningRate = proto.learningRate;
 		this.initialVariance = proto.initialVariance;
-		this.usingBayesian = proto.usingBayesian;
+		this.betaBinomial = proto.betaBinomial;
 		this.resetEpisodically = proto.resetEpisodically;
 		this.tsProperties = new HashMap<>(proto.tsProperties);
 	}
@@ -138,7 +138,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		Integer[] actionArray;
 
 		if (availableActions.isEmpty()) {
-			System.out.println("[ThompsonSamplingBehavior] No actions available, using default actions of 0 and 1");
+			System.out.println("[PosteriorSamplingBehavior] No actions available, using default actions of 0 and 1");
 			actionArray = new Integer[]{0, 1}; // default actions
 		} else {
 			actionArray = availableActions.toArray(new Integer[0]);
@@ -157,7 +157,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			double sampledValue;
 
 			/* Q-Tracking Posterior Sampling: sample from Gaussian posterior */
-			if (!usingBayesian) {
+			if (!betaBinomial) {
 				double mean = prop.getMu();
 				double variance = prop.getSigma2();
 				sampledValue = retrieveNormalSample(mean, variance);
@@ -196,12 +196,12 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	/**
 	 * Updates the Thompson Sampling posterior distribution based on observed reward.
 	 * <p>
-	 * <b>In Q-Tracking mode ({@code usingBayesian = false}):</b>
+	 * <b>In Q-Tracking mode ({@code betaBinomial = false}):</b>
 	 * Updates mean via exponential moving average toward the new Q-value, and decays variance artificially.
 	 * Designed to track continuously-updating Q-table estimates.
 	 * </p>
 	 * <p>
-	 * <b>In Bayesian mode ({@code usingBayesian = true}):</b>
+	 * <b>In Bayesian mode ({@code betaBinomial = true}):</b>
 	 * Updates success/failure counts based on reward sign, then derives posterior mean and variance
 	 * from the Beta-Binomial conjugate prior. Theoretically sound Bayesian update.
 	 * </p>
@@ -219,7 +219,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		PSProperty prop = tsProperties.getOrDefault(pair, new PSProperty(0, initialVariance, 0, 0, 0));
 
 		/* Q-Tracking Posterior Sampling (exponential moving average of Q-values) */
-		if (!usingBayesian) {
+		if (!betaBinomial) {
 			/* Q-Tracking Posterior Sampling: Update mean using exponential moving average */
 			double currMean = prop.getMu();
 //			double currVariance = prop.getSigma2();
@@ -287,12 +287,12 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	@Override
 	public BehaviorPolicy replicate() {
-		return new ThompsonSamplingBehavior(this);
+		return new PosteriorSamplingBehavior(this);
 	}
 
 	@Override
 	public String getName() {
-		return "ThompsonSamplingBehavior()";
+		return "PosteriorSamplingBehavior()";
 	}
 
 	@Override
@@ -335,7 +335,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		} else {
 			tsProperties.clear();
 
-			System.out.println("[ThompsonSamplingBehavior] Episodic data is not loaded. Reset episodically is TRUE.");
+			System.out.println("[PosteriorSamplingBehavior] Episodic data is not loaded. Reset episodically is TRUE.");
 		}
 	}
 

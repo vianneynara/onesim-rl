@@ -14,7 +14,7 @@ public class EpisodicPersistenceData {
 	public Map<String, Integer> ucbStateActionFrequencies = new HashMap<>();
 	public Map<String, Integer> ucbStateFrequencies = new HashMap<>();
 
-	// [ BehaviorPolicy.ThompsonSamplingBehavior ]
+	// [ BehaviorPolicy.PosteriorSamplingBehavior ]
 	public Map<String, String> tsProperties = new HashMap<>();
 
 	// [ QLearningMovement core ]

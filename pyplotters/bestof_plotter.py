@@ -301,7 +301,7 @@ def key_to_abbr(key: str) -> str:
     """Convert an override key to its abbreviation.
 
     Example: "ucb_ec" -> "ec" (substring after last underscore)
-             "ts_iv"  -> "iv"
+             "ps_iv"  -> "iv"
              "foo"    -> "foo"
     """
     if "_" in key:

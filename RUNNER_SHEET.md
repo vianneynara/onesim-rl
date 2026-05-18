@@ -81,7 +81,7 @@ The Batch Runner orchestrates episodic simulations for ONE-Sim reinforcement lea
 
 - **Algorithm selection**: Supports QL (Q-Learning), LFE (Lévy Flight Episodic), MC (Monte Carlo)
 - **Configuration management**: Reads from `batch_configs.py` and applies indexed configurations
-- **Behavior policies**: Optionally applies Epsilon-Greedy, Upper Confidence Bound (UCB), or Thompson Sampling (TS)
+- **Behavior policies**: Optionally applies Epsilon-Greedy, Upper Confidence Bound (UCB), or Posterior Sampling (PS)
 - **Override system**: Allows per-run parameter customization (learning rates, seeds, targets, etc.)
 - **Episodic execution**: Runs multiple episodes sequentially via `one.bat`, persisting results to
   `reports/skripsi/{parent_dir_id}/run-id/{result_id_dir}`
