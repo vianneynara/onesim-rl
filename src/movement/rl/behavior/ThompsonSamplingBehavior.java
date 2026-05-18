@@ -206,12 +206,12 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	 * from the Beta-Binomial conjugate prior. Theoretically sound Bayesian update.
 	 * </p>
 	 *
-	 * @param stateId     State where the action was taken
-	 * @param actionIndex Action that was taken
-	 * @param reward      Observed reward from the action
-	 * @param prevQ       Previous Q-value (unused in current implementation)
+	 * @param stateId      State where the action was taken
+	 * @param actionIndex  Action that was taken
+	 * @param reward       Observed reward from the action
+	 * @param prevQ        Previous Q-value (unused in current implementation)
 	 * @param prevMaxNextQ Previous max next Q (unused in current implementation)
-	 * @param updatedQ    Updated Q-value from the learning algorithm
+	 * @param updatedQ     Updated Q-value from the learning algorithm
 	 */
 	@Override
 	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
@@ -409,11 +409,22 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		public static TSProperty fromJsonValue(String jsonValue) {
 			String[] valueParts = jsonValue.split(",");
 
+//			assert valueParts.length == 3 : "Asserting TRUE (older value): jsonValue:" + jsonValue;
+
 			double mu = Double.parseDouble(valueParts[0]);
 			double sigma2 = Double.parseDouble(valueParts[1]);
 			int visitCount = Integer.parseInt(valueParts[2]);
-			int successCount = Integer.parseInt(valueParts[3]);
-			int failureCount = Integer.parseInt(valueParts[4]);
+
+			int successCount;
+			int failureCount;
+			if (valueParts.length != 3) {
+				successCount = Integer.parseInt(valueParts[3]);
+				failureCount = Integer.parseInt(valueParts[4]);
+			} else {
+				// Backward compatibility with 3 values (no successCount and failureCount)
+				successCount = 0;
+				failureCount = 0;
+			}
 
 			return new TSProperty(mu, sigma2, visitCount, successCount, failureCount);
 		}
