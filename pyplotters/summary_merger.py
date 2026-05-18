@@ -52,7 +52,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 PLOT_RESULTS_DIR = "pyplotters\\plots"
-
+# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 def _exit_with_warning(msg: str, code: int = 2) -> None:
     log.warning(msg)

@@ -5,6 +5,7 @@ Kept separate so batch runners and other scripts can reuse the same validation l
 
 from __future__ import annotations
 
+import os
 import re
 
 # Characters not allowed in Windows filenames/path components
@@ -67,4 +68,35 @@ def validate_run_id(run_id: str) -> None:
             "(CON, PRN, AUX, NUL, COM1..COM9, LPT1..LPT9). "
             "Please choose a different run_id."
         )
+
+
+def normalize_report_base(report_base: str) -> str:
+    """Normalize report base path to absolute path.
+
+    Handles both absolute and relative paths:
+    - Absolute paths (e.g., 'D:/reports' or '/home/user/reports'): normalized and returned as-is
+    - Relative paths (e.g., 'reports/skripsi' or './reports'): resolved from current working directory
+
+    Args:
+        report_base: Base report directory path (absolute or relative)
+
+    Returns:
+        Absolute normalized path
+
+    Raises:
+        ValueError: if report_base is empty or None
+    """
+    if not report_base:
+        raise ValueError("report_base must not be empty")
+
+    # Convert to absolute path
+    # os.path.abspath handles both absolute and relative paths correctly:
+    # - Absolute paths are normalized but kept as-is
+    # - Relative paths are resolved from current working directory
+    abs_path = os.path.abspath(report_base)
+
+    # Normalize the path (removes .. and . components, standardizes separators)
+    normalized = os.path.normpath(abs_path)
+
+    return normalized
 

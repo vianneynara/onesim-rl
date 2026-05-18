@@ -1,9 +1,13 @@
 """Best-of comparison plotter.
 
 This script compares *already processed* runs under `pyplotters/plots/<aof>/...`.
-It selects, for each value of a given group key (e.g. `qlm_bp`), the run with the
-highest `max_cumulative_reward` (from `summary.csv`) and overlays their episode
-series on a shared plot.
+It supports two modes:
+
+1. Best-of mode (default): selects, for each value of a given group key (e.g. `qlm_bp`),
+   the run with the highest `max_cumulative_reward` and overlays their episode series.
+
+2. Compare-all mode (--compareall): compares all available configs without grouping,
+   sorted by reward (highest first). Legend shows cfg@N and parameter overrides.
 
 Assumptions / constraints (by design):
 - Must be invoked with `-aof/--all_of`.
@@ -12,12 +16,23 @@ Assumptions / constraints (by design):
 - Run-directory names must be parseable as: <prefix>-<k>@<v>-<k>@<v>-...
   (prefix is ignored). If parsing fails, the script exits with a warning.
 
-Example:
+Examples:
+  # Best-of mode: compare best run per behavior policy
   python -m pyplotters.bestof_plotter -aof ql-c-ms@0-ls@0 --group qlm_bp
+  
+  # Best-of mode with config filtering
+  python -m pyplotters.bestof_plotter -aof ql-c-ms@0-ls@0 --group qlm_bp -c 1-5
+  
+  # Compare-all mode: plot all configs sorted by reward
+  python -m pyplotters.bestof_plotter -aof ql-p-ms@1 --title "LF vs Q-Learning" --compareall
+  
+  # Compare-all with config filtering
+  python -m pyplotters.bestof_plotter -aof ql-p-ms@1 --title "LF vs Q-Learning" --compareall -c 1-5,18-23,29-32
 
 Outputs:
   Saves best-of comparison plots into `pyplotters/plots/<aof>/` adjacent to
-  `summary.csv`.
+  `summary.csv`. Filenames end with "(Best-Of Comparison).png" or "(Compare-All).png"
+  depending on mode.
 """
 
 from __future__ import annotations
@@ -25,8 +40,10 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import re
 import sys
 from dataclasses import dataclass
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,6 +57,22 @@ if __package__ in (None, ""):
     
 from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 
+# PLOT_RESULTS_DIR = "pyplotters\\plots"
+PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+
+# CURR_CMAP = "Set1"
+# CURR_CMAP = "Set2"
+# CURR_CMAP = "Set3"
+# CURR_CMAP = "Spectral"
+# CURR_CMAP = "PuOr"
+CURR_CMAP = "gist_rainbow"
+# CURR_CMAP = "gist_ncar"
+# CURR_CMAP = "gist_heat"
+# CURR_CMAP = "gist_stern"
+# CURR_CMAP = "hsv"
+# CURR_CMAP = "cool"
+# CURR_CMAP = "winter"
+
 LINE_LENGTH = 100
 logging.basicConfig(
     level=logging.INFO,
@@ -47,8 +80,6 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 log = logging.getLogger(__name__)
-
-PLOT_RESULTS_DIR = "pyplotters\\plots"
 
 
 @dataclass(frozen=True)
@@ -99,6 +130,110 @@ def parse_run_id_strict(run_id: str) -> ParsedRunId:
     return ParsedRunId(run_id=run_id, tokens=tokens)
 
 
+def extract_cfg_index(folder_name: str) -> Optional[int]:
+    """Extract cfg index from folder name like 'cfg@05-ql500-...'.
+    
+    Returns the integer index (1-based) or None if not found.
+    """
+    match = re.match(r"cfg@(\d+)", folder_name)
+    if match:
+        try:
+            return int(match.group(1))
+        except ValueError:
+            pass
+    return None
+
+
+def parse_config_indices(config_string: str) -> list[int]:
+    """Parse config indices from a string supporting:
+    - Single values: "1,2,9"
+    - Ranges: "4-6" (expands to 4,5,6)
+    - Mixed: "1,2,4-6,9,10-17"
+    
+    Returns sorted list of unique integers.
+    Raises ValueError if format is invalid.
+    """
+    configs = set()
+    
+    # Split by comma
+    parts = config_string.split(",")
+    
+    for part in parts:
+        part = part.strip()  # Remove whitespace
+        
+        if "-" in part:
+            # It's a range
+            try:
+                start_str, end_str = part.split("-", 1)  # Use maxsplit=1 to handle negative numbers
+                start = int(start_str.strip())
+                end = int(end_str.strip())
+                
+                if start > end:
+                    raise ValueError(f"Invalid range '{part}', start > end")
+                
+                # Add all values in range (inclusive)
+                for i in range(start, end + 1):
+                    configs.add(i)
+            except ValueError as e:
+                raise ValueError(f"Invalid range format '{part}': {e}")
+        else:
+            # It's a single value
+            try:
+                configs.add(int(part))
+            except ValueError:
+                raise ValueError(f"Invalid config number '{part}' (must be integer)")
+    
+    return sorted(list(configs))
+
+
+def filter_summary_by_configs(summary_df: pd.DataFrame, config_indices: list[int]) -> pd.DataFrame:
+    """Filter summary DataFrame to include only rows matching specified config indices.
+    
+    Matches configuration_directory entries starting with 'cfg@N' where N is in config_indices.
+    
+    Args:
+        summary_df: DataFrame with 'configuration_directory' column
+        config_indices: List of integer config indices to include (1-based)
+    
+    Returns:
+        Filtered DataFrame with only matching rows
+    """
+    if "configuration_directory" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
+    
+    # Track which configs were requested but not found
+    requested_indices = set(config_indices)
+    found_indices = set()
+    
+    # Filter rows by matching cfg@ index
+    mask = pd.Series([False] * len(summary_df), index=summary_df.index)
+    for idx, row in summary_df.iterrows():
+        config_dir = str(row["configuration_directory"])
+        cfg_idx = extract_cfg_index(config_dir)
+        
+        if cfg_idx is not None and cfg_idx in config_indices:
+            mask.iloc[idx] = True
+            found_indices.add(cfg_idx)
+    
+    filtered_df = summary_df[mask]
+    
+    # Warn about missing configs
+    missing_indices = requested_indices - found_indices
+    if missing_indices:
+        for cfg_idx in sorted(missing_indices):
+            log.warning(
+                f"Requested config cfg@{cfg_idx} not found in summary.csv. Skipping."
+            )
+    
+    if len(filtered_df) == 0:
+        _exit_with_warning(
+            f"No runs found matching requested configs: {sorted(config_indices)}"
+        )
+    
+    log.info(f"Filtered to {len(filtered_df)} runs from configs: {sorted(found_indices)}")
+    return filtered_df
+
+
 def key_to_abbr(key: str) -> str:
     """Convert an override key to its abbreviation.
 
@@ -128,7 +263,7 @@ def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
     return f'{group_display} {"("+overrides_str+")" if overrides_str else ""}'
 
 
-def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: dict[str, str] | None = None) -> pd.DataFrame:
+def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: Union[dict[str, str], None] = None) -> pd.DataFrame:
     """Return DF with the single best run per group value.
     
     Args:
@@ -152,6 +287,7 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: dict[s
     
     for run_id in summary_df["configuration_directory"].astype(str).tolist():
         pr = parse_run_id_strict(run_id)
+        group_value = None  # Will be set in if/else block or exit
         
         # Check if group_key exists in tokens
         if group_key not in pr.tokens:
@@ -223,7 +359,8 @@ def plot_bestof_by_episode(
     xlabel: str,
     ylabel: str,
     out_file: str,
-    suptitle: str | None = None,
+    suptitle: Union[str, None] = None,
+    legend_outside: bool = False,
 ):
     if not series_by_label:
         _exit_with_warning("No best-of series to plot.")
@@ -238,7 +375,7 @@ def plot_bestof_by_episode(
         max_ep = int(df["episodeNumber"].max()) if max_ep is None else max(max_ep, int(df["episodeNumber"].max()))
         min_ep = int(df["episodeNumber"].min()) if min_ep is None else min(min_ep, int(df["episodeNumber"].min()))
 
-    palette = sns.color_palette(n_colors=len(series_by_label))
+    palette = sns.color_palette(CURR_CMAP or "Set1", n_colors=len(series_by_label))
     for (label, df), color in zip(series_by_label, palette):
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
@@ -272,7 +409,12 @@ def plot_bestof_by_episode(
     ax = plt.gca()
     handles, _labels = ax.get_legend_handles_labels()
     if handles:
-        ax.legend(handles=handles, loc="best", prop={"family": "monospace"})
+        if legend_outside:
+            # Place legend outside the plot, below it
+            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0, -0.15), ncol=2, prop={"family": "monospace"})
+        else:
+            # Place legend inside the plot (default behavior)
+            ax.legend(handles=handles, loc="best", prop={"family": "monospace"})
 
     out_dir = os.path.dirname(out_file)
     if out_dir:
@@ -281,7 +423,17 @@ def plot_bestof_by_episode(
     plt.close()
 
 
-def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = None, suptitle: str | None = None) -> None:
+def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indices: Union[list[int], None] = None) -> None:
+    """Compare all available configurations (no grouping, no best-of selection).
+    
+    Plots all configs with legend labels showing cfg@N and parameter overrides.
+    Runs are sorted by last_episode_cumulative_reward (descending) for ordering.
+    
+    Args:
+        all_of: Parent results directory under pyplotters/plots
+        suptitle: Optional custom title for plots
+        config_indices: Optional list of config indices to filter by
+    """
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
@@ -295,6 +447,122 @@ def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = N
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
+    
+    # Apply config filtering if specified
+    if config_indices is not None:
+        summary_df = filter_summary_by_configs(summary_df, config_indices)
+    
+    # Ensure required columns exist
+    if "configuration_directory" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
+    if "last_episode_cumulative_reward" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'last_episode_cumulative_reward'.")
+    
+    # Convert reward to numeric and sort by reward (descending)
+    summary_df = summary_df.copy()
+    summary_df["last_episode_cumulative_reward"] = pd.to_numeric(
+        summary_df["last_episode_cumulative_reward"], errors="coerce"
+    )
+    if summary_df["last_episode_cumulative_reward"].isna().any():
+        _exit_with_warning("summary.csv contains non-numeric last_episode_cumulative_reward values; aborting.")
+    
+    summary_df = summary_df.sort_values(
+        by="last_episode_cumulative_reward",
+        ascending=False,
+        kind="mergesort"
+    )
+    
+    log.info(LINE_LENGTH * "-")
+    log.info(f"Compare-All mode: plotting {len(summary_df)} configurations")
+    
+    tmp: list[tuple[str, pd.DataFrame]] = []
+    for _, row in summary_df.iterrows():
+        run_id = str(row["configuration_directory"])
+        reward = row['last_episode_cumulative_reward']
+        
+        # Parse run_id to extract cfg index and all tokens for legend label
+        cfg_idx = extract_cfg_index(run_id)
+        cfg_str = f"cfg@{cfg_idx}" if cfg_idx is not None else run_id
+        
+        # Parse all tokens from run_id and build legend label
+        try:
+            pr = parse_run_id_strict(run_id)
+            # Build legend label: cfg@N (abbr=value, abbr=value, ...)
+            if pr.tokens:
+                items: list[tuple[str, str]] = []
+                for k, v in pr.tokens.items():
+                    items.append((key_to_abbr(k), str(v)))
+                items.sort(key=lambda t: t[0])
+                overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
+                legend_label = f'{cfg_str} ({overrides_str})'
+            else:
+                legend_label = cfg_str
+        except SystemExit:
+            # If parse_run_id_strict exits, use cfg_str as fallback
+            legend_label = cfg_str
+        
+        log.info(f"  {cfg_str}: {run_id} | reward={reward:.2f}")
+        
+        common_path = os.path.join(out_dir, run_id, "common_data.csv")
+        if not os.path.exists(common_path):
+            log.warning(f"Missing {common_path}. Skipping this run.")
+            continue
+        
+        try:
+            df = pd.read_csv(common_path, sep=";")
+            tmp.append((legend_label, df))
+        except Exception as e:
+            log.warning(f"Error reading {common_path}: {e}. Skipping this run.")
+            continue
+    
+    log.info(LINE_LENGTH * "-")
+    
+    if not tmp:
+        _exit_with_warning("No valid runs found to plot.")
+    
+    series_by_label: list[tuple[str, pd.DataFrame]] = tmp
+
+    comparisons = [
+        ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
+        ("currentCumulativeReward", "Current Cumulative Reward", "Episode", "Reward"),
+        ("currentTrueDetections", "Current True Detections", "Episode", "Detection"),
+        ("currentUniqueDetections", "Current Unique Detections", "Episode", "Detection"),
+    ]
+
+    for y_key, title, xlabel, ylabel in comparisons:
+        out_file = os.path.join(out_dir, _sanitize_filename(f"Bulk Comparison of {title}.png"))
+        plot_bestof_by_episode(
+            series_by_label=series_by_label,
+            y_key=y_key,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            out_file=out_file,
+            suptitle=suptitle,
+            legend_outside=True,
+        )
+        log.info(f"Saved: {out_file}")
+
+
+def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], None] = None, suptitle: Union[str, None] = None, config_indices: Union[list[int], None] = None) -> None:
+    out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
+    summary_path = os.path.join(out_dir, "summary.csv")
+
+    if not os.path.exists(out_dir):
+        _exit_with_warning(
+            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -aof first?"
+        )
+    if not os.path.exists(summary_path):
+        _exit_with_warning(
+            f"Missing {summary_path}. Did you run persistence_plotter.py -aof first?"
+        )
+
+    summary_df = pd.read_csv(summary_path, sep=";")
+    
+    # Apply config filtering if specified
+    if config_indices is not None:
+        summary_df = filter_summary_by_configs(summary_df, config_indices)
+    
     winners = best_of_by_group(summary_df, group_key, addparams)
 
     log.info(LINE_LENGTH * "-")
@@ -333,7 +601,7 @@ def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = N
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
-        out_file = os.path.join(out_dir, _sanitize_filename(f"{title} (Best-Of Comparison).png"))
+        out_file = os.path.join(out_dir, _sanitize_filename(f"Best-Of Comparison of {title}.png"))
         plot_bestof_by_episode(
             series_by_label=series_by_label,
             y_key=y_key,
@@ -346,7 +614,7 @@ def run_bestof(all_of: str, group_key: str, addparams: dict[str, str] | None = N
         log.info(f"Saved: {out_file}")
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(argv: Union[list[str], None] = None) -> None:
     parser = argparse.ArgumentParser(
         description="Best-of comparison plotter for ONE-Sim runs (uses pyplotters/plots outputs)."
     )
@@ -358,17 +626,29 @@ def main(argv: list[str] | None = None) -> None:
         help="Parent results directory under pyplotters/plots (same value used in persistence_plotter.py -aof).",
     )
     parser.add_argument(
+        "--compareall",
+        action="store_true",
+        help="Compare all available configs instead of selecting best-of per group. --group becomes optional when this flag is set.",
+    )
+    parser.add_argument(
         "--group",
         type=str,
-        required=True,
-        help="Grouping key to compare best-of runs (e.g. qlm_bp).",
+        required=False,
+        help="Grouping key to compare best-of runs (e.g. qlm_bp). Required unless --compareall is set.",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        required=False,
+        help="Config indices to filter by (e.g. '1', '1-5', '1,3,5-7'). If not provided, all configs are processed.",
     )
     parser.add_argument(
         "--addparams",
         type=str,
         required=False,
         help="Comma-separated phantom parameters to inject into runs missing the group key (e.g. 'qlm_bp@lfe,other_key@value'). "
-             "If a key already exists in a run-id, that injection is skipped with a warning.",
+             "Only used in best-of mode (incompatible with --compareall).",
     )
     parser.add_argument(
         "-t",
@@ -380,9 +660,27 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
     
-    # Parse and validate --addparams if provided
-    addparams: dict[str, str] | None = None
-    if args.addparams:
+    # Validate argument combinations
+    if args.compareall and args.group:
+        log.warning("--compareall flag is set; --group argument will be ignored.")
+    elif not args.compareall and not args.group:
+        _exit_with_warning("Either --group must be provided or --compareall flag must be set.")
+    
+    if args.compareall and args.addparams:
+        log.warning("--compareall flag is set; --addparams argument will be ignored.")
+    
+    # Parse and validate --config if provided
+    config_indices: Union[list[int], None] = None
+    if args.config:
+        try:
+            config_indices = parse_config_indices(args.config)
+            log.info(f"Config filtering enabled: {args.config} → indices {config_indices}")
+        except ValueError as e:
+            _exit_with_warning(f"Invalid config format: {e}")
+    
+    # Parse and validate --addparams if provided (only used in best-of mode)
+    addparams: Union[dict[str, str], None] = None
+    if args.addparams and not args.compareall:
         addparams = {}
         params_list = args.addparams.split(",")
         for param in params_list:
@@ -402,7 +700,11 @@ def main(argv: list[str] | None = None) -> None:
         addparams = dict(sorted(addparams.items()))
         log.info(f"Phantom addparams provided: {addparams}")
     
-    run_bestof(args.all_of, args.group, addparams, args.title)
+    # Route to appropriate function
+    if args.compareall:
+        run_compareall(args.all_of, args.title, config_indices)
+    else:
+        run_bestof(args.all_of, args.group, addparams, args.title, config_indices)
 
 
 if __name__ == "__main__":
