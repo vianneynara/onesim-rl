@@ -14,8 +14,19 @@ import org.apache.commons.math3.random.RandomGenerator;
 import java.util.*;
 
 /**
- * Thompson Sampling (TS) algorithm in the work.
- * I honestly don't understand much of it.
+ * Thompson Sampling (TS) behavior policy implementing two distinct exploration strategies:
+ * <ul>
+ *     <li><b>Bayesian Beta-Binomial Thompson Sampling</b> ({@code usingBayesian = true}):
+ *         A true Bayesian approach using Beta-Binomial conjugate priors. Maintains success/failure counts
+ *         for each state-action pair and samples from the posterior Beta distribution. Theoretically grounded
+ *         with proper uncertainty quantification that decreases as evidence accumulates.
+ *     </li>
+ *     <li><b>Q-Tracking Posterior Sampling</b> ({@code usingBayesian = false}):
+ *         An ad-hoc approach designed to track continuously-updating Q-values from the learning algorithm.
+ *         Uses exponential moving average (EMA) with a learning rate to update the posterior mean,
+ *         making it adaptive to non-stationary Q-estimates. Variance decays artificially to control exploration.
+ *     </li>
+ * </ul>
  *
  * @author narwa
  */
@@ -30,27 +41,47 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	private final double initialVariance;
 	private final boolean usingBayesian;
 	private final boolean resetEpisodically;
-	private final Map<StateActionPair, TSProperty> tsProperties;
+	private final Map<StateActionPair, PSProperty> tsProperties;
 
 	public static final String BEHAVIOR_NS = "BehaviorPolicy.TS";
 	/**
 	 * The "learning rate" for updating posterior mean toward the new reward (new Q).
-	 * Controlling how quick the mean tracks the Q-value from the Q-Table.
-	 * This is an adaptation for the RL environment, where Q value changes continuously during learning.
 	 * <p>
-	 * Note: Match the learning rate of Q-Learning or Monte Carlo being implemented.
+	 * <b>Used only in Q-Tracking mode ({@code usingBayesian = false})</b>:
+	 * Controls how quickly the posterior mean adapts to Q-value changes from the Q-Table.
+	 * This is an adaptation for the RL environment where Q-values change continuously during learning.
+	 * Higher values make the mean track Q more aggressively; lower values smooth changes.
 	 * </p>
-	 *
+	 * <p>
+	 * <b>Note:</b> Should match the learning rate of the Q-Learning or Monte Carlo algorithm being implemented.
+	 * </p>
 	 */
 	public static final String LEARNING_RATE_S = "learningRate";
 	/**
 	 * The initial uncertainty of the posterior distribution for each state-action.
-	 * Higher value means agent is more uncertain about all actions (more exploration).
-	 * As visit count increases, variance decays monotonically via Bayesian decay: σ²(n) = σ²₀ / (1 + n).
-	 *
+	 * <p>
+	 * <b>In Q-Tracking mode ({@code usingBayesian = false}):</b>
+	 * Controls initial variance for Gaussian sampling. Higher value = more uncertain (more exploration).
+	 * Variance monotonically decays via artificial decay: σ²(n) = σ²₀ / (1 + n) as visit count increases.
+	 * </p>
+	 * <p>
+	 * <b>In Bayesian mode ({@code usingBayesian = true}):</b>
+	 * Not directly used in parameter updates, as posterior variance derives from Beta distribution.
+	 * Primarily serves as a reference or unused legacy parameter in this mode.
+	 * </p>
 	 */
 	public static final String INITIAL_VARIANCE_S = "initialVariance";
 
+	/**
+	 * Flag to select between two Thompson Sampling variants:
+	 * <ul>
+	 *   <li>{@code true}: Use true Bayesian Beta-Binomial Thompson Sampling. Posterior is updated via conjugate prior
+	 *       rules by counting successes/failures. Variance is theoretically grounded in Beta distribution.</li>
+	 *   <li>{@code false}: Use Q-Tracking Posterior Sampling. Posterior mean is updated via exponential moving average
+	 *       toward Q-table values. Variance decays artificially. Not a true Bayesian approach but adaptive to non-stationary
+	 *       Q-estimates.</li>
+	 * </ul>
+	 */
 	public static final String USING_BAYESIAN_S = "usingBayesian";
 
 	public static final String RESET_EPISODICALLY_S = "resetEpisodically";
@@ -120,19 +151,19 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		for (Integer action : actionArray) {
 			StateActionPair pair = StateActionPair.of(stateId, action);
 
-			final TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0, 0, 0));
+			final PSProperty prop = tsProperties.getOrDefault(pair, new PSProperty(0, initialVariance, 0, 0, 0));
 
 
 			double sampledValue;
 
-			/* Gaussian Thompson Sampling */
+			/* Q-Tracking Posterior Sampling: sample from Gaussian posterior */
 			if (!usingBayesian) {
 				double mean = prop.getMu();
 				double variance = prop.getSigma2();
 				sampledValue = retrieveNormalSample(mean, variance);
 			}
 
-			/* Bayesian Thompson Sampling */
+			/* Bayesian Beta-Binomial Thompson Sampling: sample from Beta posterior */
 			else {
 				// (Defensive) ensure RNG is initialized even if setRandom() wasn't called through ctor.
 				if (apacheRNG == null) {
@@ -164,20 +195,32 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 
 	/**
 	 * Updates the Thompson Sampling posterior distribution based on observed reward.
-	 * Uses incremental Bayesian update for both mean (μ) and variance (σ²).
+	 * <p>
+	 * <b>In Q-Tracking mode ({@code usingBayesian = false}):</b>
+	 * Updates mean via exponential moving average toward the new Q-value, and decays variance artificially.
+	 * Designed to track continuously-updating Q-table estimates.
+	 * </p>
+	 * <p>
+	 * <b>In Bayesian mode ({@code usingBayesian = true}):</b>
+	 * Updates success/failure counts based on reward sign, then derives posterior mean and variance
+	 * from the Beta-Binomial conjugate prior. Theoretically sound Bayesian update.
+	 * </p>
 	 *
-	 * @param stateId     State where the action was taken
-	 * @param actionIndex Action that was taken
-	 * @param reward      Observed reward from the action
+	 * @param stateId      State where the action was taken
+	 * @param actionIndex  Action that was taken
+	 * @param reward       Observed reward from the action
+	 * @param prevQ        Previous Q-value (unused in current implementation)
+	 * @param prevMaxNextQ Previous max next Q (unused in current implementation)
+	 * @param updatedQ     Updated Q-value from the learning algorithm
 	 */
 	@Override
 	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
 		StateActionPair pair = StateActionPair.of(stateId, actionIndex);
-		TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0, 0, 0));
+		PSProperty prop = tsProperties.getOrDefault(pair, new PSProperty(0, initialVariance, 0, 0, 0));
 
-		/* Gaussian Thompson Sampling (with learning rate) */
+		/* Q-Tracking Posterior Sampling (exponential moving average of Q-values) */
 		if (!usingBayesian) {
-			/* Gaussian Thompson Sampling (with learning rate) */
+			/* Q-Tracking Posterior Sampling: Update mean using exponential moving average */
 			double currMean = prop.getMu();
 //			double currVariance = prop.getSigma2();
 			int currVisitCount = prop.getVisitCount();
@@ -186,25 +229,23 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			int newVisitCount = currVisitCount + 1;
 			prop.incrementVisitCount();
 
-			/* Gaussian Thompson Sampling (with learning rate) */
-			// Update mean using incremental average: μ_new = μ_old + (r - μ_old) / n
+			/* Update mean via EMA toward updatedQ: μ_new = μ_old + learningRate * (Q_new - μ_old) */
 			double updatedMean = currMean + learningRate * (updatedQ - currMean);
 
-			// Update variance using incremental formula for running variance
-			// σ²_new = σ²_old + (r - μ_old)(r - μ_new) / n
+			/* Update variance: Artificial decay to control exploration without theoretical grounding */
 			double updatedVariance;
 			if (newVisitCount == 1) {
-				// First observation: initialize variance to a small value or based on reward
+				// First observation: initialize variance to initial value
 				updatedVariance = initialVariance;
 			} else {
-				/* Variance: Welford's Algorithm */
+				/* Variance: Artificial decay (not derived from Bayesian principles) */
 //				updatedVariance = currVariance + (reward - currMean) * (reward - updatedMean) / newVisitCount;
 
-				/* Variance: Monotone Bayesian decay */
+				/* Variance decay: σ²(n) = σ²₀ / (1 + n) */
 				updatedVariance = initialVariance / (1.0 + newVisitCount);
 			}
 
-			// This ensures variance to not exceed 0.000001, avoiding zero
+			// Ensure variance does not become too small, avoiding numerical issues
 			updatedVariance = Math.max(updatedVariance, 1e-6);
 
 			prop.setMu(updatedMean);
@@ -214,28 +255,28 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			tsProperties.put(pair, prop);
 		}
 
-		/* Bayesian? Thompson Sampling */
+		/* Bayesian Beta-Binomial Thompson Sampling (conjugate prior update) */
 		else {
 			int alpha = 1 + prop.getSuccessCount();
 			int beta = 1 + prop.getFailureCount();
 
-			/* If the reward is plus, count as success and increase alpha. Beta otherwise. */
+			/* If reward is positive, count as success and increment alpha. Otherwise increment beta. */
 			if (reward > 0) {
 				alpha++;
 			} else {
 				beta++;
 			}
 
-			/* Calculate mean from Alpha and Beta */
+			/* Derive posterior mean and variance from Beta distribution: mean = α/(α+β) */
 			double updatedMean = (double) alpha / (alpha + beta);
 			double updatedVariance = (double) (alpha * beta) / (Math.pow((alpha + beta), 2) * (alpha + beta + 1));
 
-			/* Ensures variance to not exceed 0.000001, avoiding zero */
+			/* Ensure variance does not become too small, avoiding numerical issues */
 			updatedVariance = Math.max(updatedVariance, 1e-6);
 
-			/* Update the state-action pair wise TS properties */
-			prop.setSuccessCount(alpha - 1);    // decrement by one for consistency
-			prop.setFailureCount(beta - 1);        // decrement by one for consistency
+			/* Update state-action pair with new posterior parameters */
+			prop.setSuccessCount(alpha - 1);    // store count (subtract 1 for consistency with initialization)
+			prop.setFailureCount(beta - 1);     // store count (subtract 1 for consistency with initialization)
 			prop.setMu(updatedMean);
 			prop.setSigma2(updatedVariance);
 
@@ -286,7 +327,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			if (epd.tsProperties != null) {
 				for (var entry : epd.tsProperties.entrySet()) {
 					StateActionPair pair = StateActionPair.fromJsonKey(entry.getKey());
-					TSProperty prop = TSProperty.fromJsonValue(entry.getValue());
+					PSProperty prop = PSProperty.fromJsonValue(entry.getValue());
 
 					tsProperties.put(pair, prop);
 				}
@@ -311,16 +352,20 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	}
 
 	/**
-	 * Encapsulated class that contains Thompson Sampling needs, consisting of:
+	 * Encapsulated class that contains Thompson Sampling state, consisting of:
 	 * <ul>
-	 *     <li>mu, μ the mean Q-values</li>
-	 *     <li>sigma^2, σ² the variance</li>
-	 *     <li>the visit count</li>
+	 *     <li><b>mu (μ):</b> Posterior mean. In Q-Tracking mode: tracks Q-values via EMA.
+	 *                        In Bayesian mode: α/(α+β) from Beta distribution.</li>
+	 *     <li><b>sigma^2 (σ²):</b> Posterior variance. In Q-Tracking mode: artificial decay σ²₀/(1+n).
+	 *                        In Bayesian mode: derived from Beta distribution.</li>
+	 *     <li><b>visitCount:</b> Used in Q-Tracking mode to track state-action visits for variance decay.
+	 *                        Unused in Bayesian mode.</li>
+	 *     <li><b>successCount:</b> Used in Bayesian mode to track positive rewards. Unused in Q-Tracking mode.</li>
+	 *     <li><b>failureCount:</b> Used in Bayesian mode to track non-positive rewards. Unused in Q-Tracking mode.</li>
 	 * </ul>
 	 * This will be keyed using {@link StateActionPair}.
-	 *
 	 */
-	public static class TSProperty {
+	public static class PSProperty {
 		@Getter
 		@Setter
 		private double mu;
@@ -337,7 +382,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		@Setter
 		private int failureCount;
 
-		public TSProperty() {
+		public PSProperty() {
 			this.mu = 0.0;
 			this.sigma2 = 0.0;
 			this.visitCount = 0;
@@ -345,7 +390,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			this.failureCount = 0;
 		}
 
-		public TSProperty(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
+		public PSProperty(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
 			this.mu = mu;
 			this.sigma2 = sigma2;
 			this.visitCount = visitCount;
@@ -353,28 +398,39 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			this.failureCount = failureCount;
 		}
 
-		public static TSProperty of(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
-			return new TSProperty(mu, sigma2, visitCount, successCount, failureCount);
+		public static PSProperty of(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
+			return new PSProperty(mu, sigma2, visitCount, successCount, failureCount);
 		}
 
 		/**
-		 * Decodes {@link TSProperty} from format of "mu,sigma2,visitCount".
+		 * Decodes {@link PSProperty} from format of "mu,sigma2,visitCount,successCount,failureCount".
 		 *
 		 */
-		public static TSProperty fromJsonValue(String jsonValue) {
+		public static PSProperty fromJsonValue(String jsonValue) {
 			String[] valueParts = jsonValue.split(",");
+
+//			assert valueParts.length == 3 : "Asserting TRUE (older value): jsonValue:" + jsonValue;
 
 			double mu = Double.parseDouble(valueParts[0]);
 			double sigma2 = Double.parseDouble(valueParts[1]);
 			int visitCount = Integer.parseInt(valueParts[2]);
-			int successCount = Integer.parseInt(valueParts[3]);
-			int failureCount = Integer.parseInt(valueParts[4]);
 
-			return new TSProperty(mu, sigma2, visitCount, successCount, failureCount);
+			int successCount;
+			int failureCount;
+			if (valueParts.length != 3) {
+				successCount = Integer.parseInt(valueParts[3]);
+				failureCount = Integer.parseInt(valueParts[4]);
+			} else {
+				// Backward compatibility with 3 values (no successCount and failureCount)
+				successCount = 0;
+				failureCount = 0;
+			}
+
+			return new PSProperty(mu, sigma2, visitCount, successCount, failureCount);
 		}
 
 		/**
-		 * Encodes {@link TSProperty} as "mu,sigma2,visitCount" string to be represented in JSON value.
+		 * Encodes {@link PSProperty} as "mu,sigma2,visitCount" string to be represented in JSON value.
 		 *
 		 */
 		public String toJsonValue() {

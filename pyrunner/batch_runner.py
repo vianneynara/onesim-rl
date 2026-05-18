@@ -140,7 +140,7 @@ def create_config_setting_json(
         "parent_dir_id": parent_dir_id,
         "runner_id": result_dir_id,
         "runner_algorithm": alg,
-        "runner_nrof_episodes:": runs,
+        "runner_nrof_episodes": runs,
     }
 
     # Add behavior policy override if specified
@@ -253,9 +253,16 @@ def build_result_id_dir(
         runs: int,
         config_index: int,
         overrides: list[str],
-        run_id: Optional[str]
+        run_id: Optional[str],
+        group: Optional[str] = None
 ) -> str:
-    prefix = f"cfg@{config_index:02}-{alg}{runs}"
+    prefix = f"cfg@{config_index:02}"
+    
+    # Insert group right after cfg@N prefix, before alg+runs
+    if group:
+        prefix = f"{prefix}-cg@{group}"
+    
+    prefix = f"{prefix}-{alg}{runs}"
     ordered_overrides = _order_abbreviated_overrides(overrides)
 
     if ordered_overrides:
@@ -281,6 +288,7 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1, custom_cfg
     script.append(expand_algorithm(algo, custom_cfg, alg_override))
 
     _start_time = None
+    _end_time = None
 
     try:
         _start_time = datetime.now()
@@ -289,12 +297,15 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1, custom_cfg
         log.info("Running episode %s for algorithm %s.", ep, algo)
         log.info("%s", "-" * LINE_LENGTH)
         log.info("Running command: %s", " ".join(script))
-        subprocess.run(script, check=True, shell=True)
+        result = subprocess.run(script, shell=True)
+        
+        if result.returncode != 0:
+            log.error("Episode %s failed with exit code: %s", ep, result.returncode)
+            return False
+        
         return True
-    except subprocess.CalledProcessError:
-        _end_time = datetime.now()
-
-        log.error("Error running episode %s for algorithm %s.", ep, algo)
+    except Exception as e:
+        log.error("Exception while running episode %s for algorithm %s: %s", ep, algo, e)
         return False
     finally:
         _end_time = datetime.now()
@@ -488,12 +499,14 @@ def run_simulation(
         bp: Optional[str] = None,
         run_id: Optional[str] = None,
         overrides_list: Optional[dict[str, Any]] = None,
+        group: Optional[str] = None,
         verify: bool = False,
         do_continue: bool = False,
         parent_dir_id: Optional[str] = None,
         custom_cfg: Optional[str] = None,
         alg_override: Optional[str] = None,
-        report_base: str = REPORTS_BASE
+        report_base: str = REPORTS_BASE,
+        continue_on_error: bool = False
 ) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg, custom_cfg, alg_override)
@@ -520,7 +533,7 @@ def run_simulation(
             abr_overrides.append(f"{bp_override_key}@{bp}")
             full_overrides.append(f"{KEY_ABBREVIATIONS[bp_override_key]}={BEHAVIOR_PACKAGES[bp]}")
 
-    result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id)
+    result_id_dir = build_result_id_dir(alg, runs, config_index, abr_overrides, run_id, group)
     validate_run_id(result_id_dir)
 
     # Allow overriding the {alg} portion of the report path
@@ -642,6 +655,13 @@ def run_simulation(
             succeeds += 1
         else:
             failed += 1
+            # Stop on first error unless continue_on_error is True
+            if not continue_on_error:
+                log.warning(
+                    "Episode %s failed. Stopping config run (use --continue-on-error to override).",
+                    ep
+                )
+                break
 
     end_time = datetime.now()
 
@@ -776,6 +796,11 @@ if __name__ == "__main__":
         help="Shortcut for --verify --continue"
     )
 
+    parser.add_argument(
+        "--continue-on-error", action="store_true",
+        help="Continue running remaining episodes even if one fails. Default behavior is to stop on first error."
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -809,6 +834,7 @@ if __name__ == "__main__":
 
             bp = config["bp"] if "bp" in config else None
             id = config["id"]
+            group = config.get("group")
             overrides = config.get("overrides")
 
             _sim_start_time = datetime.now()
@@ -820,13 +846,15 @@ if __name__ == "__main__":
                 config_index=LIST_OF_CONFIGS.index(config) + 1,
                 bp=bp,
                 run_id=id,
+                group=group,
                 overrides_list=overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
                 parent_dir_id=args.parent_dir_id,
                 custom_cfg=args.runcfg,
                 alg_override=args.algorithm,
-                report_base=args.setreportspath or REPORTS_BASE
+                report_base=args.setreportspath or REPORTS_BASE,
+                continue_on_error=args.continue_on_error
             )
 
             _sim_end_time = datetime.now()
@@ -864,6 +892,7 @@ if __name__ == "__main__":
 
             bp = config["bp"] if "bp" in config else None
             id = config["id"]
+            group = config.get("group")
             overrides = config.get("overrides")
 
             _sim_start_time = datetime.now()
@@ -875,13 +904,15 @@ if __name__ == "__main__":
                 config_index=config_num,
                 bp=bp,
                 run_id=id,
+                group=group,
                 overrides_list=overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
                 parent_dir_id=args.parent_dir_id,
                 custom_cfg=args.runcfg,
                 alg_override=args.algorithm,
-                report_base=args.setreportspath or REPORTS_BASE
+                report_base=args.setreportspath or REPORTS_BASE,
+                continue_on_error=args.continue_on_error
             )
 
 
@@ -904,7 +935,7 @@ if __name__ == "__main__":
         format_timedelta(avg_running_time),
     )
     log.info(
-        "[SUMMARY] Total configurations run: %s (Success: %s, Failed: %s)",
+        "[SUMMARY] Total configurations run: %s (Success: %s, Failed: %s) - Errors count as Failed",
         successes + failures,
         successes,
         failures,

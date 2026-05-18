@@ -3,14 +3,14 @@
 ## Overall running with different ALG overriding
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 1-27 -alg ql-c-ms@0
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 1-27 -alg ql-c-ms@1
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 1-27 -alg ql-p-ms@0
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 1-27 -alg ql-p-ms@1
-python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 28-35 -alg lfe-c-ms@0
-python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 28-35 -alg lfe-c-ms@1
-python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 28-35 -alg lfe-p-ms@0
-python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 28-35 -alg lfe-p-ms@1
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 1-35 -alg ql-c-ms@0
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 1-35 -alg ql-c-ms@1
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 1-35 -alg ql-p-ms@0
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 1-35 -alg ql-p-ms@1
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 36-43 -alg lfe-c-ms@0
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 36-43 -alg lfe-c-ms@1
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 36-43 -alg lfe-p-ms@0
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 36-43 -alg lfe-p-ms@1
 
 ```
 
@@ -39,24 +39,41 @@ python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 11-22
 ### Running Thompson Sampling Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 23-28
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 23-28
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 23-28
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 23-28
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 23-35
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 23-35
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 23-35
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 23-35
 
 ```
 
 ### Running Lévy Flight Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 29-36
-python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 29-36
-python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 29-36
-python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 29-36
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 36-43
 
 ```
 
-# How Batch Runner
+# Episode Extender Module
+
+This module provides a way to set up the existing run_id directories which already have alg+runs set with config_setting.json
+containing respective `runner_id` and `runner_nrof_episodes`. As mixing this module into batch_runner will cause confusion of
+goal, we separate it into a separate module.
+
+```shell
+py pyrunner\episode_extender.py -pid ql-c-ms@0 -fs ql500 --toepisodes 750 -c 1-35 --overwrite -ack
+py pyrunner\episode_extender.py -pid ql-c-ms@1 -fs ql500 --toepisodes 750 -c 1-35 --overwrite -ack
+py pyrunner\episode_extender.py -pid ql-p-ms@0 -fs ql500 --toepisodes 750 -c 1-35 --overwrite -ack
+py pyrunner\episode_extender.py -pid ql-p-ms@1 -fs ql500 --toepisodes 750 -c 1-35 --overwrite -ack
+py pyrunner\episode_extender.py -pid lfe-c-ms@0 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+py pyrunner\episode_extender.py -pid lfe-c-ms@1 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+py pyrunner\episode_extender.py -pid lfe-p-ms@0 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+py pyrunner\episode_extender.py -pid lfe-p-ms@1 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+```
+
+# How Batch Runner Works
 
 ## Overview
 
