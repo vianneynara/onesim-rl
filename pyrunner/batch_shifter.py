@@ -102,11 +102,11 @@ def extract_behavior_policy(folder_name: str) -> Optional[str]:
     """
     Extract behavior policy from folder name by looking for patterns like:
     - qlm_bp@ucb (UCB)
-    - qlm_bp@ts (Thompson Sampling)
+    - qlm_bp@ps (Thompson Sampling)
     - qlm_bp@epsilon (not typically used, but possible)
     - absence of qlm_bp@ indicates epsilon-greedy (default for QL)
     
-    Returns: behavior policy name (e.g., 'ucb', 'ts', 'epsilon') or None if not found.
+    Returns: behavior policy name (e.g., 'ucb', 'ps', 'epsilon') or None if not found.
     Example: 'cfg@11-ql500-qlm_bp@ucb-ucb_ec@0.5' → 'ucb'
     """
     # Look for qlm_bp@<value> or mcm_bp@<value>
@@ -131,7 +131,7 @@ def build_config_signature(alg: str, runs: int, bp: Optional[str] = None) -> str
     Examples:
       - ql500+epsilon (epsilon-greedy)
       - ql500+ucb (UCB exploration)
-      - ql500+ts (Thompson Sampling)
+      - ql500+ps (Thompson Sampling)
       - lfe500 (no behavior policy)
     
     Returns: signature string
@@ -164,7 +164,7 @@ def scan_run_id_folders(parent_dir_id: str, reports_base: str = REPORTS_BASE) ->
         reports_base: Base reports directory path
     
     Returns: {cfg_index: folder_name, ...}
-    Example: {31: 'cfg@31-ql500-qlm_bp@ts-ts_iv@5.0', 32: 'cfg@32-ql500-...'}
+    Example: {31: 'cfg@31-ql500-qlm_bp@ps-ps_iv@5.0', 32: 'cfg@32-ql500-...'}
     """
     run_id_path = os.path.join(reports_base, parent_dir_id, "run-id")
 
@@ -227,7 +227,7 @@ def build_rename_mapping(
         config = active_configs[idx]
         alg = config["alg"]
         runs = config["runs"]
-        bp = config.get("bp")  # Extract behavior policy from config (epsilon, ucb, ts, or None)
+        bp = config.get("bp")  # Extract behavior policy from config (epsilon, ucb, ps, or None)
         sig = build_config_signature(alg, runs, bp)
         if sig not in active_sig_to_indices:
             active_sig_to_indices[sig] = []
@@ -721,13 +721,13 @@ def extract_override_params(folder_name: str) -> Dict[str, str]:
     Extract override parameters from folder name.
     
     Looks for patterns like:
-    - ts_iv@5.0
+    - ps_iv@5.0
     - ucb_ec@2.5
     - eg_ed@0.99
     - lfe_la@1.5
     
     Returns: {param_key: param_value, ...}
-    Example: 'cfg@31-ql500-qlm_bp@ts-ts_iv@5.0' → {'ts_iv': '5.0'}
+    Example: 'cfg@31-ql500-qlm_bp@ps-ps_iv@5.0' → {'ps_iv': '5.0'}
     """
     params = {}
     # Match patterns like key@value

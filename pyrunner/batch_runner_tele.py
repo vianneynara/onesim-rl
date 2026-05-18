@@ -289,7 +289,7 @@ HIGHLIGHTED_SETTINGS = [
 
     "BehaviorPolicy.UCB.explorationConstant",
 
-    "BehaviorPolicy.TS.initialVariance",
+    "BehaviorPolicy.PS.initialVariance",
 
     "SearchingAgentRouter.targetPrefix",
     "Group1.nrofHosts",
