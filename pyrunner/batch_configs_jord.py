@@ -28,6 +28,87 @@ LIST_OF_CONFIGS = [
     # =========================================================================
 
     # --- Epsilon-Greedy | fv=True ---
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.99,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.991,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.992,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.993,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.994,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.9954,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.996,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.997,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.998,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.999,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+
     # 1
     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
@@ -234,6 +315,87 @@ LIST_OF_CONFIGS = [
     # =========================================================================
 
     # --- Epsilon-Greedy | fv=False ---
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.99,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.991,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.992,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.993,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.994,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.9954,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.996,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.997,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.998,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.999,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+
     # 17
     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
