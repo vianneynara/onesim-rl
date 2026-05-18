@@ -41,7 +41,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	private final double initialVariance;
 	private final boolean usingBayesian;
 	private final boolean resetEpisodically;
-	private final Map<StateActionPair, TSProperty> tsProperties;
+	private final Map<StateActionPair, PSProperty> tsProperties;
 
 	public static final String BEHAVIOR_NS = "BehaviorPolicy.TS";
 	/**
@@ -151,7 +151,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		for (Integer action : actionArray) {
 			StateActionPair pair = StateActionPair.of(stateId, action);
 
-			final TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0, 0, 0));
+			final PSProperty prop = tsProperties.getOrDefault(pair, new PSProperty(0, initialVariance, 0, 0, 0));
 
 
 			double sampledValue;
@@ -206,17 +206,17 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	 * from the Beta-Binomial conjugate prior. Theoretically sound Bayesian update.
 	 * </p>
 	 *
-	 * @param stateId     State where the action was taken
-	 * @param actionIndex Action that was taken
-	 * @param reward      Observed reward from the action
-	 * @param prevQ       Previous Q-value (unused in current implementation)
+	 * @param stateId      State where the action was taken
+	 * @param actionIndex  Action that was taken
+	 * @param reward       Observed reward from the action
+	 * @param prevQ        Previous Q-value (unused in current implementation)
 	 * @param prevMaxNextQ Previous max next Q (unused in current implementation)
-	 * @param updatedQ    Updated Q-value from the learning algorithm
+	 * @param updatedQ     Updated Q-value from the learning algorithm
 	 */
 	@Override
 	public void update(int stateId, int actionIndex, double reward, double prevQ, double prevMaxNextQ, double updatedQ) {
 		StateActionPair pair = StateActionPair.of(stateId, actionIndex);
-		TSProperty prop = tsProperties.getOrDefault(pair, new TSProperty(0, initialVariance, 0, 0, 0));
+		PSProperty prop = tsProperties.getOrDefault(pair, new PSProperty(0, initialVariance, 0, 0, 0));
 
 		/* Q-Tracking Posterior Sampling (exponential moving average of Q-values) */
 		if (!usingBayesian) {
@@ -327,7 +327,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			if (epd.tsProperties != null) {
 				for (var entry : epd.tsProperties.entrySet()) {
 					StateActionPair pair = StateActionPair.fromJsonKey(entry.getKey());
-					TSProperty prop = TSProperty.fromJsonValue(entry.getValue());
+					PSProperty prop = PSProperty.fromJsonValue(entry.getValue());
 
 					tsProperties.put(pair, prop);
 				}
@@ -365,7 +365,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 	 * </ul>
 	 * This will be keyed using {@link StateActionPair}.
 	 */
-	public static class TSProperty {
+	public static class PSProperty {
 		@Getter
 		@Setter
 		private double mu;
@@ -382,7 +382,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 		@Setter
 		private int failureCount;
 
-		public TSProperty() {
+		public PSProperty() {
 			this.mu = 0.0;
 			this.sigma2 = 0.0;
 			this.visitCount = 0;
@@ -390,7 +390,7 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			this.failureCount = 0;
 		}
 
-		public TSProperty(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
+		public PSProperty(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
 			this.mu = mu;
 			this.sigma2 = sigma2;
 			this.visitCount = visitCount;
@@ -398,28 +398,39 @@ public class ThompsonSamplingBehavior implements BehaviorPolicy {
 			this.failureCount = failureCount;
 		}
 
-		public static TSProperty of(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
-			return new TSProperty(mu, sigma2, visitCount, successCount, failureCount);
+		public static PSProperty of(double mu, double sigma2, int visitCount, int successCount, int failureCount) {
+			return new PSProperty(mu, sigma2, visitCount, successCount, failureCount);
 		}
 
 		/**
-		 * Decodes {@link TSProperty} from format of "mu,sigma2,visitCount".
+		 * Decodes {@link PSProperty} from format of "mu,sigma2,visitCount,successCount,failureCount".
 		 *
 		 */
-		public static TSProperty fromJsonValue(String jsonValue) {
+		public static PSProperty fromJsonValue(String jsonValue) {
 			String[] valueParts = jsonValue.split(",");
+
+//			assert valueParts.length == 3 : "Asserting TRUE (older value): jsonValue:" + jsonValue;
 
 			double mu = Double.parseDouble(valueParts[0]);
 			double sigma2 = Double.parseDouble(valueParts[1]);
 			int visitCount = Integer.parseInt(valueParts[2]);
-			int successCount = Integer.parseInt(valueParts[3]);
-			int failureCount = Integer.parseInt(valueParts[4]);
 
-			return new TSProperty(mu, sigma2, visitCount, successCount, failureCount);
+			int successCount;
+			int failureCount;
+			if (valueParts.length != 3) {
+				successCount = Integer.parseInt(valueParts[3]);
+				failureCount = Integer.parseInt(valueParts[4]);
+			} else {
+				// Backward compatibility with 3 values (no successCount and failureCount)
+				successCount = 0;
+				failureCount = 0;
+			}
+
+			return new PSProperty(mu, sigma2, visitCount, successCount, failureCount);
 		}
 
 		/**
-		 * Encodes {@link TSProperty} as "mu,sigma2,visitCount" string to be represented in JSON value.
+		 * Encodes {@link PSProperty} as "mu,sigma2,visitCount" string to be represented in JSON value.
 		 *
 		 */
 		public String toJsonValue() {
