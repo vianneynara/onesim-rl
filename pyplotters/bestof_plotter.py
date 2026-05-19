@@ -66,8 +66,8 @@ if __package__ in (None, ""):
     
 from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 
-# PLOT_RESULTS_DIR = "pyplotters\\plots"
-PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+PLOT_RESULTS_DIR = "pyplotters\\plots"
+# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 # BESTOF_CMAP = "viridis"
 # BESTOF_CMAP = "magma"
