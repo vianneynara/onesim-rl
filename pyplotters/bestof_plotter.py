@@ -1,16 +1,19 @@
 """Best-of comparison plotter.
 
 This script compares *already processed* runs under `pyplotters/plots/<aof>/...`.
-It supports two modes:
+It supports three modes:
 
-1. Best-of mode (default): selects, for each value of a given group key (e.g. `qlm_bp`),
-   the run with the highest `max_cumulative_reward` and overlays their episode series.
+1. Best-of mode (--group KEY): selects, for each value of a given group key (e.g. `qlm_bp`),
+   the run with the highest `last_episode_cumulative_reward` and overlays their episode series.
 
 2. Compare-all mode (--compareall): compares all available configs without grouping,
    sorted by reward (highest first). Legend shows cfg@N and parameter overrides.
 
+3. Config-group mode (--configgroup KEY): filters runs by config-group key (e.g. cg@ql_epsilon),
+   plots all matching runs sorted by reward (descending). Legend shows parameter overrides only.
+
 Assumptions / constraints (by design):
-- Must be invoked with `-aof/--all_of`.
+- Must be invoked with `-pid/--parent_id`.
 - Requires `pyplotters/plots/<aof>/summary.csv` to exist.
 - Requires each referenced `common_data.csv` to exist.
 - Run-directory names must be parseable as: <prefix>-<k>@<v>-<k>@<v>-...
@@ -18,21 +21,27 @@ Assumptions / constraints (by design):
 
 Examples:
   # Best-of mode: compare best run per behavior policy
-  python -m pyplotters.bestof_plotter -aof ql-c-ms@0-ls@0 --group qlm_bp
+  python -m pyplotters.bestof_plotter -pid ql-c-ms@0-ls@0 --group qlm_bp
   
   # Best-of mode with config filtering
-  python -m pyplotters.bestof_plotter -aof ql-c-ms@0-ls@0 --group qlm_bp -c 1-5
+  python -m pyplotters.bestof_plotter -pid ql-c-ms@0-ls@0 --group qlm_bp -c 1-5
   
   # Compare-all mode: plot all configs sorted by reward
-  python -m pyplotters.bestof_plotter -aof ql-p-ms@1 --title "LF vs Q-Learning" --compareall
-  
+  python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --compareall
+
   # Compare-all with config filtering
-  python -m pyplotters.bestof_plotter -aof ql-p-ms@1 --title "LF vs Q-Learning" --compareall -c 1-5,18-23,29-32
+  python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --compareall -c 1-5,18-23,29-32
+  
+  # Config-group mode: compare all runs with cg@ql_epsilon
+  python -m pyplotters.bestof_plotter -pid ql-c-ms@0 --configgroup ql_epsilon
+  
+  # Config-group mode with custom title and config filtering
+  python -m pyplotters.bestof_plotter -pid ql-c-ms@0 --configgroup ql_epsilon -c 1-3,5-7 -t "Epsilon Sensitivity"
 
 Outputs:
-  Saves best-of comparison plots into `pyplotters/plots/<aof>/` adjacent to
-  `summary.csv`. Filenames end with "(Best-Of Comparison).png" or "(Compare-All).png"
-  depending on mode.
+  Saves comparison plots into `pyplotters/plots/<aof>/` adjacent to `summary.csv`.
+  Filenames end with "(Best-Of Comparison).png", "(Compare-All).png", or 
+  "(of group <KEY>).png" depending on mode.
 """
 
 from __future__ import annotations
@@ -60,6 +69,12 @@ from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 # PLOT_RESULTS_DIR = "pyplotters\\plots"
 PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
+# BESTOF_CMAP = "viridis"
+# BESTOF_CMAP = "magma"
+# BESTOF_CMAP = "plasma"
+# BESTOF_CMAP = "gnuplot2"
+BESTOF_CMAP = "inferno"
+
 # CURR_CMAP = "Set1"
 # CURR_CMAP = "Set2"
 # CURR_CMAP = "Set3"
@@ -81,6 +96,13 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# Keys to ignore in legend labels (algorithm, runs count, config index, config group)
+LIST_OF_IGNORED_OVERRIDES = [
+    "cfg",  # config index (e.g., cfg@01)
+    "cg",   # config group (e.g., cg@ql_epsilon)
+    "ql500",  # Q-Learning with 500 runs
+    "lfe500"  # Lévy Flight with 500 runs
+]
 
 @dataclass(frozen=True)
 class ParsedRunId:
@@ -234,11 +256,52 @@ def filter_summary_by_configs(summary_df: pd.DataFrame, config_indices: list[int
     return filtered_df
 
 
+def filter_summary_by_configgroup(summary_df: pd.DataFrame, cg_key: str) -> pd.DataFrame:
+    """Filter summary DataFrame to include only rows matching a config-group key.
+    
+    Matches configuration_directory entries containing 'cg@<cg_key>'.
+    
+    Args:
+        summary_df: DataFrame with 'configuration_directory' column
+        cg_key: The config-group value to filter by (e.g., 'ql_epsilon')
+    
+    Returns:
+        Filtered DataFrame with only matching rows
+    """
+    if "configuration_directory" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
+    
+    # Filter rows by matching cg@ value
+    mask = pd.Series([False] * len(summary_df), index=summary_df.index)
+    found_count = 0
+    
+    for idx, row in summary_df.iterrows():
+        config_dir = str(row["configuration_directory"])
+        try:
+            pr = parse_run_id_strict(config_dir)
+            if "cg" in pr.tokens and pr.tokens["cg"] == cg_key:
+                mask.iloc[idx] = True
+                found_count += 1
+        except SystemExit:
+            # Skip runs that can't be parsed
+            continue
+    
+    filtered_df = summary_df[mask]
+    
+    if len(filtered_df) == 0:
+        _exit_with_warning(
+            f"No runs found with config-group cg@{cg_key}. Available runs must contain 'cg@{cg_key}' token."
+        )
+    
+    log.info(f"Filtered to {len(filtered_df)} runs with config-group cg@{cg_key}")
+    return filtered_df
+
+
 def key_to_abbr(key: str) -> str:
     """Convert an override key to its abbreviation.
 
     Example: "ucb_ec" -> "ec" (substring after last underscore)
-             "ts_iv"  -> "iv"
+             "ps_iv"  -> "iv"
              "foo"    -> "foo"
     """
     if "_" in key:
@@ -314,7 +377,8 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: Union[
                     f"skipping requested injection '{add_key}@{add_value}'."
                 )
         
-        overrides = {k: v for k, v in pr.tokens.items() if k != group_key}
+        overrides = {k: v for k, v in pr.tokens.items() 
+                    if k != group_key and k not in LIST_OF_IGNORED_OVERRIDES}
         records.append(
             {
                 "configuration_directory": run_id,
@@ -359,8 +423,9 @@ def plot_bestof_by_episode(
     xlabel: str,
     ylabel: str,
     out_file: str,
-    suptitle: Union[str, None] = None,
+    suptitle: SuptitleFormat = None,
     legend_outside: bool = False,
+    cmap: str = None,
 ):
     if not series_by_label:
         _exit_with_warning("No best-of series to plot.")
@@ -375,7 +440,9 @@ def plot_bestof_by_episode(
         max_ep = int(df["episodeNumber"].max()) if max_ep is None else max(max_ep, int(df["episodeNumber"].max()))
         min_ep = int(df["episodeNumber"].min()) if min_ep is None else min(min_ep, int(df["episodeNumber"].min()))
 
-    palette = sns.color_palette(CURR_CMAP or "Set1", n_colors=len(series_by_label))
+    if not cmap:
+        cmap = 'gist_rainbow'
+    palette = sns.color_palette(cmap, n_colors=len(series_by_label))
     for (label, df), color in zip(series_by_label, palette):
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
@@ -392,18 +459,29 @@ def plot_bestof_by_episode(
         plt.xlim(left=min_ep)
 
     # Construct title with suptitle and subtitle
-    if suptitle:
-        # Multi-line title: suptitle on top, subtitle below
+    if suptitle.title != "":
         fig = plt.gcf()
-        fig.suptitle(suptitle, fontweight="bold", fontsize=12, y=0.99)
+
+        fig.suptitle(
+            suptitle.title,
+            fontweight="bold",
+            fontsize=12,
+            y=0.99
+        )
+
         plt.title(title, fontweight="bold", fontsize=10)
-        fig.subplots_adjust(top=0.92)
+
+        extra_lines = max(0, suptitle.newline_gap - 1)
+
+        fig.subplots_adjust(
+            top=0.92 - (0.04 * extra_lines)
+        )
     else:
         # Single title (backward compatible)
         plt.title(title, fontweight="bold")
 
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
+    plt.xlabel(xlabel, fontweight="bold")
+    plt.ylabel(ylabel, fontweight="bold")
     plt.margins(x=0)
 
     ax = plt.gca()
@@ -423,7 +501,7 @@ def plot_bestof_by_episode(
     plt.close()
 
 
-def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indices: Union[list[int], None] = None) -> None:
+def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
     """Compare all available configurations (no grouping, no best-of selection).
     
     Plots all configs with legend labels showing cfg@N and parameter overrides.
@@ -439,11 +517,11 @@ def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indice
 
     if not os.path.exists(out_dir):
         _exit_with_warning(
-            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -aof first?"
+            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -pid first?"
         )
     if not os.path.exists(summary_path):
         _exit_with_warning(
-            f"Missing {summary_path}. Did you run persistence_plotter.py -aof first?"
+            f"Missing {summary_path}. Did you run persistence_plotter.py -pid first?"
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
@@ -488,13 +566,15 @@ def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indice
         try:
             pr = parse_run_id_strict(run_id)
             # Build legend label: cfg@N (abbr=value, abbr=value, ...)
+            # Filter out ignored keys (cfg, cg, alg+runs)
             if pr.tokens:
                 items: list[tuple[str, str]] = []
                 for k, v in pr.tokens.items():
-                    items.append((key_to_abbr(k), str(v)))
+                    if k not in LIST_OF_IGNORED_OVERRIDES:
+                        items.append((key_to_abbr(k), str(v)))
                 items.sort(key=lambda t: t[0])
                 overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
-                legend_label = f'{cfg_str} ({overrides_str})'
+                legend_label = f'{cfg_str} ({overrides_str})' if overrides_str else cfg_str
             else:
                 legend_label = cfg_str
         except SystemExit:
@@ -526,7 +606,7 @@ def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indice
         ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
         ("currentCumulativeReward", "Current Cumulative Reward", "Episode", "Reward"),
         ("currentTrueDetections", "Current True Detections", "Episode", "Detection"),
-        ("currentUniqueDetections", "Current Unique Detections", "Episode", "Detection"),
+        ("currentUniqueDetections", "Current Unique True Detections", "Episode", "Detection"),
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
@@ -544,17 +624,17 @@ def run_compareall(all_of: str, suptitle: Union[str, None] = None, config_indice
         log.info(f"Saved: {out_file}")
 
 
-def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], None] = None, suptitle: Union[str, None] = None, config_indices: Union[list[int], None] = None) -> None:
+def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
     if not os.path.exists(out_dir):
         _exit_with_warning(
-            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -aof first?"
+            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -pid first?"
         )
     if not os.path.exists(summary_path):
         _exit_with_warning(
-            f"Missing {summary_path}. Did you run persistence_plotter.py -aof first?"
+            f"Missing {summary_path}. Did you run persistence_plotter.py -pid first?"
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
@@ -563,10 +643,10 @@ def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], Non
     if config_indices is not None:
         summary_df = filter_summary_by_configs(summary_df, config_indices)
     
-    winners = best_of_by_group(summary_df, group_key, addparams)
+    winners = best_of_by_group(summary_df, comparison_key, addparams)
 
     log.info(LINE_LENGTH * "-")
-    log.info(f"Best-Of selection by group '{group_key}'")
+    log.info(f"Best-Of selection by group '{comparison_key}'")
     for _, row in winners.iterrows():
         gv = str(row["group_value"])
         formal = GROUP_VALUE_TERMS.get(gv, "")
@@ -597,7 +677,7 @@ def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], Non
         ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
         ("currentCumulativeReward", "Current Cumulative Reward", "Episode", "Reward"),
         ("currentTrueDetections", "Current True Detections", "Episode", "Detection"),
-        ("currentUniqueDetections", "Current Unique Detections", "Episode", "Detection"),
+        ("currentUniqueDetections", "Current Unique True Detections", "Episode", "Detection"),
     ]
 
     for y_key, title, xlabel, ylabel in comparisons:
@@ -610,6 +690,129 @@ def run_bestof(all_of: str, group_key: str, addparams: Union[dict[str, str], Non
             ylabel=ylabel,
             out_file=out_file,
             suptitle=suptitle,
+            cmap=BESTOF_CMAP
+        )
+        log.info(f"Saved: {out_file}")
+
+
+def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
+    """Compare all runs matching a config-group key.
+    
+    Filters runs by cg@KEY, plots all matching runs sorted by reward (descending).
+    Legend labels show parameter overrides only (no cg@ or cfg@ prefixes).
+    
+    Args:
+        all_of: Parent results directory under pyplotters/plots
+        cg_key: The config-group value to filter by (e.g., 'ql_epsilon')
+        suptitle: Optional custom title for plots
+        config_indices: Optional list of config indices to additionally filter by
+    """
+    out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
+    summary_path = os.path.join(out_dir, "summary.csv")
+
+    if not os.path.exists(out_dir):
+        _exit_with_warning(
+            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -pid first?"
+        )
+    if not os.path.exists(summary_path):
+        _exit_with_warning(
+            f"Missing {summary_path}. Did you run persistence_plotter.py -pid first?"
+        )
+
+    summary_df = pd.read_csv(summary_path, sep=";")
+    
+    # Filter by config-group key
+    summary_df = filter_summary_by_configgroup(summary_df, cg_key)
+    
+    # Apply config filtering if specified (can combine with config-group filtering)
+    if config_indices is not None:
+        summary_df = filter_summary_by_configs(summary_df, config_indices)
+    
+    # Ensure required columns exist
+    if "configuration_directory" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
+    if "last_episode_cumulative_reward" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'last_episode_cumulative_reward'.")
+
+    # Convert reward to numeric and sort by reward (descending)
+    summary_df = summary_df.copy()
+    summary_df["last_episode_cumulative_reward"] = pd.to_numeric(
+        summary_df["last_episode_cumulative_reward"], errors="coerce"
+    )
+    if summary_df["last_episode_cumulative_reward"].isna().any():
+        _exit_with_warning("summary.csv contains non-numeric last_episode_cumulative_reward values; aborting.")
+    
+    summary_df = summary_df.sort_values(
+        by="last_episode_cumulative_reward",
+        ascending=False,
+        kind="mergesort"
+    )
+    
+    log.info(LINE_LENGTH * "-")
+    log.info(f"Config-Group mode: cg@{cg_key}, plotting {len(summary_df)} runs")
+    
+    tmp: list[tuple[str, pd.DataFrame]] = []
+    for _, row in summary_df.iterrows():
+        run_id = str(row["configuration_directory"])
+        reward = row['last_episode_cumulative_reward']
+        
+        # Build legend label showing only parameter overrides (no cfg@, no cg@)
+        try:
+            pr = parse_run_id_strict(run_id)
+            # Extract parameter overrides, excluding cfg, cg, and algorithm identifiers
+            if pr.tokens:
+                items: list[tuple[str, str]] = []
+                for k, v in pr.tokens.items():
+                    if k not in LIST_OF_IGNORED_OVERRIDES:
+                        items.append((key_to_abbr(k), str(v)))
+                items.sort(key=lambda t: t[0])
+                overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
+                legend_label = overrides_str if overrides_str else run_id
+            else:
+                legend_label = run_id
+        except SystemExit:
+            # If parse_run_id_strict exits, use run_id as fallback
+            legend_label = run_id
+        
+        log.info(f"  {run_id} | reward={reward:.2f} | label={legend_label}")
+        
+        common_path = os.path.join(out_dir, run_id, "common_data.csv")
+        if not os.path.exists(common_path):
+            log.warning(f"Missing {common_path}. Skipping this run.")
+            continue
+        
+        try:
+            df = pd.read_csv(common_path, sep=";")
+            tmp.append((legend_label, df))
+        except Exception as e:
+            log.warning(f"Error reading {common_path}: {e}. Skipping this run.")
+            continue
+    
+    log.info(LINE_LENGTH * "-")
+    
+    if not tmp:
+        _exit_with_warning("No valid runs found to plot.")
+    
+    series_by_label: list[tuple[str, pd.DataFrame]] = tmp
+
+    comparisons = [
+        ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
+        ("currentCumulativeReward", "Current Cumulative Reward", "Episode", "Reward"),
+        ("currentTrueDetections", "Current True Detections", "Episode", "Detection"),
+        ("currentUniqueDetections", "Current Unique True Detections", "Episode", "Detection"),
+    ]
+
+    for y_key, title, xlabel, ylabel in comparisons:
+        out_file = os.path.join(out_dir, _sanitize_filename(f"Bulk Comparison of {title} (of group {cg_key}).png"))
+        plot_bestof_by_episode(
+            series_by_label=series_by_label,
+            y_key=y_key,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            out_file=out_file,
+            suptitle=suptitle,
+            legend_outside=True,
         )
         log.info(f"Saved: {out_file}")
 
@@ -619,11 +822,11 @@ def main(argv: Union[list[str], None] = None) -> None:
         description="Best-of comparison plotter for ONE-Sim runs (uses pyplotters/plots outputs)."
     )
     parser.add_argument(
-        "-aof",
-        "--all_of",
+        "-pid",
+        "--parent_id",
         type=str,
         required=True,
-        help="Parent results directory under pyplotters/plots (same value used in persistence_plotter.py -aof).",
+        help="Parent results directory under pyplotters/plots (same value used in persistence_plotter.py -pid).",
     )
     parser.add_argument(
         "--compareall",
@@ -631,10 +834,17 @@ def main(argv: Union[list[str], None] = None) -> None:
         help="Compare all available configs instead of selecting best-of per group. --group becomes optional when this flag is set.",
     )
     parser.add_argument(
-        "--group",
+        "--comparekey",
         type=str,
         required=False,
-        help="Grouping key to compare best-of runs (e.g. qlm_bp). Required unless --compareall is set.",
+        help="Grouping key to compare best-of runs (e.g. qlm_bp). Mutually exclusive with --compareall and --configgroup.",
+    )
+    parser.add_argument(
+        "--configgroup",
+        "-cg",
+        type=str,
+        required=False,
+        help="Config-group key to filter runs by (e.g. ql_epsilon). Filters all runs matching cg@KEY. Mutually exclusive with --group and --compareall.",
     )
     parser.add_argument(
         "-c",
@@ -648,7 +858,7 @@ def main(argv: Union[list[str], None] = None) -> None:
         type=str,
         required=False,
         help="Comma-separated phantom parameters to inject into runs missing the group key (e.g. 'qlm_bp@lfe,other_key@value'). "
-             "Only used in best-of mode (incompatible with --compareall).",
+             "Only used in best-of mode (incompatible with --compareall and --configgroup).",
     )
     parser.add_argument(
         "-t",
@@ -660,11 +870,13 @@ def main(argv: Union[list[str], None] = None) -> None:
 
     args = parser.parse_args(argv)
     
-    # Validate argument combinations
-    if args.compareall and args.group:
-        log.warning("--compareall flag is set; --group argument will be ignored.")
-    elif not args.compareall and not args.group:
-        _exit_with_warning("Either --group must be provided or --compareall flag must be set.")
+    # Count how many modes are specified (exactly one must be set)
+    modes_specified = sum([bool(args.compareall), bool(args.comparekey), bool(args.configgroup)])
+    
+    if modes_specified != 1:
+        _exit_with_warning(
+            "Exactly one mode must be specified: --group, --compareall, or --configgroup"
+        )
     
     if args.compareall and args.addparams:
         log.warning("--compareall flag is set; --addparams argument will be ignored.")
@@ -678,9 +890,12 @@ def main(argv: Union[list[str], None] = None) -> None:
         except ValueError as e:
             _exit_with_warning(f"Invalid config format: {e}")
     
+    if args.compareall and args.addparams:
+        log.warning("--compareall flag is set; --addparams argument will be ignored.")
+    
     # Parse and validate --addparams if provided (only used in best-of mode)
     addparams: Union[dict[str, str], None] = None
-    if args.addparams and not args.compareall:
+    if args.addparams and args.comparekey:
         addparams = {}
         params_list = args.addparams.split(",")
         for param in params_list:
@@ -699,13 +914,32 @@ def main(argv: Union[list[str], None] = None) -> None:
         # Sort by key alphabetically for stable/deterministic injection order
         addparams = dict(sorted(addparams.items()))
         log.info(f"Phantom addparams provided: {addparams}")
+
+    ftitle = SuptitleFormat("", 1)
+
+    if args.title:
+        # Replacing special newline escape character and \\t for latex equation
+        args.title = (
+            args.title
+            .replace(r"\n", "\n")
+            .replace(r"\\t", "\\t")
+        )
+        line_count = args.title.count("\n") + 1
+        ftitle = SuptitleFormat(args.title, line_count)
     
     # Route to appropriate function
     if args.compareall:
-        run_compareall(args.all_of, args.title, config_indices)
+        run_compareall(args.parent_id, ftitle, config_indices)
+    elif args.configgroup:
+        run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices)
     else:
-        run_bestof(args.all_of, args.group, addparams, args.title, config_indices)
+        run_bestof(args.parent_id, args.comparekey, addparams, ftitle, config_indices)
 
+
+class SuptitleFormat:
+    def __init__(self, title: str, newline_gap: int = 1):
+        self.title = title
+        self.newline_gap = newline_gap
 
 if __name__ == "__main__":
     main()
