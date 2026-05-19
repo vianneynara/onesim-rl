@@ -1,8 +1,12 @@
 """
-episode_extender.py — Episode Extension Setupper
+episode_extender.py — Episode Extension & Reversion Setupper
 
 Prepares an existing run directory to continue from where it left off,
-extending the total episode count to a new target.
+extending the total episode count to a new target, or reverting episodes with errors.
+
+Two main modes:
+  - EXTEND: increase episode count to a higher target (--toepisodes)
+  - REVERT: roll back episodes to a previous state (--revertto)
 
 Two resolution modes for the source directory:
   - Signature mode (-fs):  matches run dirs containing alg+runs in their name
@@ -10,7 +14,7 @@ Two resolution modes for the source directory:
 
 Both modes can be combined: -fs filters by alg+runs AND -c filters by cfg@N.
 
-Usage examples:
+Usage examples - EXTEND:
   # Extend by signature, copy mode
   python episode_extender.py -pid skripsi-run1 -fs lfe500 --toepisodes 750
 
@@ -22,6 +26,13 @@ Usage examples:
 
   # Custom reports base path
   python episode_extender.py -pid skripsi-run1 -fs lfe500 --toepisodes 750 -srp D:/reports
+
+Usage examples - REVERT:
+  # Revert to episode 450, by config index
+  python episode_extender.py -pid skripsi-run1 -c 3 --revertto 450
+
+  # Revert by signature
+  python episode_extender.py -pid skripsi-run1 -fs lfe500 --revertto 300
 """
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -370,6 +381,89 @@ def update_config_setting_json(
 
 
 # ------------------------------------------------------------------------------------------------------------------- #
+# REVERT HELPERS
+# ------------------------------------------------------------------------------------------------------------------- #
+
+def delete_episodes_after_target(
+        ep_root: str,
+        target_episode: int,
+) -> Tuple[bool, str]:
+    """
+    Delete all episode directories ep/N where N > target_episode.
+
+    Returns: (success, message)
+    """
+    try:
+        deleted = 0
+        warnings = []
+
+        episode_dirs = safe_int_dirnames(ep_root)
+        if not episode_dirs:
+            return True, "No episodes to delete (ep directory empty or missing)"
+
+        for ep_num in sorted(episode_dirs):
+            if ep_num > target_episode:
+                ep_path = os.path.join(ep_root, str(ep_num))
+                try:
+                    shutil.rmtree(ep_path)
+                    deleted += 1
+                except Exception as exc:
+                    warnings.append(f"Failed to delete ep/{ep_num}: {exc}")
+
+        msg = f"Deleted {deleted} episode(s) (ep/{target_episode + 1} and beyond)"
+        if warnings:
+            msg += "\nWarnings:\n  " + "\n  ".join(warnings)
+        
+        return True, msg
+    except Exception as exc:
+        return False, f"Failed during episode deletion: {exc}"
+
+
+def restore_persistence_from_episode(
+        ep_root: str,
+        target_episode: int,
+        full_report_dir: str,
+) -> Tuple[bool, str, int]:
+    """
+    Restore _persistence.json from Persistence-Episode@N.json of the highest valid
+    episode at or below target_episode.
+
+    Returns: (success, message, actual_episode_used)
+    """
+    try:
+        # Find highest valid persistence at or below target
+        restoration_episode = 0
+        for ep in range(target_episode, 0, -1):
+            persistence_path = os.path.join(
+                ep_root, str(ep), f"Persistence-Episode@{ep}.json"
+            )
+            ok, data, err = load_json_file(persistence_path)
+            if ok:
+                restoration_episode = ep
+                break
+
+        if restoration_episode == 0:
+            return False, f"No readable persistence found at or below episode {target_episode}", 0
+
+        src_persistence = os.path.join(
+            ep_root, str(restoration_episode), f"Persistence-Episode@{restoration_episode}.json"
+        )
+        dst_persistence = os.path.join(full_report_dir, "_persistence.json")
+
+        shutil.copy2(src_persistence, dst_persistence)
+        msg = (
+            f"Restored _persistence.json from episode {restoration_episode}"
+            if restoration_episode == target_episode
+            else f"Restored _persistence.json from episode {restoration_episode} "
+                 f"(highest valid at/below target {target_episode})"
+        )
+        return True, msg, restoration_episode
+
+    except Exception as exc:
+        return False, f"Failed to restore persistence: {exc}", 0
+
+
+# ------------------------------------------------------------------------------------------------------------------- #
 # COPY HELPERS
 # ------------------------------------------------------------------------------------------------------------------- #
 
@@ -408,6 +502,102 @@ def copy_episodes_recursively(
         return True, f"Copied {copied} episode(s) (ep/1 … ep/{max_episode})"
     except Exception as exc:
         return False, f"Failed during episode copy: {exc}"
+
+
+# ------------------------------------------------------------------------------------------------------------------- #
+# MAIN REVERT LOGIC
+# ------------------------------------------------------------------------------------------------------------------- #
+
+def revert_run(
+        source_dir: str,
+        to_episode: int,
+) -> None:
+    """
+    Core reversion routine for a single matched source directory.
+
+    Steps:
+        1. Validate config_setting.json
+        2. Find highest good episode
+        3. Validate revert target <= highest good episode
+        4. Delete episodes after target
+        5. Restore _persistence.json from target episode
+        6. Update config_setting.json with reverted episode count
+    """
+    log.info("%s", "=" * LINE_LENGTH)
+    log.info("[REVERT] Source: %s", source_dir)
+
+    # ── Step 1: Validate source config ────────────────────────────────────
+    is_valid, msg, source_config = validate_source_config(source_dir)
+    if not is_valid:
+        log.error("[REVERT] Config validation failed: %s", msg)
+        sys.exit(1)
+
+    runner_id = source_config["runner_id"]
+    current_episodes = int(source_config["runner_nrof_episodes"])
+
+    log.info("[REVERT] Runner ID:        %s", runner_id)
+    log.info("[REVERT] Current episodes: %d", current_episodes)
+    log.info("[REVERT] Target episode:   %d", to_episode)
+
+    # ── Step 2: Find highest good episode ─────────────────────────────────
+    highest_good, problems, episodic_available, main_persistence_available = (
+        find_highest_good_episode(source_dir)
+    )
+
+    if problems:
+        for p in problems:
+            log.warning("[REVERT] %s", p)
+
+    log.info("[REVERT] Highest valid episode: %d", highest_good)
+
+    if highest_good <= 0:
+        log.error("[REVERT] No readable episodes found. Cannot revert.")
+        sys.exit(1)
+
+    # ── Step 3: Validate revert target ────────────────────────────────────
+    if to_episode > highest_good:
+        log.error(
+            "[REVERT] --revertto (%d) must be <= highest valid episode (%d)",
+            to_episode,
+            highest_good,
+        )
+        sys.exit(1)
+
+    if to_episode == highest_good:
+        log.warning("[REVERT] Target episode %d equals highest good episode — nothing to delete", to_episode)
+    elif to_episode < 1:
+        log.error("[REVERT] --revertto must be >= 1")
+        sys.exit(1)
+
+    ep_root = os.path.join(source_dir, "ep")
+
+    # ── Step 4: Delete episodes after target ──────────────────────────────
+    if to_episode < highest_good:
+        ok, delete_msg = delete_episodes_after_target(ep_root, to_episode)
+        if not ok:
+            log.error("[REVERT] Episode deletion failed: %s", delete_msg)
+            sys.exit(1)
+        log.info("[REVERT] %s", delete_msg)
+
+    # ── Step 5: Restore persistence from target episode ────────────────────
+    ok, restore_msg, actual_ep = restore_persistence_from_episode(ep_root, to_episode, source_dir)
+    if not ok:
+        log.error("[REVERT] Persistence restoration failed: %s", restore_msg)
+        sys.exit(1)
+    log.info("[REVERT] %s", restore_msg)
+
+    # ── Step 6: Update config_setting.json ────────────────────────────────
+    ok, update_msg = update_config_setting_json(source_dir, runner_id, actual_ep)
+    if not ok:
+        log.error("[REVERT] Failed to update config_setting.json: %s", update_msg)
+        sys.exit(1)
+
+    log.info("[REVERT] %s", update_msg)
+    log.info("%s", "=" * LINE_LENGTH)
+    log.info("[REVERT] Done!")
+    log.info("[REVERT] Target directory : %s", source_dir)
+    log.info("[REVERT] Episodes reverted: %d → %d (deleted: %d)", highest_good, actual_ep, highest_good - actual_ep)
+    log.info("%s", "=" * LINE_LENGTH)
 
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -475,6 +665,7 @@ def extend_run(
         sys.exit(1)
 
     # ── Step 3: Compute new runner_id ────────────────────────────────────
+    new_runner_id = old_runner_id
     try:
         new_runner_id = replace_alg_runs_in_runner_id(old_runner_id, alg, old_runs, to_episodes)
     except ValueError as exc:
@@ -574,7 +765,7 @@ def extend_run(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Episode Extension Setupper — prepares a run directory to continue to a higher episode count."
+        description="Episode Extension Setupper — extend a run to more episodes or revert it to a prior episode."
     )
 
     parser.add_argument(
@@ -600,9 +791,16 @@ if __name__ == "__main__":
         ),
     )
 
-    parser.add_argument(
-        "--toepisodes", type=int, required=True,
-        help="Target total episode count. Must be greater than the current highest valid episode.",
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+
+    mode_group.add_argument(
+        "--toepisodes", type=int,
+        help="Extend mode: target total episode count. Must be greater than the current highest valid episode.",
+    )
+
+    mode_group.add_argument(
+        "--revertto", type=int,
+        help="Revert mode: restore the run to this episode number and delete later episode folders.",
     )
 
     parser.add_argument(
@@ -633,8 +831,17 @@ if __name__ == "__main__":
     if not args.config and not args.fromsignature:
         parser.error("At least one of -c/--config or -fs/--fromsignature must be provided.")
 
-    if args.toepisodes <= 0:
+    is_revert_mode = args.revertto is not None
+    is_extend_mode = args.toepisodes is not None
+
+    if is_extend_mode and args.toepisodes <= 0:
         parser.error("--toepisodes must be a positive integer.")
+
+    if is_revert_mode and args.revertto <= 0:
+        parser.error("--revertto must be a positive integer.")
+
+    if is_revert_mode and (args.overwrite or args.acknowledge):
+        parser.error("--overwrite and --acknowledge are only valid with --toepisodes extend mode.")
 
     # ── Resolve reports base ───────────────────────────────────────────────
     reports_base = normalize_report_base(args.setreportspath or REPORTS_BASE)
@@ -658,8 +865,12 @@ if __name__ == "__main__":
     log.info("Reports base     : %s", reports_base)
     log.info("From signature   : %s", args.fromsignature or "(not set)")
     log.info("Config filter    : %s", config_indices or "(not set)")
-    log.info("To episodes      : %d", args.toepisodes)
-    log.info("Overwrite mode   : %s", "YES" if args.overwrite else "NO (copy)")
+    log.info("Mode             : %s", "REVERT" if is_revert_mode else "EXTEND")
+    log.info("Target episode   : %d", args.revertto if is_revert_mode else args.toepisodes)
+    log.info(
+        "Overwrite mode   : %s",
+        "(not applicable)" if is_revert_mode else ("YES" if args.overwrite else "NO (copy)"),
+    )
     log.info("%s", "=" * LINE_LENGTH)
 
     matched_dirs = None
@@ -682,24 +893,34 @@ if __name__ == "__main__":
     for d in matched_dirs:
         log.info("  %s", d)
 
-    # ── Extend each matched directory ────────────────────────────────────
+    # ── Process each matched directory ───────────────────────────────────
     if len(matched_dirs) > 1:
         MULTI_WAIT = 10
         log.info("⚠️" * (LINE_LENGTH // 2))
-        log.info("Multiple directories will be extended. Continuing in %d seconds. Ctrl+C to cancel.", MULTI_WAIT)
+        log.info("Multiple directories will be processed. Continuing in %d seconds. Ctrl+C to cancel.", MULTI_WAIT)
         log.info("⚠️" * (LINE_LENGTH // 2))
         time.sleep(MULTI_WAIT)
 
     for source_dir in matched_dirs:
-        extend_run(
-            source_dir=source_dir,
-            to_episodes=args.toepisodes,
-            overwrite=args.overwrite,
-            reports_base=reports_base,
-            parent_dir_id=args.parent_dir_id,
-            acknowledge_overwrite=args.acknowledge,
-        )
+        if is_revert_mode:
+            revert_run(
+                source_dir=source_dir,
+                to_episode=args.revertto,
+            )
+        else:
+            extend_run(
+                source_dir=source_dir,
+                to_episodes=args.toepisodes,
+                overwrite=args.overwrite,
+                reports_base=reports_base,
+                parent_dir_id=args.parent_dir_id,
+                acknowledge_overwrite=args.acknowledge,
+            )
 
     log.info("%s", "=" * LINE_LENGTH)
-    log.info("All done. %d director%s extended.", len(matched_dirs), "y" if len(matched_dirs) == 1 else "ies")
+    log.info(
+        "All done. %d director%s processed.",
+        len(matched_dirs),
+        "y" if len(matched_dirs) == 1 else "ies",
+    )
     log.info("%s", "=" * LINE_LENGTH)
