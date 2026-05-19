@@ -19,40 +19,40 @@ python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 36-43 -alg lfe-p-ms@1
 ### Running Epsilon Greedy Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 1-10
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 1-10
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 1-10
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 1-10
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -alg ql-c-ms@0 -c 1-10
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -alg ql-c-ms@1 -c 1-10
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -alg ql-p-ms@0 -c 1-10
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -alg ql-p-ms@1 -c 1-10
 
 ```
 
 ### Running Upper Confidence Bound Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 11-22
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 11-22
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 11-22
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 11-22
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -alg ql-c-ms@0 -c 11-22
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -alg ql-c-ms@1 -c 11-22
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -alg ql-p-ms@0 -c 11-22
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -alg ql-p-ms@1 -c 11-22
 
 ```
 
 ### Running Thompson Sampling Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 23-35
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 23-35
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 23-35
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 23-35
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -alg ql-c-ms@0 -c 23-35
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -alg ql-c-ms@1 -c 23-35
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -alg ql-p-ms@0 -c 23-35
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -alg ql-p-ms@1 -c 23-35
 
 ```
 
 ### Running Lévy Flight Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 36-43
-python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 36-43
-python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 36-43
-python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -alg lfe-c-ms@0 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -alg lfe-c-ms@1 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -alg lfe-p-ms@0 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -alg lfe-p-ms@1 -c 36-43
 
 ```
 
