@@ -18,7 +18,7 @@ Leave "start_ep" out (or set it to 1) for a fresh run.
   exploration, agent never exploits — not useful to compare.
 - EpsilonGreedy eg_ed >= 0.999999999: decay is so slow that epsilon barely
   moves over 500 episodes — equivalent to running pure random exploration.
-- TS ts_iv >= 5.0: excessively high initial variance causes near-random
+- PS ps_iv >= 5.0: excessively high initial variance causes near-random
   sampling for too long relative to the 500-episode budget.
 """
 
@@ -28,6 +28,87 @@ LIST_OF_CONFIGS = [
     # =========================================================================
 
     # --- Epsilon-Greedy | fv=True ---
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.99,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.991,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.992,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.993,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.994,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.9954,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.996,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.997,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.998,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.999,
+#             "eg_me": 0.1,
+#             "mcnm_fv": True,
+#         }
+#     },
+
     # 1
     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
@@ -191,39 +272,39 @@ LIST_OF_CONFIGS = [
 
     # --- Thompson Sampling | fv=True ---
     # 14
-    {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
         "overrides": {
-            "ts_iv": 0.5,
+            "ps_iv": 0.5,
             "mcnm_fv": True,
         }
     },
     # 15
-    {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
         "overrides": {
-            "ts_iv": 1.0,
+            "ps_iv": 1.0,
             "mcnm_fv": True,
         }
     },
     # 16
-    {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
         "overrides": {
-            "ts_iv": 2.0,
+            "ps_iv": 2.0,
             "mcnm_fv": True,
         }
     },
-    # COMMENTED OUT — ts_iv >= 5.0 causes near-random sampling for too long
+    # COMMENTED OUT — ps_iv >= 5.0 causes near-random sampling for too long
     # relative to the 500-episode budget. Not useful to compare.
     # # 17
-    # {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    # {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
     #     "overrides": {
-    #         "ts_iv": 5.0,
+    #         "ps_iv": 5.0,
     #         "mcnm_fv": True,
     #     }
     # },
     # # 18
-    # {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    # {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
     #     "overrides": {
-    #         "ts_iv": 10.0,
+    #         "ps_iv": 10.0,
     #         "mcnm_fv": True,
     #     }
     # },
@@ -234,6 +315,87 @@ LIST_OF_CONFIGS = [
     # =========================================================================
 
     # --- Epsilon-Greedy | fv=False ---
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.99,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.991,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.992,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.993,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.994,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.9954,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.996,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.997,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.998,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+#     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
+#         "overrides": {
+#             "eg_ip": 1.0,
+#             "eg_ed": 0.999,
+#             "eg_me": 0.1,
+#             "mcnm_fv": False,
+#         }
+#     },
+
     # 17
     {"alg": "mcn", "runs": 500, "bp": "epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
@@ -397,39 +559,39 @@ LIST_OF_CONFIGS = [
 
     # --- Thompson Sampling | fv=False ---
     # 30
-    {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
         "overrides": {
-            "ts_iv": 0.5,
+            "ps_iv": 0.5,
             "mcnm_fv": False,
         }
     },
     # 31
-    {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
         "overrides": {
-            "ts_iv": 1.0,
+            "ps_iv": 1.0,
             "mcnm_fv": False,
         }
     },
     # 32
-    {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
         "overrides": {
-            "ts_iv": 2.0,
+            "ps_iv": 2.0,
             "mcnm_fv": False,
         }
     },
-    # COMMENTED OUT — same reason as fv=True: ts_iv >= 5.0 causes near-random
+    # COMMENTED OUT — same reason as fv=True: ps_iv >= 5.0 causes near-random
     # sampling for too long relative to the 500-episode budget.
     # # 33
-    # {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    # {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
     #     "overrides": {
-    #         "ts_iv": 5.0,
+    #         "ps_iv": 5.0,
     #         "mcnm_fv": False,
     #     }
     # },
     # # 34
-    # {"alg": "mcn", "runs": 500, "bp": "ts", "id": "mcn1-bp=ts",
+    # {"alg": "mcn", "runs": 500, "bp": "ps", "id": "mcn1-bp=ps",
     #     "overrides": {
-    #         "ts_iv": 10.0,
+    #         "ps_iv": 10.0,
     #         "mcnm_fv": False,
     #     }
     # },

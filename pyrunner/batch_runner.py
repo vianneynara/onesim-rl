@@ -50,10 +50,11 @@ ALG_LABEL = "ALG_LABEL"
 
 S_REPORT_DIR = f"Report.reportDir={REPORTS_BASE}/{ALG_LABEL}/run-id/{ID_LABEL}"
 
-PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcm_bp"]
+PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcnm_bp"]
 
 # Import the configs
 from pyrunner.batch_configs import LIST_OF_CONFIGS
+# from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
 
 HIGHLIGHTED_SETTINGS = [
     "MovementModel.rngSeed",
@@ -73,6 +74,18 @@ HIGHLIGHTED_SETTINGS = [
     "QLearningMovement.targetCooldown",
     "QLearningMovement.learningSeed",
 
+    "MCMovementEnd.learningRate",
+    "MCMovementEnd.discountFactor",
+    "MCMovementEnd.initialQValue",
+    "MCMovementEnd.behaviorPolicy",
+    "MCMovementEnd.targetPrefix",
+    "MCMovementEnd.stepPenalty",
+    "MCMovementEnd.foundReward",
+    "MCMovementEnd.agentSpeed",
+    "MCMovementEnd.targetCooldown",
+    "MCMovementEnd.learningSeed",
+    "MCMovementEnd.firstVisit",
+
     "LevyFlightEpisodic.levyAlpha",
     "LevyFlightEpisodic.xm",
     "LevyFlightEpisodic.targetPrefix",
@@ -88,7 +101,7 @@ HIGHLIGHTED_SETTINGS = [
 
     "BehaviorPolicy.UCB.explorationConstant",
 
-    "BehaviorPolicy.TS.initialVariance",
+    "BehaviorPolicy.PS.initialVariance",
 
     "SearchingAgentRouter.targetPrefix",
     "Group1.nrofHosts",
@@ -178,8 +191,8 @@ def parse_overrides(overrides_dict: dict[str, Any]) -> Tuple[list[str], list[str
 def _get_bp_override_key(alg: str) -> Optional[str]:
     if alg == "ql":
         return "qlm_bp"
-    if alg == "mc":
-        return "mcm_bp"
+    if alg == "mcn":
+        return "mcnm_bp"
     return None
 
 

@@ -7,7 +7,7 @@ import java.util.Random;
 
 /**
  * Minimal adapter from {@link java.util.Random} to Commons-Math {@link RandomGenerator}.
- * This keeps all random draws (Gaussian TS, Beta TS, tie-breaking) on the same RNG stream.
+ * This keeps all random draws (Gaussian PS, Beta-Binomial PS, tie-breaking) on the same RNG stream.
  */
 public class AdaptedJavaRandom implements RandomGenerator {
 	private final Random delegate;

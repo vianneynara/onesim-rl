@@ -79,10 +79,10 @@ def extract_behavior_policy(folder_name: str) -> Optional[str]:
     """
     Extract behavior policy from folder name by looking for patterns like:
     - qlm_bp@ucb (UCB)
-    - qlm_bp@ts (Thompson Sampling)
+    - qlm_bp@ps (Thompson Sampling)
     - qlm_bp@epsilon (Epsilon-Greedy)
     
-    Returns: behavior policy name (e.g., 'ucb', 'ts', 'epsilon') or None if not found.
+    Returns: behavior policy name (e.g., 'ucb', 'ps', 'epsilon') or None if not found.
     """
     if re.search(r"cfg@\d+-ql\d+", folder_name):
         # Q-Learning algorithm

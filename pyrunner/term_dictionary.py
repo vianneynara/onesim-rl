@@ -4,8 +4,13 @@ ALG_BASE_SETTINGS_PATH = {
     "ql-c-ms@1": "settings/skripsi/randomsearch-qlearn-ql-c-ms@1.cfg",
     "ql-p-ms@0": "settings/skripsi/randomsearch-qlearn-ql-p-ms@0.cfg",
     "ql-p-ms@1": "settings/skripsi/randomsearch-qlearn-ql-p-ms@1.cfg",
-    "mc": "settings/skripsi/randomsearch-mc.cfg",
+
     "mcn": "settings/skripsi/randomsearch-mcn.cfg",
+    "mcn-c-ms@0": "settings/skripsi/randomsearch-mcn-mc-c-ms@0.cfg",
+    "mcn-c-ms@1": "settings/skripsi/randomsearch-mcn-mc-c-ms@1.cfg",
+    "mcn-p-ms@0": "settings/skripsi/randomsearch-mcn-mc-p-ms@0.cfg",
+    "mcn-p-ms@1": "settings/skripsi/randomsearch-mcn-mc-p-ms@1.cfg",
+
     "lfe": "settings/skripsi/randomsearch-lf-episodic.cfg",
     "lfe-c-ms@0": "settings/skripsi/randomsearch-lf-episodic-lfe-c-ms@0.cfg",
     "lfe-c-ms@1": "settings/skripsi/randomsearch-lf-episodic-lfe-c-ms@1.cfg",
@@ -22,7 +27,7 @@ ALG_ABBREVIATIONS = {
 BEHAVIOR_PACKAGES = {
     "epsilon": "movement.rl.behavior.EpsilonGreedyBehavior",
     "ucb": "movement.rl.behavior.UCBBehavior",
-    "ts": "movement.rl.behavior.ThompsonSamplingBehavior"
+    "ps": "movement.rl.behavior.PosteriorSamplingBehavior"
 }
 
 KEY_ABBREVIATIONS = {
@@ -74,10 +79,10 @@ KEY_ABBREVIATIONS = {
     "ucb_reset": "BehaviorPolicy.UCB.resetEpisodically",
 
     # [ TSBehavior settings ]
-    "ts_lr": "BehaviorPolicy.TS.learningRate",
-    "ts_iv": "BehaviorPolicy.TS.initialVariance",
-    "ts_bayesian": "BehaviorPolicy.TS.usingBayesian",
-    "ts_reset": "BehaviorPolicy.TS.resetEpisodically",
+    "ps_lr": "BehaviorPolicy.PS.learningRate",
+    "ps_iv": "BehaviorPolicy.PS.initialVariance",
+    "ps_betabinomial": "BehaviorPolicy.PS.betaBinomial",
+    "ps_reset": "BehaviorPolicy.PS.resetEpisodically",
 
     # [ EpisodicPersistenceManager settings ]
     "epm_ep": "EpisodicPersistenceManager.episodeNumber",

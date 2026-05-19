@@ -14,7 +14,7 @@ CSV_PATH = r"pyrunner"
 GROUP_TRANSLATOR = {
     "ql_epsilon": "EG",
     "ql_ucb": "UCB",
-    "ql_ts": "PS",
+    "ql_ps": "PS",
     "lf": "LF",
 }
 
@@ -23,10 +23,10 @@ KEY_TRANSLATOR = {
     "eg_me": "Minimum Epsilon Threshold",
     "eg_ed": "Epsilon Decay",
     "ucb_ec": "Exploration Constant",
-    "ts_lr": "Q-Tracking PS Learning Rate",
-    "ts_iv": "Q-Tracking PS Initial Variance",
-    "ts_bayesian": "Using Beta-Bernoulli Sampling",
-    "ts_reset": "Reset Episodes",
+    "ps_lr": "Q-Tracking PS Learning Rate",
+    "ps_iv": "Q-Tracking PS Initial Variance",
+    "ps_betabinomial": "Using Beta-Binomial Sampling",
+    "ps_reset": "Reset Episodes",
     "lfe_la": "Lévy Alpha",
 }
 
