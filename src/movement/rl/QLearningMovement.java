@@ -71,6 +71,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	public static final String LEARNING_SEED_S = "learningSeed";
 
 	public static final String PAUSE_TRAINING_S = "pauseTraining";
+	public static final String RESET_TRAJECTORY_HISTORY_S = "resetTrajectoryHistory";
 
 	// [Configuration - Fixed parameters]
 	private final double agentSpeed;
@@ -135,6 +136,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	public static Random learningRNG;
 
 	public final boolean pauseTraining;
+	public final boolean resetTrajectoryHistory;
 
 	// static initialization of all movement models' random number generator
 	static {
@@ -186,6 +188,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		// Training progress, whether to pauseTraining
 		this.pauseTraining = s.getBoolean(PAUSE_TRAINING_S, false);
+		this.resetTrajectoryHistory = s.getBoolean(RESET_TRAJECTORY_HISTORY_S, false);
 
 		// Re/Initializes episodic persistence
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
@@ -248,6 +251,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentTrajectorySteps = proto.currentTrajectorySteps;
 		this.direction = proto.direction;
 		this.pauseTraining = proto.pauseTraining;
+		this.resetTrajectoryHistory = proto.resetTrajectoryHistory;
 
 		if (proto.currentPosition != null) {
 			this.currentPosition = new Coord(proto.currentPosition.getX(), proto.currentPosition.getY());
@@ -651,9 +655,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		/* Loading trajectory recorder */
 		trajectoryFrequencies.clear();
-		if (epd.trajectoryFrequencies != null) {
-			for (var entry : epd.trajectoryFrequencies.entrySet()) {
-				this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+
+		if (!this.resetTrajectoryHistory) {
+			if (epd.trajectoryFrequencies != null) {
+				for (var entry : epd.trajectoryFrequencies.entrySet()) {
+					this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+				}
 			}
 		}
 
