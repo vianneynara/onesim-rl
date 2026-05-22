@@ -29,16 +29,17 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# BASE_REPORTS_DIR = r"reports\\skripsi"
-# PLOT_RESULTS_DIR = r"pyplotters\\plots"
+BASE_REPORTS_DIR = r"reports\\skripsi"
+PLOT_RESULTS_DIR = r"pyplotters\\plots"
 
-BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
-PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+# BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
+# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 LIST_OF_IGNORED_OVERRIDES = [
     "cfg",  # config index
     "cg",  # config group
     "ql500",  # Q-Learning with 500 runs
+    "mcn500",
     "lfe500"  # Lévy Flight with 500 runs
 ]
 
@@ -93,15 +94,72 @@ def parse_run_description(_run_id: str) -> str:
     return f"({'; '.join(parsed_tokens)})"
 
 
-def read_json_file(file_path):
-    json_data = None
+# def read_json_file(file_path):
+#     json_data = None
+#     try:
+#         with open(file_path, "r") as file:
+#             json_data = json.load(file)
+#     except FileNotFoundError:
+#         log.error(f"The file {file_path} does not exist.")
+#         raise FileNotFoundError(f"The json file {file_path} does not exist.")
+#     return json_data
+
+FAILED_JSON_FILES = []
+
+
+def read_json_file(file_path, run_id=None):
     try:
-        with open(file_path, "r") as file:
-            json_data = json.load(file)
+        # Check empty file first
+        if os.path.getsize(file_path) == 0:
+            error_msg = "Empty JSON file"
+
+            FAILED_JSON_FILES.append({
+                "run_id": run_id,
+                "file": file_path,
+                "error": error_msg
+            })
+
+            log.warning(f"[FAILED JSON] {error_msg}: {file_path}")
+            return None
+
+        with open(file_path, "r", encoding="utf-8") as file:
+            return json.load(file)
+
     except FileNotFoundError:
-        log.error(f"The file {file_path} does not exist.")
-        raise FileNotFoundError(f"The json file {file_path} does not exist.")
-    return json_data
+        error_msg = "File not found"
+
+        FAILED_JSON_FILES.append({
+            "run_id": run_id,
+            "file": file_path,
+            "error": error_msg
+        })
+
+        log.warning(f"[FAILED JSON] {error_msg}: {file_path}")
+        return None
+
+    except json.JSONDecodeError as e:
+        error_msg = f"JSONDecodeError: {e}"
+
+        FAILED_JSON_FILES.append({
+            "run_id": run_id,
+            "file": file_path,
+            "error": error_msg
+        })
+
+        log.warning(f"[FAILED JSON] {error_msg}: {file_path}")
+        return None
+
+    except Exception as e:
+        error_msg = f"Unexpected error: {e}"
+
+        FAILED_JSON_FILES.append({
+            "run_id": run_id,
+            "file": file_path,
+            "error": error_msg
+        })
+
+        log.warning(f"[FAILED JSON] {error_msg}: {file_path}")
+        return None
 
 
 def retrieve_episode_json_dirs(_run_id_dir) -> list[str]:
@@ -431,12 +489,34 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
     # ADDITIONAL COLUMN: meanCumulativeReward
     common_df = pd.DataFrame(columns=COMMON_IDX)
 
-    # Use the last episodic JSON file to determine the number of trajectories
-    traj_freq_df = retrieve_trajectoryFrequencies(read_json_file(episode_jsons_dir[-1]))
+    last_valid_json = None
+
+    # Find the last VALID JSON instead of assuming the last file is valid
+    for json_path in reversed(episode_jsons_dir):
+        candidate_json = read_json_file(
+            json_path,
+            run_id=run_id
+        )
+
+        if candidate_json is not None:
+            last_valid_json = candidate_json
+            break
+
+    if last_valid_json is None:
+        raise ValueError(
+            f"All JSON files are invalid for run: {_run_id_dir}"
+        )
+
+    traj_freq_df = retrieve_trajectoryFrequencies(last_valid_json)
 
     for episode_json_dir in episode_jsons_dir:
-        # log.info(f"Processing JSON file: {episode_json_dir}")
-        json_data = read_json_file(episode_json_dir)
+        json_data = read_json_file(
+            episode_json_dir,
+            run_id=run_id
+        )
+
+        if json_data is None:
+            continue
 
         # Collect all values for this episode
         row_data = {key: json_data[key] for key in COMMON_IDX}
@@ -672,3 +752,32 @@ if __name__ == "__main__":
         log.info(f"Processing result directory: {run_dir}")
 
         process_reports(run_dir, None, args.title, args.describe)
+
+        # =====================================================================================
+        # FINAL JSON VALIDATION SUMMARY
+        # =====================================================================================
+
+        log.info("=" * LINE_LENGTH)
+        log.info("JSON VALIDATION SUMMARY")
+        log.info("=" * LINE_LENGTH)
+
+        if not FAILED_JSON_FILES:
+            log.info("No invalid JSON files detected.")
+
+        else:
+            log.warning(f"Total failed JSON files: {len(FAILED_JSON_FILES)}")
+
+            # Group by run_id
+            grouped_errors = {}
+
+            for entry in FAILED_JSON_FILES:
+                grouped_errors.setdefault(entry["run_id"], []).append(entry)
+
+            for run_id, errors in grouped_errors.items():
+                log.warning("-" * LINE_LENGTH)
+                log.warning(f"RUN CONFIG: {run_id}")
+                log.warning(f"FAILED FILE COUNT: {len(errors)}")
+
+                for i, err in enumerate(errors, start=1):
+                    log.warning(f"[{i}] FILE  : {err['file']}")
+                    log.warning(f"    ERROR : {err['error']}")
