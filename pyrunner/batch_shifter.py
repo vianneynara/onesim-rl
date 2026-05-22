@@ -797,7 +797,7 @@ def execute_shift(
             ", ".join(f"cfg@{idx:02d}({len(items)})" for idx, items in sorted(duplicates.items()))
         )
     if duplicate_count > 0:
-        log.info("(Duplicate folders also copied to: %s)", REPORTS_DUPLICATE)
+        log.info("(Duplicate folders also moved to: %s)", os.path.join(reports_base, parent_dir_id, "_duplicate"))
     if orphaned_count > 0:
         log.info("(Orphaned folders archived to: %s)", REPORTS_ORPHANED)
     log.info("%s", "=" * LINE_LENGTH)

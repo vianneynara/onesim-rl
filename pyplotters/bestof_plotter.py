@@ -66,8 +66,8 @@ if __package__ in (None, ""):
     
 from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 
-# PLOT_RESULTS_DIR = "pyplotters\\plots"
-PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+PLOT_RESULTS_DIR = "pyplotters\\plots"
+# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 # BESTOF_CMAP = "viridis"
 # BESTOF_CMAP = "magma"
@@ -101,6 +101,7 @@ LIST_OF_IGNORED_OVERRIDES = [
     "cfg",  # config index (e.g., cfg@01)
     "cg",   # config group (e.g., cg@ql_epsilon)
     "ql500",  # Q-Learning with 500 runs
+    "mcn500",
     "lfe500"  # Lévy Flight with 500 runs
 ]
 
