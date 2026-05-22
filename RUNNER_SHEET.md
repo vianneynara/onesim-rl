@@ -3,10 +3,10 @@
 ## Overall running with different ALG overriding
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 1-35 -alg ql-c-ms@0
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 1-35 -alg ql-c-ms@1
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 1-35 -alg ql-p-ms@0
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 1-35 -alg ql-p-ms@1
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 1-35 -alg ql-c-ms@0 --verify --setreportspath "D:\Developments+\Java\onesim-rl-data\reports"
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 1-35 -alg ql-c-ms@1 --verify --setreportspath "D:\Developments+\Java\onesim-rl-data\reports"
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 1-35 -alg ql-p-ms@0 --verify --setreportspath "D:\Developments+\Java\onesim-rl-data\reports"
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 1-35 -alg ql-p-ms@1 --verify --setreportspath "D:\Developments+\Java\onesim-rl-data\reports"
 python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 36-43 -alg lfe-c-ms@0
 python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 36-43 -alg lfe-c-ms@1
 python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 36-43 -alg lfe-p-ms@0
@@ -19,40 +19,40 @@ python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 36-43 -alg lfe-p-ms@1
 ### Running Epsilon Greedy Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 1-10
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 1-10
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 1-10
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 1-10
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -alg ql-c-ms@0 -c 1-10
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -alg ql-c-ms@1 -c 1-10
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -alg ql-p-ms@0 -c 1-10
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -alg ql-p-ms@1 -c 1-10
 
 ```
 
 ### Running Upper Confidence Bound Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 11-22
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 11-22
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 11-22
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 11-22
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -alg ql-c-ms@0 -c 11-22
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -alg ql-c-ms@1 -c 11-22
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -alg ql-p-ms@0 -c 11-22
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -alg ql-p-ms@1 -c 11-22
 
 ```
 
 ### Running Thompson Sampling Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid ql-c-ms@0 -c 23-35
-python pyrunner/batch_runner.py -pid ql-c-ms@1 -c 23-35
-python pyrunner/batch_runner.py -pid ql-p-ms@0 -c 23-35
-python pyrunner/batch_runner.py -pid ql-p-ms@1 -c 23-35
+python pyrunner/batch_runner.py -pid ql-c-ms@0 -alg ql-c-ms@0 -c 23-35
+python pyrunner/batch_runner.py -pid ql-c-ms@1 -alg ql-c-ms@1 -c 23-35
+python pyrunner/batch_runner.py -pid ql-p-ms@0 -alg ql-p-ms@0 -c 23-35
+python pyrunner/batch_runner.py -pid ql-p-ms@1 -alg ql-p-ms@1 -c 23-35
 
 ```
 
 ### Running Lévy Flight Configs
 
 ```sh
-python pyrunner/batch_runner.py -pid lfe-c-ms@0 -c 36-43
-python pyrunner/batch_runner.py -pid lfe-c-ms@1 -c 36-43
-python pyrunner/batch_runner.py -pid lfe-p-ms@0 -c 36-43
-python pyrunner/batch_runner.py -pid lfe-p-ms@1 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-c-ms@0 -alg lfe-c-ms@0 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-c-ms@1 -alg lfe-c-ms@1 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-p-ms@0 -alg lfe-p-ms@0 -c 36-43
+python pyrunner/batch_runner.py -pid lfe-p-ms@1 -alg lfe-p-ms@1 -c 36-43
 
 ```
 
@@ -71,6 +71,13 @@ py pyrunner\episode_extender.py -pid lfe-c-ms@0 -fs lfe500 --toepisodes 750 -c 3
 py pyrunner\episode_extender.py -pid lfe-c-ms@1 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
 py pyrunner\episode_extender.py -pid lfe-p-ms@0 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
 py pyrunner\episode_extender.py -pid lfe-p-ms@1 -fs lfe500 --toepisodes 750 -c 36-43 --overwrite -ack
+```
+
+```shell
+py .\pyrunner\episode_extender.py -pid ql-c-ms@0 -fs ql750 --revertto 500 -c 11-22
+py .\pyrunner\episode_extender.py -pid ql-c-ms@1 -fs ql750 --revertto 500 -c 11-22
+py .\pyrunner\episode_extender.py -pid ql-p-ms@0 -fs ql750 --revertto 500 -c 11-22
+py .\pyrunner\episode_extender.py -pid ql-p-ms@1 -fs ql750 --revertto 500 -c 11-22
 ```
 
 # How Batch Runner Works
