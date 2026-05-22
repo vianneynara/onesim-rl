@@ -70,6 +70,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	public static final String TARGET_COOLDOWN_S = "targetCooldown";
 	public static final String LEARNING_SEED_S = "learningSeed";
 
+	public static final String PAUSE_TRAINING_S = "pauseTraining";
+
 	// [Configuration - Fixed parameters]
 	private final double agentSpeed;
 	/**
@@ -132,6 +134,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 */
 	public static Random learningRNG;
 
+	public final boolean pauseTraining;
+
 	// static initialization of all movement models' random number generator
 	static {
 		DTNSim.registerForReset(QLearningMovement.class.getCanonicalName());
@@ -179,6 +183,9 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		// Initialize direction randomly
 		this.direction = rng.nextDouble() * 2 * Math.PI;
 		this.currentPosition = null; // will be initialized on first getPath()
+
+		// Training progress, whether to pauseTraining
+		this.pauseTraining = s.getBoolean(PAUSE_TRAINING_S, false);
 
 		// Re/Initializes episodic persistence
 		EpisodicPersistenceData epd = EpisodicPersistenceManager.loadIfExists();
@@ -240,6 +247,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.currentState = proto.currentState;
 		this.currentTrajectorySteps = proto.currentTrajectorySteps;
 		this.direction = proto.direction;
+		this.pauseTraining = proto.pauseTraining;
 
 		if (proto.currentPosition != null) {
 			this.currentPosition = new Coord(proto.currentPosition.getX(), proto.currentPosition.getY());
@@ -344,7 +352,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	@Override
 	public Path getPath() {
 		/* Perform Q-Learning update only if we have previous action */
-		if (prevAction != -1) {
+		if (prevAction != -1 && !pauseTraining) {
 			// to make it easier to understand
 			int s_t = prevState;
 			int a_t = prevAction;
