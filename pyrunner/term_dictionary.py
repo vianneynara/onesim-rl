@@ -27,7 +27,7 @@ ALG_ABBREVIATIONS = {
 BEHAVIOR_PACKAGES = {
     "epsilon": "movement.rl.behavior.EpsilonGreedyBehavior",
     "ucb": "movement.rl.behavior.UCBBehavior",
-    "ts": "movement.rl.behavior.ThompsonSamplingBehavior"
+    "ps": "movement.rl.behavior.PosteriorSamplingBehavior"
 }
 
 KEY_ABBREVIATIONS = {
@@ -79,10 +79,10 @@ KEY_ABBREVIATIONS = {
     "ucb_reset": "BehaviorPolicy.UCB.resetEpisodically",
 
     # [ TSBehavior settings ]
-    "ts_lr": "BehaviorPolicy.TS.learningRate",
-    "ts_iv": "BehaviorPolicy.TS.initialVariance",
-    "ts_bayesian": "BehaviorPolicy.TS.usingBayesian",
-    "ts_reset": "BehaviorPolicy.TS.resetEpisodically",
+    "ps_lr": "BehaviorPolicy.PS.learningRate",
+    "ps_iv": "BehaviorPolicy.PS.initialVariance",
+    "ps_betabinomial": "BehaviorPolicy.PS.betaBinomial",
+    "ps_reset": "BehaviorPolicy.PS.resetEpisodically",
 
     # [ EpisodicPersistenceManager settings ]
     "epm_ep": "EpisodicPersistenceManager.episodeNumber",
