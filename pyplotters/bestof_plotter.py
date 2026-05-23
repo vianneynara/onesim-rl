@@ -101,6 +101,7 @@ LIST_OF_IGNORED_OVERRIDES = [
     "cfg",  # config index (e.g., cfg@01)
     "cg",   # config group (e.g., cg@ql_epsilon)
     "ql500",  # Q-Learning with 500 runs
+    "mcn500",
     "lfe500"  # Lévy Flight with 500 runs
 ]
 

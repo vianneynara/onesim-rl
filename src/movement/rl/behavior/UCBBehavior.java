@@ -56,7 +56,7 @@ public class UCBBehavior implements BehaviorPolicy {
 
     public UCBBehavior(UCBBehavior proto) {
         this.explorationConstant = proto.explorationConstant;
-        this.resetEpisodically =  proto.resetEpisodically;
+        this.resetEpisodically = proto.resetEpisodically;
         this.stateActionFrequencies = new HashMap<>(proto.stateActionFrequencies);
         this.stateFrequencies = new HashMap<>(proto.stateFrequencies);
         this.random = proto.random;
