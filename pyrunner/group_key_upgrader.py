@@ -6,6 +6,7 @@ Supports:
 - optional custom config module via --config-module
 - dry-run mode
 - batch processing
+- replace existing group tokens via --replacegroup
 
 Examples:
 
@@ -21,20 +22,31 @@ python pyrunner/group_key_upgrader.py \
     --config-module pyrunner.batch_configs_jord \
     --dry-run
 
+# Replace existing group tokens
+python pyrunner/group_key_upgrader.py \
+    -pid ql-p-ms@0 \
+    --replacegroup \
+    --dry-run
+
+# Short version with replace
+python pyrunner/group_key_upgrader.py -pid ql-p-ms@0 -rg --dry-run
+
 # Process all directories
 python pyrunner/group_key_upgrader.py --all
 
 # Short version
 python pyrunner/group_key_upgrader.py -a
 
-# Process all using custom configs
+# Process all using custom configs and replace groups
 python pyrunner/group_key_upgrader.py \
     -a \
-    --config-module pyrunner.batch_configs_jord
+    --config-module pyrunner.batch_configs_jord \
+    --replacegroup
 """
 
 import argparse
 import importlib
+import json
 import logging
 import os
 import re
@@ -152,12 +164,14 @@ def extract_alg_and_runs(folder_name: str) -> Optional[Tuple[str, int]]:
 
 
 def extract_behavior_policy(folder_name: str) -> Optional[str]:
-    """
+    r"""
     Extract behavior policy from folder name.
+    Accounts for optional group token: cfg@\d+(-cg@{group})?-ql\d+
     """
 
     # Q-learning
-    if re.search(r"cfg@\d+-ql\d+", folder_name):
+    # Matches: cfg@\d+-ql\d+ OR cfg@\d+-cg@...-ql\d+
+    if re.search(r"cfg@\d+(?:-cg@[^\-]+)?-ql\d+", folder_name):
 
         match = re.search(r"qlm_bp@(\w+)", folder_name)
 
@@ -167,7 +181,8 @@ def extract_behavior_policy(folder_name: str) -> Optional[str]:
         return "epsilon"
 
     # Monte Carlo
-    if re.search(r"cfg@\d+-mcn\d+", folder_name):
+    # Matches: cfg@\d+-mcn\d+ OR cfg@\d+-cg@...-mcn\d+
+    if re.search(r"cfg@\d+(?:-cg@[^\-]+)?-mcn\d+", folder_name):
 
         match = re.search(r"bp@(\w+)", folder_name)
 
@@ -177,7 +192,8 @@ def extract_behavior_policy(folder_name: str) -> Optional[str]:
         return "epsilon"
 
     # Lévy Flight
-    if re.search(r"cfg@\d+-lfe\d+", folder_name):
+    # Matches: cfg@\d+-lfe\d+ OR cfg@\d+-cg@...-lfe\d+
+    if re.search(r"cfg@\d+(?:-cg@[^\-]+)?-lfe\d+", folder_name):
         return None
 
     return None
@@ -189,6 +205,125 @@ def has_group_token(folder_name: str) -> bool:
     """
 
     return "cg@" in folder_name
+
+
+def extract_existing_group(folder_name: str) -> Optional[str]:
+    """
+    Extract the existing group from folder name.
+    
+    Example: cfg@05-cg@ql_ps-ql500-... -> "ql_ps"
+    """
+
+    match = re.search(r"cg@([^\-]+)", folder_name)
+
+    if match:
+        return match.group(1)
+
+    return None
+
+
+def replace_group_token(
+        folder_name: str,
+        new_group: str
+) -> str:
+    """
+    Replace existing cg@{old_group} with cg@{new_group}.
+    
+    Example: cfg@05-cg@ql_ps-ql500-... -> cfg@05-cg@ql_ps_bbts-ql500-...
+    """
+
+    return re.sub(
+        r"(cfg@\d+)-cg@[^\-]+",
+        f"\\1-cg@{new_group}",
+        folder_name
+    )
+
+
+# ============================================================================
+# Config Setting JSON Updates
+# ============================================================================
+
+def update_config_setting_json(
+        folder_path: str,
+        old_folder_name: str,
+        new_folder_name: str
+) -> Tuple[int, int]:
+    """
+    Update config_setting.json files in the folder.
+    
+    Returns: (updated_count, failed_count)
+    """
+
+    updated = 0
+    failed = 0
+
+    # Find all config_setting.json files
+    for root, dirs, files in os.walk(folder_path):
+        if "config_setting.json" in files:
+            config_path = os.path.join(root, "config_setting.json")
+
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+
+            except Exception as e:
+                log.warning(
+                    "Failed to read config_setting.json '%s': %s",
+                    config_path,
+                    e
+                )
+                failed += 1
+                continue
+
+            modified = False
+
+            # Update runner_id field
+            if "runner_id" in config_data:
+                if config_data["runner_id"] == old_folder_name:
+                    config_data["runner_id"] = new_folder_name
+                    modified = True
+
+            # Update highlighted_settings persistence path
+            if "highlighted_settings" in config_data:
+                if "EpisodicPersistenceManager.persistencePath" in config_data["highlighted_settings"]:
+                    old_path = config_data["highlighted_settings"]["EpisodicPersistenceManager.persistencePath"]
+                    new_path = old_path.replace(old_folder_name, new_folder_name)
+
+                    if old_path != new_path:
+                        config_data["highlighted_settings"]["EpisodicPersistenceManager.persistencePath"] = new_path
+                        modified = True
+
+            # Update overridden_settings persistence path
+            if "overridden_settings" in config_data:
+                if "EpisodicPersistenceManager.persistencePath" in config_data["overridden_settings"]:
+                    old_path = config_data["overridden_settings"]["EpisodicPersistenceManager.persistencePath"]
+                    new_path = old_path.replace(old_folder_name, new_folder_name)
+
+                    if old_path != new_path:
+                        config_data["overridden_settings"]["EpisodicPersistenceManager.persistencePath"] = new_path
+                        modified = True
+
+            # Write back if modified
+            if modified:
+                try:
+                    with open(config_path, 'w', encoding='utf-8') as f:
+                        json.dump(config_data, f, indent=4)
+
+                    log.info(
+                        "Updated config_setting.json: %s",
+                        config_path
+                    )
+                    updated += 1
+
+                except Exception as e:
+                    log.error(
+                        "Failed to write config_setting.json '%s': %s",
+                        config_path,
+                        e
+                    )
+                    failed += 1
+
+    return updated, failed
 
 
 # ============================================================================
@@ -264,7 +399,8 @@ def scan_run_id_folders(
 
 def build_upgrade_mapping(
         existing_folders: Dict[int, str],
-        active_configs: Dict[int, dict]
+        active_configs: Dict[int, dict],
+        replace_mode: bool = False
 ) -> Tuple[Dict[str, str], List[str]]:
 
     rename_mapping = {}
@@ -285,13 +421,6 @@ def build_upgrade_mapping(
 
     # Process folders
     for cfg_idx, old_folder_name in sorted(existing_folders.items()):
-
-        # Skip already upgraded
-        if has_group_token(old_folder_name):
-            messages.append(
-                f"cfg@{cfg_idx:02d}: Already upgraded, skipping"
-            )
-            continue
 
         alg_runs = extract_alg_and_runs(old_folder_name)
 
@@ -321,7 +450,41 @@ def build_upgrade_mapping(
             )
             continue
 
-        # Insert cg@
+        # Handle folders that already have a group token
+        if has_group_token(old_folder_name):
+
+            if not replace_mode:
+                messages.append(
+                    f"cfg@{cfg_idx:02d}: Already has group, skipping "
+                    f"(use --replacegroup to update)"
+                )
+                continue
+
+            # Extract existing group
+            existing_group = extract_existing_group(old_folder_name)
+
+            # Skip if already has the correct group
+            if existing_group == group:
+                messages.append(
+                    f"cfg@{cfg_idx:02d}: [SKIP] Already has correct group "
+                    f"(cg@{group})"
+                )
+                continue
+
+            # Replace with new group
+            new_folder_name = replace_group_token(old_folder_name, group)
+
+            rename_mapping[old_folder_name] = new_folder_name
+
+            messages.append(
+                f"cfg@{cfg_idx:02d}: [REPLACE] "
+                f"'{old_folder_name}' -> '{new_folder_name}' "
+                f"(cg@{existing_group} -> cg@{group})"
+            )
+
+            continue
+
+        # Insert cg@ for folders without group token
         new_folder_name = re.sub(
             r"^(cfg@\d+)-",
             f"\\1-cg@{group}-",
@@ -331,7 +494,7 @@ def build_upgrade_mapping(
         rename_mapping[old_folder_name] = new_folder_name
 
         messages.append(
-            f"cfg@{cfg_idx:02d}: "
+            f"cfg@{cfg_idx:02d}: [ADD] "
             f"'{old_folder_name}' -> '{new_folder_name}'"
         )
 
@@ -384,7 +547,22 @@ def execute_renames(
 
                 log.info("Renamed: %s -> %s", old_name, new_name)
 
-                successes += 1
+                # Update config_setting.json files in the renamed folder
+                updated_configs, failed_configs = update_config_setting_json(
+                    new_path,
+                    old_name,
+                    new_name
+                )
+
+                if failed_configs > 0:
+                    log.warning(
+                        "Failed to update %d config_setting.json files in %s",
+                        failed_configs,
+                        new_name
+                    )
+                    failures += 1
+                else:
+                    successes += 1
 
             except Exception as e:
                 log.error(
@@ -406,7 +584,8 @@ def process_parent_dir(
         parent_dir_id: str,
         list_of_configs,
         reports_base: str = REPORTS_BASE,
-        dry_run: bool = True
+        dry_run: bool = True,
+        replace_mode: bool = False
 ) -> Tuple[int, int, int]:
 
     log.info("%s", "=" * LINE_LENGTH)
@@ -431,7 +610,8 @@ def process_parent_dir(
 
     rename_mapping, info_messages = build_upgrade_mapping(
         existing_folders,
-        active_configs
+        active_configs,
+        replace_mode
     )
 
     for msg in info_messages:
@@ -490,6 +670,13 @@ def main():
         "--dry-run",
         action="store_true",
         help="Preview changes without renaming"
+    )
+
+    parser.add_argument(
+        "--replacegroup",
+        "-rg",
+        action="store_true",
+        help="Replace existing group tokens according to batch_configs"
     )
 
     parser.add_argument(
@@ -565,7 +752,8 @@ def main():
                 parent_dir,
                 list_of_configs,
                 normalized_report_base,
-                args.dry_run
+                args.dry_run,
+                args.replacegroup
             )
 
             total_renames += total
@@ -589,7 +777,8 @@ def main():
                 parent_dir,
                 list_of_configs,
                 normalized_report_base,
-                args.dry_run
+                args.dry_run,
+                args.replacegroup
             )
 
             total_renames += total
