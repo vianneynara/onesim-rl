@@ -406,9 +406,12 @@ def build_upgrade_mapping(
     rename_mapping = {}
     messages = []
 
-    sig_to_group: Dict[str, str] = {}
+    # Map signature to list of possible groups (handles multiple groups per sig)
+    sig_to_groups: Dict[str, List[str]] = {}
+    # Also keep mapping of config index to group for specific assignments
+    idx_to_group: Dict[int, str] = {}
 
-    for _, config in active_configs.items():
+    for idx, config in active_configs.items():
 
         alg = config["alg"]
         runs = config["runs"]
@@ -417,7 +420,16 @@ def build_upgrade_mapping(
 
         sig = build_config_signature(alg, runs, bp)
 
-        sig_to_group[sig] = group
+        # Store mapping for specific config index
+        if group:
+            idx_to_group[idx] = group
+
+        # Store all possible groups for this signature
+        if sig not in sig_to_groups:
+            sig_to_groups[sig] = []
+
+        if group and group not in sig_to_groups[sig]:
+            sig_to_groups[sig].append(group)
 
     # Process folders
     for cfg_idx, old_folder_name in sorted(existing_folders.items()):
@@ -436,58 +448,91 @@ def build_upgrade_mapping(
 
         sig = build_config_signature(alg, runs, bp)
 
-        if sig not in sig_to_group:
+        if sig not in sig_to_groups:
             messages.append(
                 f"cfg@{cfg_idx:02d}: No matching config for sig={sig}"
             )
             continue
 
-        group = sig_to_group[sig]
+        possible_groups = sig_to_groups[sig]
 
-        if not group:
+        if not possible_groups:
             messages.append(
                 f"cfg@{cfg_idx:02d}: Matching config has no group"
             )
             continue
 
+        # Get the correct group for this specific config index
+        correct_group = idx_to_group.get(cfg_idx)
+
         # Handle folders that already have a group token
         if has_group_token(old_folder_name):
 
-            if not replace_mode:
-                messages.append(
-                    f"cfg@{cfg_idx:02d}: Already has group, skipping "
-                    f"(use --replacegroup to update)"
-                )
-                continue
-
-            # Extract existing group
             existing_group = extract_existing_group(old_folder_name)
 
-            # Skip if already has the correct group
-            if existing_group == group:
+            # Check if existing group is valid for this signature
+            if existing_group in possible_groups:
+                # If it's the correct one for this config, skip it
+                if correct_group and existing_group == correct_group:
+                    messages.append(
+                        f"cfg@{cfg_idx:02d}: [SKIP] Already has correct group "
+                        f"(cg@{existing_group})"
+                    )
+                    continue
+
+                # If it's valid but different from what config specifies, optionally replace
+                if replace_mode and correct_group and existing_group != correct_group:
+                    new_group = correct_group
+
+                    new_folder_name = replace_group_token(old_folder_name, new_group)
+
+                    rename_mapping[old_folder_name] = new_folder_name
+
+                    messages.append(
+                        f"cfg@{cfg_idx:02d}: [REPLACE] "
+                        f"'{old_folder_name}' -> '{new_folder_name}' "
+                        f"(cg@{existing_group} -> cg@{new_group})"
+                    )
+
+                    continue
+
+                # Valid group but no replace mode or no correct_group
                 messages.append(
-                    f"cfg@{cfg_idx:02d}: [SKIP] Already has correct group "
-                    f"(cg@{group})"
+                    f"cfg@{cfg_idx:02d}: [SKIP] Already has valid group "
+                    f"(cg@{existing_group})"
                 )
                 continue
 
-            # Replace with new group
-            new_folder_name = replace_group_token(old_folder_name, group)
+            # Existing group is not in the valid list
+            if not replace_mode:
+                messages.append(
+                    f"cfg@{cfg_idx:02d}: Has invalid group (cg@{existing_group}), "
+                    f"skipping (use --replacegroup to update)"
+                )
+                continue
+
+            # Replace with the correct group for this config index
+            new_group = correct_group if correct_group else possible_groups[0]
+
+            new_folder_name = replace_group_token(old_folder_name, new_group)
 
             rename_mapping[old_folder_name] = new_folder_name
 
             messages.append(
                 f"cfg@{cfg_idx:02d}: [REPLACE] "
                 f"'{old_folder_name}' -> '{new_folder_name}' "
-                f"(cg@{existing_group} -> cg@{group})"
+                f"(cg@{existing_group} -> cg@{new_group})"
             )
 
             continue
 
         # Insert cg@ for folders without group token
+        # Use the correct group for this specific config index
+        new_group = correct_group if correct_group else possible_groups[0]
+
         new_folder_name = re.sub(
             r"^(cfg@\d+)-",
-            f"\\1-cg@{group}-",
+            f"\\1-cg@{new_group}-",
             old_folder_name
         )
 
