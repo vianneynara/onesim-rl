@@ -169,6 +169,47 @@ def create_config_setting_json(
         json.dump(config_setting_json, json_file, indent=4)
 
 
+def parse_moreoverrides(overrides_string: Optional[str]) -> dict[str, Any]:
+    """Parse CLI --moreoverrides string into a dictionary of key=value pairs.
+    
+    Args:
+        overrides_string: Comma-separated string like "key1=value1,key2=value2"
+                         or None/empty string (treated as no overrides)
+    
+    Returns:
+        Dictionary of {key: value} pairs with validated keys
+    
+    Exits with error code 1 if any key is not registered in KEY_ABBREVIATIONS.
+    """
+    if not overrides_string or not overrides_string.strip():
+        return {}
+    
+    overrides_dict = {}
+    pairs = overrides_string.split(",")
+    
+    for pair in pairs:
+        pair = pair.strip()
+        if not pair:
+            continue
+        
+        if "=" not in pair:
+            log.error("[MOREOVERRIDES] Invalid format '%s'. Expected key=value", pair)
+            sys.exit(1)
+        
+        key, value = pair.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        
+        if key not in KEY_ABBREVIATIONS:
+            log.error("[MOREOVERRIDES] Unregistered key '%s'. Valid keys: %s", 
+                     key, ", ".join(sorted(KEY_ABBREVIATIONS.keys())))
+            sys.exit(1)
+        
+        overrides_dict[key] = value
+    
+    return overrides_dict
+
+
 def parse_overrides(overrides_dict: dict[str, Any]) -> Tuple[list[str], list[str]]:
     # convert the override dictionary into a list of key-value
     abr_overrides_list = []
@@ -842,6 +883,11 @@ if __name__ == "__main__":
         help="Continue running remaining episodes even if one fails. Default behavior is to stop on first error."
     )
 
+    parser.add_argument(
+        "-mo", "--moreoverrides", type=str, required=False,
+        help="Additional CLI overrides as comma-separated key=value pairs (e.g., 'qlm_pt=True,qlm_rth=False'). CLI overrides take precedence over config file overrides. Unregistered keys will cause exit with error."
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -866,6 +912,9 @@ if __name__ == "__main__":
     start_time = datetime.now()
     running_times = []
 
+    # Parse CLI overrides early (validates keys and exits if invalid)
+    cli_overrides = parse_moreoverrides(args.moreoverrides)
+
     if args.all:
         log.info("Running %s configurations.", len(LIST_OF_CONFIGS))
         for config in LIST_OF_CONFIGS:
@@ -876,7 +925,10 @@ if __name__ == "__main__":
             bp = config["bp"] if "bp" in config else None
             id = config["id"]
             group = config.get("group")
-            overrides = config.get("overrides")
+            overrides = config.get("overrides") or {}
+
+            # Merge config overrides with CLI overrides (CLI takes precedence)
+            merged_overrides = {**overrides, **cli_overrides}
 
             _sim_start_time = datetime.now()
 
@@ -888,7 +940,7 @@ if __name__ == "__main__":
                 bp=bp,
                 run_id=id,
                 group=group,
-                overrides_list=overrides,
+                overrides_list=merged_overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
                 parent_dir_id=args.parent_dir_id,
@@ -934,7 +986,10 @@ if __name__ == "__main__":
             bp = config["bp"] if "bp" in config else None
             id = config["id"]
             group = config.get("group")
-            overrides = config.get("overrides")
+            overrides = config.get("overrides") or {}
+
+            # Merge config overrides with CLI overrides (CLI takes precedence)
+            merged_overrides = {**overrides, **cli_overrides}
 
             _sim_start_time = datetime.now()
 
@@ -946,7 +1001,7 @@ if __name__ == "__main__":
                 bp=bp,
                 run_id=id,
                 group=group,
-                overrides_list=overrides,
+                overrides_list=merged_overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
                 parent_dir_id=args.parent_dir_id,
