@@ -413,9 +413,11 @@ def get_versioned_result_id_dir(parent_dir_id: str, base_result_id_dir: str, rep
 
 def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], bool, bool]:
     """Determine highest *contiguous* episode number (starting from 1) in which Persistence-Episode@N.json is readable JSON.
+    
+    Falls back to episode 0 if no contiguous training episodes (1+) exist.
 
     Returns: (highest_good, problems, episodic_available, main_persistence_available)
-    - highest_good is 0 if none are valid.
+    - highest_good is 0 if no training episodes exist (but episode 0 baseline may be available).
     - episodic_available False means ep/ directory missing (saveEpisodically likely false).
     - main_persistence_available False means _persistence.json missing (simulation has never run).
     """
@@ -463,6 +465,29 @@ def find_highest_good_episode(full_report_dir: str) -> Tuple[int, list[str], boo
                 break
 
         highest_good = expected
+
+    # If no training episodes found, fall back to episode 0 if available
+    if highest_good == 0 and 0 in episode_dirs:
+        persistence_path = os.path.join(ep_root, "0", "Persistence-Episode@0.json")
+        ok, data, err = load_json_file(persistence_path)
+        if ok:
+            # Validate episodeNumber field if present
+            if "episodeNumber" in data:
+                try:
+                    if int(data["episodeNumber"]) == 0:
+                        # Episode 0 is valid as a baseline
+                        pass
+                    else:
+                        problems.append(
+                            f"Episode 0 persistence mismatch: episodeNumber={data['episodeNumber']} in {persistence_path}"
+                        )
+                        return 0, problems, True, True
+                except (TypeError, ValueError):
+                    problems.append(f"Episode 0 persistence has non-integer episodeNumber in {persistence_path}")
+                    return 0, problems, True, True
+            # Episode 0 is available as baseline; highest_good stays 0, but no error
+        else:
+            problems.append(f"Episode 0 persistence unreadable: {persistence_path} ({err})")
 
     return highest_good, problems, True, True
 
@@ -613,11 +638,27 @@ def run_simulation(
                     "[CONTINUE] Episodic snapshots not available; cannot rebuild from ep/N. Will restart from episode 1."
                 )
                 start_ep = 1
-            elif highest_good <= 0:
+            elif highest_good < 0:
                 log.warning("[CONTINUE] No readable episodic snapshot found; will restart from episode 1.")
                 start_ep = 1
+            elif highest_good == 0:
+                # Check if episode 0 (baseline) exists as fallback
+                ep_0_path = os.path.join(full_report_dir, "ep", "0", "Persistence-Episode@0.json")
+                if os.path.isfile(ep_0_path):
+                    ok, msg = rebuild_main_persistence_from_episode(full_report_dir, 0)
+                    if ok:
+                        log.info("[CONTINUE] %s", msg)
+                    else:
+                        log.warning("[CONTINUE] %s", msg)
+                    start_ep = 1
+                    log.info(
+                        "[CONTINUE] No training episodes found; using episode 0 as baseline. Resuming from episode 1."
+                    )
+                else:
+                    log.warning("[CONTINUE] No training episodes and no episode 0 baseline found; will restart from episode 1.")
+                    start_ep = 1
             else:
-                # Rebuild main persistence from last good, then resume from the next episode.
+                # highest_good > 0: Rebuild main persistence from last good, then resume from the next episode.
                 # Assumption: if Persistence-Episode@K.json exists and is readable, K is uncorrupted.
                 ok, msg = rebuild_main_persistence_from_episode(full_report_dir, highest_good)
                 if ok:
