@@ -80,6 +80,15 @@ py .\pyrunner\episode_extender.py -pid ql-p-ms@0 -fs ql750 --revertto 500 -c 11-
 py .\pyrunner\episode_extender.py -pid ql-p-ms@1 -fs ql750 --revertto 500 -c 11-22
 ```
 
+# Running a stable model (paused learning)
+Model Extractor module can sample a stable model from a given run_id within a pid and save it as a new config,
+starting from episode 1 (in the future episode 0). This gives us a starting point of a model.
+Perfect to resume output from a stable-paused learning model.
+
+```shell
+py .\pyrunner\model_extractor.py -pid ql-c-ms@0 -c 1 --ofepisode 750 --aspid "best-ql-c-ms@0"
+```
+
 # How Batch Runner Works
 
 ## Overview
@@ -116,3 +125,14 @@ The runner generates:
 | `-cc, --count-configs`  | flag | Display total number of configs and exit (useful for checking config range limits)                                                                          |
 
 **Note**: `-c` and `-a` are mutually exclusive. If neither is specified, the runner shows help text.
+
+
+# Group Key Upgrader
+
+```sh
+python pyrunner/group_key_upgrader.py -pid ql-c-ms@0 --replacegroup --reports-base "D:\Developments+\Java\onesim-rl-data\reports"
+python pyrunner/group_key_upgrader.py -pid ql-c-ms@1 --replacegroup --reports-base "D:\Developments+\Java\onesim-rl-data\reports"
+python pyrunner/group_key_upgrader.py -pid ql-p-ms@0 --replacegroup --reports-base "D:\Developments+\Java\onesim-rl-data\reports"
+python pyrunner/group_key_upgrader.py -pid ql-p-ms@1 --replacegroup --reports-base "D:\Developments+\Java\onesim-rl-data\reports"
+
+```
