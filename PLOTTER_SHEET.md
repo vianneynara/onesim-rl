@@ -3,14 +3,14 @@
 ## Persistence Plotters
 
 ```sh
-python pyplotters/persistence_plotter.py -pid lfe-c-ms@0 --title "Lévy Flight on Stochastic Stationary Clustered Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid lfe-c-ms@1 --title "Lévy Flight on Fixed Stationary Clustered Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid lfe-p-ms@0 --title "Lévy Flight on Stochastic Stationary Poisson Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid lfe-p-ms@1 --title "Lévy Flight on Fixed Stationary Poisson Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid ql-c-ms@0 --title "Q-Learning on Stochastic Stationary Clustered Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid ql-c-ms@1 --title "Q-Learning on Fixed Stationary Clustered Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid ql-p-ms@0 --title "Q-Learning on Stochastic Stationary Poisson Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid ql-p-ms@1 --title "Q-Learning on Fixed Stationary Poisson Distributed Targets" --describe
+python pyplotters/persistence_plotter.py -pid lfe-c-ms@0 --title "Lévy Flight on Resampled Immobile Clustered Distributed Targets" --describe
+python pyplotters/persistence_plotter.py -pid lfe-c-ms@1 --title "Lévy Flight on Fixed Immobile Clustered Distributed Targets" --describe
+python pyplotters/persistence_plotter.py -pid lfe-p-ms@0 --title "Lévy Flight on Resampled Immobile Poisson Distributed Targets" --describe
+python pyplotters/persistence_plotter.py -pid lfe-p-ms@1 --title "Lévy Flight on Fixed Immobile Poisson Distributed Targets" --describe
+python pyplotters/persistence_plotter.py -pid ql-c-ms@0 --title "Q-Learning on Resampled Immobile Clustered Distributed Targets" --describe
+python pyplotters/persistence_plotter.py -pid ql-c-ms@1 --title "Q-Learning on Fixed Immobile Clustered Distributed Targets" --describe
+python pyplotters/persistence_plotter.py -pid ql-p-ms@0 --title "Q-Learning on Resampled Immobile Poisson Distributed Targets" --describe
+python pyplotters/persistence_plotter.py -pid ql-p-ms@1 --title "Q-Learning on Fixed Immobile Poisson Distributed Targets" --describe
 
 ```
 
@@ -38,11 +38,21 @@ python pyplotters/bestof_plotter.py -pid lfe-p-ms@1 --comparekey lfe_la
 
 ### Q-Learning
 
+Using classic qlm_bp (behavior policy)
 ```sh
 python pyplotters/bestof_plotter.py -pid ql-c-ms@0 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Resampled Locations)}$'
 python pyplotters/bestof_plotter.py -pid ql-c-ms@1 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Fixed Locations)}$'
 python pyplotters/bestof_plotter.py -pid ql-p-ms@0 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$'
 python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$'
+
+```
+
+Using group-specific (cg@GROUP)
+```sh
+python pyplotters/bestof_plotter.py -pid ql-c-ms@0 --comparekey cg --addparams cg@other --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Resampled Locations)}$'
+python pyplotters/bestof_plotter.py -pid ql-c-ms@1 --comparekey cg --addparams cg@other --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Fixed Locations)}$'
+python pyplotters/bestof_plotter.py -pid ql-p-ms@0 --comparekey cg --addparams cg@other --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$'
+python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --comparekey cg --addparams cg@other --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$'
 
 ```
 
@@ -62,22 +72,26 @@ python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --compareall --title 'Bulk Pe
 # Clustered Distributed, Resampled Locations
 python -m pyplotters.bestof_plotter -pid ql-c-ms@0 --configgroup ql_epsilon --title "Group Performance of Q-Learning with Epsilon Greedy\n$\\text{(Clustered Distributed, Resampled Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-c-ms@0 --configgroup ql_ucb --title "Group Performance of Q-Learning with Upper Confidence Bound\n$\\text{(Clustered Distributed, Resampled Locations)}$"
-python -m pyplotters.bestof_plotter -pid ql-c-ms@0 --configgroup ql_ps --title "Group Performance of Q-Learning with Posterior Sampling\n$\\text{(Clustered Distributed, Resampled Locations)}$"
+python -m pyplotters.bestof_plotter -pid ql-c-ms@0 --configgroup ql_ps_gts --title "Group Performance of Q-Learning with Gaussian Thompson Sampling\n$\\text{(Clustered Distributed, Resampled Locations)}$"
+python -m pyplotters.bestof_plotter -pid ql-c-ms@0 --configgroup ql_ps_bbts --title "Group Performance of Q-Learning with Beta-Binomial Thompson Sampling\n$\\text{(Clustered Distributed, Resampled Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-c-ms@0 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Clustered Distributed, Resampled Locations)}$"
 # Clustered Distributed, Fixed Locations
 python -m pyplotters.bestof_plotter -pid ql-c-ms@1 --configgroup ql_epsilon --title "Group Performance of Q-Learning with Epsilon Greedy\n$\\text{(Clustered Distributed, Fixed Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-c-ms@1 --configgroup ql_ucb --title "Group Performance of Q-Learning with Upper Confidence Bound\n$\\text{(Clustered Distributed, Fixed Locations)}$"
-python -m pyplotters.bestof_plotter -pid ql-c-ms@1 --configgroup ql_ps --title "Group Performance of Q-Learning with Posterior Sampling\n$\\text{(Clustered Distributed, Fixed Locations)}$"
+python -m pyplotters.bestof_plotter -pid ql-c-ms@1 --configgroup ql_ps_gts --title "Group Performance of Q-Learning with Gaussian Thompson Sampling\n$\\text{(Clustered Distributed, Fixed Locations)}$"
+python -m pyplotters.bestof_plotter -pid ql-c-ms@1 --configgroup ql_ps_bbts --title "Group Performance of Q-Learning with Beta-Binomial Thompson Sampling\n$\\text{(Clustered Distributed, Fixed Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-c-ms@1 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Clustered Distributed, Fixed Locations)}$"
 # Poisson Distributed, Resampled Locations
 python -m pyplotters.bestof_plotter -pid ql-p-ms@0 --configgroup ql_epsilon --title "Group Performance of Q-Learning with Epsilon Greedy\n$\\text{(Poisson Distributed, Resampled Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-p-ms@0 --configgroup ql_ucb --title "Group Performance of Q-Learning with Upper Confidence Bound\n$\\text{(Poisson Distributed, Resampled Locations)}$"
-python -m pyplotters.bestof_plotter -pid ql-p-ms@0 --configgroup ql_ps --title "Group Performance of Q-Learning with Posterior Sampling\n$\\text{(Poisson Distributed, Resampled Locations)}$"
+python -m pyplotters.bestof_plotter -pid ql-p-ms@0 --configgroup ql_ps_gts --title "Group Performance of Q-Learning with Gaussian Thompson Sampling\n$\\text{(Poisson Distributed, Resampled Locations)}$"
+python -m pyplotters.bestof_plotter -pid ql-p-ms@0 --configgroup ql_ps_bbts --title "Group Performance of Q-Learning with Beta-Binomial Thompson Sampling\n$\\text{(Poisson Distributed, Resampled Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-p-ms@0 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Poisson Distributed, Resampled Locations)}$"
 # Poisson Distributed, Fixed Locations
 python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup ql_epsilon --title "Group Performance of Q-Learning with Epsilon Greedy\n$\\text{(Poisson Distributed, Fixed Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup ql_ucb --title "Group Performance of Q-Learning with Upper Confidence Bound\n$\\text{(Poisson Distributed, Fixed Locations)}$"
-python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup ql_ps --title "Group Performance of Q-Learning with Posterior Sampling\n$\\text{(Poisson Distributed, Fixed Locations)}$"
+python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup ql_ps_gts --title "Group Performance of Q-Learning with Gaussian Thompson Sampling\n$\\text{(Poisson Distributed, Fixed Locations)}$"
+python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup ql_ps_bbts --title "Group Performance of Q-Learning with Beta-Binomial Thompson Sampling\n$\\text{(Poisson Distributed, Fixed Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Poisson Distributed, Fixed Locations)}$"
 
 ```
