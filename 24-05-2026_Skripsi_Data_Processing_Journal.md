@@ -90,7 +90,7 @@ As we'll also evaluate how the "optimal" policies behave without learning proces
 `model_extractor.py` for all the best performing algorithms aggregated by the `bestof_plotter.py`.
 This is ran to generate the average trajectory distribution.
 
-### Extract the best performing model weights
+### 7. Extract the best performing model weights
 
 Using `model_extractor.py`, the following are the scripts used to sample the best, according to part 5 (results).
 I also planned it whiffing 2 times with Claude, but it works now.
@@ -111,23 +111,61 @@ py .\pyrunner\model_extractor.py -pid lfe-p-ms@1 -c 36 --ofepisode 750 --aspid "
 
 ```
 
-### Running the best performing model weights
+### 8. Running the best performing model weights
 
 Then using the sampled model weights, we'll run 10 episodes.
 We have to separate LF and QL runs because they run different algorithm settings base.
+I had to update `QLearningMovement` becauase the previous implementation incorrectly pauses the MDP instead of the
+update() invocation. It works now!
 
 ```shell
 # Thomas Clustering, Randomized Seed (pid: best-ql-c-ms@0)
-py .\pyrunner\batch_runner.py -pid best-ql-c-ms@0 -r 10 -c 30,35,11,1 -alg ql-c-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-ql-c-ms@0 -r 10 -c 30,35 -alg ql-c-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-ql-c-ms@0 -r 10 -c 11,1 -alg ql-c-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
 py .\pyrunner\batch_runner.py -pid best-lfe-c-ms@0 -r 10 -c 36 -alg lfe-c-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "lfe_rth=True"
 # Thomas Clustering, Fixed Seed (pid: best-ql-c-ms@1)
-py .\pyrunner\batch_runner.py -pid best-ql-c-ms@1 -r 10 -c 35,15,23,2 -alg ql-c-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-ql-c-ms@1 -r 10 -c 35,15 -alg ql-c-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-ql-c-ms@1 -r 10 -c 23,2 -alg ql-c-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
 py .\pyrunner\batch_runner.py -pid best-lfe-c-ms@1 -r 10 -c 36 -alg lfe-c-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "lfe_rth=True"
 # Homogenous Poisson, Randomized Seed (pid: best-ql-p-ms@0)
-py .\pyrunner\batch_runner.py -pid best-ql-p-ms@0 -r 10 -c 27,14,35,1 -alg ql-p-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-ql-p-ms@0 -r 10 -c 27,14 -alg ql-p-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-ql-p-ms@0 -r 10 -c 35,1 -alg ql-p-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
 py .\pyrunner\batch_runner.py -pid best-lfe-p-ms@0 -r 10 -c 36 -alg lfe-p-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "lfe_rth=True"
 # Homogenous Poisson, Fixed Seed (pid: best-ql-p-ms@1)
-py .\pyrunner\batch_runner.py -pid best-ql-p-ms@1 -r 10 -c 12,35,27,1 -alg ql-p-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-ql-p-ms@1 -r 10 -c 12,35 -alg ql-p-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-ql-p-ms@1 -r 10 -c 27,1 -alg ql-p-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
 py .\pyrunner\batch_runner.py -pid best-lfe-p-ms@1 -r 10 -c 36 -alg lfe-p-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "lfe_rth=True"
+
+```
+
+Okay running em all now.
+
+### 9. Persistence Plotter on Best Performing Models
+
+I've run all and the results are promising, now we'll plot each of the best performing models.
+
+```shell
+python pyplotters/persistence_plotter.py -pid best-lfe-c-ms@0 --title "Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe
+python pyplotters/persistence_plotter.py -pid best-lfe-c-ms@1 --title "Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe
+python pyplotters/persistence_plotter.py -pid best-lfe-p-ms@0 --title "Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/persistence_plotter.py -pid best-lfe-p-ms@1 --title "Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/persistence_plotter.py -pid best-ql-c-ms@0 --title "Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe
+python pyplotters/persistence_plotter.py -pid best-ql-c-ms@1 --title "Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe
+python pyplotters/persistence_plotter.py -pid best-ql-p-ms@0 --title "Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/persistence_plotter.py -pid best-ql-p-ms@1 --title "Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe
+
+```
+
+Now also running the Trajectory Distribution (aggregated) Plotter I just vibecoded.
+
+```shell
+python pyplotters/trajectory_aggregator.py -pid best-lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-lfe-p-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-ql-c-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-ql-c-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-ql-p-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-ql-p-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe
 
 ```
