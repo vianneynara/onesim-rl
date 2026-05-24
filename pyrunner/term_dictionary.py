@@ -47,6 +47,8 @@ KEY_ABBREVIATIONS = {
     "qlm_sp": "QLearningMovement.stepPenalty",
     "qlm_fr": "QLearningMovement.foundReward",
     "qlm_as": "QLearningMovement.agentSpeed",
+    "qlm_pt": "QLearningMovement.pauseTraining",
+    "qlm_rth": "QLearningMovement.resetTrajectoryHistory",
 
     # [ Monte-Carlo Movement settings ]
     "mcnm_bp": "MCMovementEnd.behaviorPolicy",
@@ -58,6 +60,8 @@ KEY_ABBREVIATIONS = {
     "mcnm_fr": "MCMovementEnd.foundReward",
     "mcnm_as": "MCMovementEnd.agentSpeed",
     "mcnm_fv": "MCMovementEnd.firstVisit",
+    "mcnm_pt": "MCMovementEnd.pauseTraining",
+    "mcnm_rth": "MCMovementEnd.resetTrajectoryHistory",
 
     # [ Lévy Flight Episodic Movement settings ]
     "lfe_la": "LevyFlightEpisodic.levyAlpha",
