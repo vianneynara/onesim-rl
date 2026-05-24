@@ -29,11 +29,11 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-BASE_REPORTS_DIR = r"reports\\skripsi"
-PLOT_RESULTS_DIR = r"pyplotters\\plots"
+# BASE_REPORTS_DIR = r"reports\\skripsi"
+# PLOT_RESULTS_DIR = r"pyplotters\\plots"
 
-# BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
-# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
+PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 LIST_OF_IGNORED_OVERRIDES = [
     "cfg",  # config index
@@ -45,12 +45,37 @@ LIST_OF_IGNORED_OVERRIDES = [
 
 SUMMARY_KEYS = [
     "configuration_directory",
+    "group",
     "max_cumulative_reward",
     "last_episode_cumulative_reward",
     "mean_cumulative_reward",
     "max_cumulative_true_detections",
     "max_trajectory_length",
 ]
+
+
+def extract_group_from_run_id(_run_id: str) -> str:
+    """
+    Extract the config group (cg@<groupkey>) from run_id.
+    
+    Example: "ql-movseed@0-cg@ql_epsilon" -> "ql_epsilon"
+    If no cg@ token found, returns "NA".
+    
+    Args:
+        _run_id: The run identifier string
+        
+    Returns:
+        Group value (string) or "NA" if cg@ not present
+    """
+    tokens = _run_id.split("-")
+    
+    for token in tokens:
+        if "@" in token:
+            key, value = token.split("@", 1)
+            if key == "cg":
+                return value
+    
+    return "NA"
 
 
 def check_exists_source_dir(dir_path):
@@ -482,6 +507,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
 
     _run_summary = {key: float("-inf") for key in SUMMARY_KEYS}
     _run_summary["configuration_directory"] = _run_id_dir.split("\\")[-1]
+    _run_summary["group"] = extract_group_from_run_id(run_id)
 
     COMMON_IDX = ["episodeNumber", "currentEpisodeReward", "currentCumulativeReward", "previousCumulativeReward",
                   "currentTrueDetections", "currentUniqueDetections", "currentCumulativeTrueDetections",
