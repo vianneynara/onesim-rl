@@ -70,6 +70,7 @@ KEY_ABBREVIATIONS = {
     "lfe_fs": "LevyFlightEpisodic.flightSpeed",
     "lfe_sp": "LevyFlightEpisodic.stepPenalty",
     "lfe_fr": "LevyFlightEpisodic.foundReward",
+    "lfe_rth": "LevyFlightEpisodic.resetTrajectoryHistory",
 
     # [ EpsilonGreedyBehavior settings ]
     "eg_ip": "BehaviorPolicy.EpsilonGreedy.epsilon",
