@@ -93,20 +93,21 @@ This is ran to generate the average trajectory distribution.
 ### Extract the best performing model weights
 
 Using `model_extractor.py`, the following are the scripts used to sample the best, according to part 5 (results).
+I also planned it whiffing 2 times with Claude, but it works now.
 
 ```shell
 # Thomas Clustering, Randomized Seed (pid: best-ql-c-ms@0 and best-lfe-c-ms@0)
-py .\pyrunner\model_extractor.py -pid ql-c-ms@0 -c 30,35,11,36,1 --ofepisode 750 --aspid "best-ql-c-ms@0" -srp "D:\Developments+\Java\onesim-rl-data\reports"
-py .\pyrunner\model_extractor.py -pid lfe-c-ms@0 -c 36 --ofepisode 750 --aspid "best-lfe-c-ms@0" -srp "D:\Developments+\Java\onesim-rl-data\reports"
+py .\pyrunner\model_extractor.py -pid ql-c-ms@0 -c 30,35,11,1 --ofepisode 750 --aspid "best-ql-c-ms@0" -srp "D:\Developments+\Java\onesim-rl-data\reports" --prepfor "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\model_extractor.py -pid lfe-c-ms@0 -c 36 --ofepisode 750 --aspid "best-lfe-c-ms@0" -srp "D:\Developments+\Java\onesim-rl-data\reports" --prepfor "lfe_rth=True"
 # Thomas Clustering, Fixed Seed (pid: best-ql-c-ms@1 and best-lfe-c-ms@1)
-py .\pyrunner\model_extractor.py -pid ql-c-ms@1 -c 35,15,23,36,2 --ofepisode 750 --aspid "best-ql-c-ms@1" -srp "D:\Developments+\Java\onesim-rl-data\reports"
-py .\pyrunner\model_extractor.py -pid lfe-c-ms@1 -c 36 --ofepisode 750 --aspid "best-lfe-c-ms@1" -srp "D:\Developments+\Java\onesim-rl-data\reports"
+py .\pyrunner\model_extractor.py -pid ql-c-ms@1 -c 35,15,23,2 --ofepisode 750 --aspid "best-ql-c-ms@1" -srp "D:\Developments+\Java\onesim-rl-data\reports" --prepfor "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\model_extractor.py -pid lfe-c-ms@1 -c 36 --ofepisode 750 --aspid "best-lfe-c-ms@1" -srp "D:\Developments+\Java\onesim-rl-data\reports" --prepfor "lfe_rth=True"
 # Homogenous Poisson, Randomized Seed (pid: best-ql-p-ms@0 and best-lfe-p-ms@0)
-py .\pyrunner\model_extractor.py -pid ql-p-ms@0 -c 27,14,35,36,1 --ofepisode 750 --aspid "best-ql-p-ms@0" -srp "D:\Developments+\Java\onesim-rl-data\reports"
-py .\pyrunner\model_extractor.py -pid lfe-p-ms@0 -c 36 --ofepisode 750 --aspid "best-lfe-p-ms@0" -srp "D:\Developments+\Java\onesim-rl-data\reports"
+py .\pyrunner\model_extractor.py -pid ql-p-ms@0 -c 27,14,35,1 --ofepisode 750 --aspid "best-ql-p-ms@0" -srp "D:\Developments+\Java\onesim-rl-data\reports" --prepfor "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\model_extractor.py -pid lfe-p-ms@0 -c 36 --ofepisode 750 --aspid "best-lfe-p-ms@0" -srp "D:\Developments+\Java\onesim-rl-data\reports" --prepfor "lfe_rth=True"
 # Homogenous Poisson, Fixed Seed (pid: best-ql-p-ms@1 and best-lfe-p-ms@1)
-py .\pyrunner\model_extractor.py -pid ql-p-ms@1 -c 12,35,27,36,1 --ofepisode 750 --aspid "best-ql-p-ms@1" -srp "D:\Developments+\Java\onesim-rl-data\reports"
-py .\pyrunner\model_extractor.py -pid lfe-p-ms@1 -c 36 --ofepisode 750 --aspid "best-lfe-p-ms@1" -srp "D:\Developments+\Java\onesim-rl-data\reports"
+py .\pyrunner\model_extractor.py -pid ql-p-ms@1 -c 12,35,27,1 --ofepisode 750 --aspid "best-ql-p-ms@1" -srp "D:\Developments+\Java\onesim-rl-data\reports" --prepfor "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\model_extractor.py -pid lfe-p-ms@1 -c 36 --ofepisode 750 --aspid "best-lfe-p-ms@1" -srp "D:\Developments+\Java\onesim-rl-data\reports" --prepfor "lfe_rth=True"
 
 ```
 
@@ -117,16 +118,16 @@ We have to separate LF and QL runs because they run different algorithm settings
 
 ```shell
 # Thomas Clustering, Randomized Seed (pid: best-ql-c-ms@0)
-py .\pyrunner\batch_runner.py -pid best-ql-c-ms@0 -r 10 -c 30,35,11,1 -alg ql-c-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue
-py .\pyrunner\batch_runner.py -pid best-lfe-c-ms@0 -r 10 -c 36 -alg lfe-c-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue
+py .\pyrunner\batch_runner.py -pid best-ql-c-ms@0 -r 10 -c 30,35,11,1 -alg ql-c-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-lfe-c-ms@0 -r 10 -c 36 -alg lfe-c-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "lfe_rth=True"
 # Thomas Clustering, Fixed Seed (pid: best-ql-c-ms@1)
-py .\pyrunner\batch_runner.py -pid best-ql-c-ms@1 -r 10 -c 35,15,23,2 -alg ql-c-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue
-py .\pyrunner\batch_runner.py -pid best-lfe-c-ms@1 -r 10 -c 36 -alg lfe-c-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue
+py .\pyrunner\batch_runner.py -pid best-ql-c-ms@1 -r 10 -c 35,15,23,2 -alg ql-c-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-lfe-c-ms@1 -r 10 -c 36 -alg lfe-c-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "lfe_rth=True"
 # Homogenous Poisson, Randomized Seed (pid: best-ql-p-ms@0)
-py .\pyrunner\batch_runner.py -pid best-ql-p-ms@0 -r 10 -c 27,14,35,1 -alg ql-p-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue
-py .\pyrunner\batch_runner.py -pid best-lfe-p-ms@0 -r 10 -c 36 -alg lfe-p-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue
+py .\pyrunner\batch_runner.py -pid best-ql-p-ms@0 -r 10 -c 27,14,35,1 -alg ql-p-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-lfe-p-ms@0 -r 10 -c 36 -alg lfe-p-ms@0 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "lfe_rth=True"
 # Homogenous Poisson, Fixed Seed (pid: best-ql-p-ms@1)
-py .\pyrunner\batch_runner.py -pid best-ql-p-ms@1 -r 10 -c 12,35,27,1 -alg ql-p-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue
-py .\pyrunner\batch_runner.py -pid best-lfe-p-ms@1 -r 10 -c 36 -alg lfe-p-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue
+py .\pyrunner\batch_runner.py -pid best-ql-p-ms@1 -r 10 -c 12,35,27,1 -alg ql-p-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "qlm_pt=True,qlm_rth=True"
+py .\pyrunner\batch_runner.py -pid best-lfe-p-ms@1 -r 10 -c 36 -alg lfe-p-ms@1 --setreportspath "D:\Developments+\Java\onesim-rl-data\reports" --continue -mo "lfe_rth=True"
 
 ```
