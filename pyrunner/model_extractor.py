@@ -2,12 +2,12 @@
 model_extractor.py — Single Episode Model Extraction
 
 Extracts a single episode from an existing run directory into a fresh parent
-directory structure, normalizing the extracted episode as episode 1 for model reuse.
+directory structure, normalizing the extracted episode as episode 0 (base/previous weight).
 
 This module creates a new run directory hierarchy suitable for deployment or analysis:
   - Defaults to extracting the last (highest) episode from the source run
-  - Normalizes all episodeNumber fields to 1 in the extracted episode
-  - Derives _persistence.json from the extracted episode's Persistence-Episode@1.json
+  - Normalizes all episodeNumber fields to 0 in the extracted episode
+  - Derives _persistence.json from the extracted episode's Persistence-Episode@0.json
   - Preserves config_setting.json as-is (for reference of original run parameters)
 
 Two modes for specifying the source:
@@ -58,6 +58,8 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 log = logging.getLogger(__name__)
+
+SAMPLED_INITIAL_EPISODE = 0
 
 # Default base directory for all report outputs (mirrors episode_extender.py)
 REPORTS_BASE = "reports/skripsi"
@@ -256,46 +258,51 @@ def normalize_episode_to_one(
         source_episode_num: int,
 ) -> Tuple[bool, str]:
     """
-    Copy episode from source to target ep/1, normalizing all episodeNumber fields to 1.
+    Copy only Persistence-Episode@{source_episode_num}.json to target ep/SAMPLED_INITIAL_EPISODE,
+    renaming it to Persistence-Episode@SAMPLED_INITIAL_EPISODE.json and normalizing episodeNumber.
+    
+    Skips all other files (CSV reports, etc.) to keep the extracted episode minimal.
 
     Returns: (success, message)
     """
     source_ep_path = os.path.join(source_ep_dir, str(source_episode_num))
-    target_ep_path = os.path.join(target_ep_dir, "1")
+    target_ep_path = os.path.join(target_ep_dir, str(SAMPLED_INITIAL_EPISODE))
 
     if not os.path.isdir(source_ep_path):
         return False, f"Source episode directory not found: {source_ep_path}"
 
     try:
-        # Copy entire episode directory recursively
+        # Create target episode directory
         if os.path.exists(target_ep_path):
             shutil.rmtree(target_ep_path)
-        shutil.copytree(source_ep_path, target_ep_path)
+        os.makedirs(target_ep_path, exist_ok=True)
 
-        # Normalize all episodeNumber fields to 1 in JSON files
-        json_count = 0
-        for root, dirs, files in os.walk(target_ep_path):
-            for file in files:
-                if file.endswith(".json"):
-                    json_path = os.path.join(root, file)
-                    ok, data, err = load_json_file(json_path)
-                    if not ok:
-                        log.warning("Skipping unreadable JSON: %s (%s)", json_path, err)
-                        continue
+        # Find and copy only the Persistence-Episode@{source_episode_num}.json file
+        source_persistence_file = f"Persistence-Episode@{source_episode_num}.json"
+        source_persistence_path = os.path.join(source_ep_path, source_persistence_file)
+        
+        if not os.path.isfile(source_persistence_path):
+            return False, f"Persistence file not found: {source_persistence_path}"
 
-                    if "episodeNumber" in data:
-                        old_value = data["episodeNumber"]
-                        data["episodeNumber"] = 1
-                        
-                        try:
-                            with open(json_path, "w", encoding="utf-8") as f:
-                                json.dump(data, f, indent=4, sort_keys=True)
-                            json_count += 1
-                            log.debug("Updated episodeNumber in: %s (%s → 1)", file, old_value)
-                        except OSError as exc:
-                            log.warning("Failed to update episodeNumber in %s: %s", json_path, exc)
+        # Copy with renamed filename to target
+        target_persistence_file = f"Persistence-Episode@{SAMPLED_INITIAL_EPISODE}.json"
+        target_persistence_path = os.path.join(target_ep_path, target_persistence_file)
 
-        return True, f"Copied and normalized episode {source_episode_num} → 1 ({json_count} JSON file(s) updated)"
+        ok, data, err = load_json_file(source_persistence_path)
+        if not ok:
+            return False, f"Failed to read persistence file: {err}"
+
+        # Update episodeNumber to target episode
+        if "episodeNumber" in data:
+            old_value = data["episodeNumber"]
+            data["episodeNumber"] = SAMPLED_INITIAL_EPISODE
+            log.debug("Updated episodeNumber in persistence: %s → %d", old_value, SAMPLED_INITIAL_EPISODE)
+
+        # Write to target location with new name
+        with open(target_persistence_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, sort_keys=True)
+
+        return True, f"Copied and normalized {source_persistence_file} → {target_persistence_file} (episode {source_episode_num} → {SAMPLED_INITIAL_EPISODE})"
 
     except Exception as exc:
         return False, f"Failed during episode normalization: {exc}"
@@ -306,29 +313,125 @@ def create_persistence_from_episode(
         target_root_dir: str,
 ) -> Tuple[bool, str]:
     """
-    Create _persistence.json in target root from the normalized Persistence-Episode@1.json.
+    Create _persistence.json in target root from the normalized Persistence-Episode@SAMPLED_INITIAL_EPISODE.json.
 
     Returns: (success, message)
     """
     try:
-        source_persistence = os.path.join(source_ep_dir, "1", "Persistence-Episode@1.json")
+        source_persistence = os.path.join(source_ep_dir, str(SAMPLED_INITIAL_EPISODE), f"Persistence-Episode@{SAMPLED_INITIAL_EPISODE}.json")
         target_persistence = os.path.join(target_root_dir, "_persistence.json")
 
         ok, data, err = load_json_file(source_persistence)
         if not ok:
             return False, f"Cannot read source persistence: {source_persistence} ({err})"
 
-        # Ensure episodeNumber is 1 in the root persistence as well
+        # Ensure episodeNumber is SAMPLED_INITIAL_EPISODE in the root persistence as well
         if "episodeNumber" in data:
-            data["episodeNumber"] = 1
+            data["episodeNumber"] = SAMPLED_INITIAL_EPISODE
 
         with open(target_persistence, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, sort_keys=True)
 
-        return True, f"Created _persistence.json from Persistence-Episode@1.json"
+        return True, f"Created _persistence.json from Persistence-Episode@{SAMPLED_INITIAL_EPISODE}.json"
 
     except Exception as exc:
         return False, f"Failed to create _persistence.json: {exc}"
+
+
+def replace_alg_runs_in_runner_id(runner_id: str, alg: str, old_runs: int, new_runs: int) -> str:
+    """
+    Replace the alg+runs token inside a runner_id string.
+
+    Example:    cfg@03-lfe500-bp@ps  →  cfg@03-lfe10-bp@ps
+    Or:         cfg@03-cg@lf-lfe500-bp@ps  →  cfg@03-cg@lf-lfe10-bp@ps
+    """
+    pattern     = rf"\b{re.escape(alg)}{old_runs}\b"
+    replacement = f"{alg}{new_runs}"
+    updated     = re.sub(pattern, replacement, runner_id, count=1)
+
+    if updated == runner_id:
+        raise ValueError(
+            f"Could not find '{alg}{old_runs}' to replace in runner_id: '{runner_id}'"
+        )
+    return updated
+
+
+def update_config_setting_for_extraction(
+        full_report_dir: str,
+        new_runner_id: str,
+        new_episodes: int,
+) -> Tuple[bool, str]:
+    """
+    Update config_setting.json with the new runner_id and episode count.
+    Also updates alg+runs patterns in highlighted_settings and overridden_settings.
+
+    Keys updated:
+        runner_id             ← new_runner_id
+        runner_nrof_episodes  ← new_episodes
+        highlighted_settings[EpisodicPersistenceManager.persistencePath] ← regex with new runs
+        overridden_settings[...persistencePath...] ← regex with new runs
+
+    Returns: (success, message)
+    """
+    config_file = os.path.join(full_report_dir, "config_setting.json")
+    tmp_file    = config_file + ".tmp"
+
+    ok, config, err = load_json_file(config_file)
+    if not ok:
+        return False, f"Cannot read config_setting.json: {err}"
+
+    try:
+        # Migrate deprecated key just in case
+        bad_key  = "runner_nrof_episodes:"
+        good_key = "runner_nrof_episodes"
+        if bad_key in config:
+            del config[bad_key]
+
+        old_runner_id = config.get("runner_id", "unknown")
+        old_episodes  = config.get(good_key, "unknown")
+
+        config[good_key]    = new_episodes
+        config["runner_id"] = new_runner_id
+
+        # Update highlighted_settings if present (regex patterns with persistencePath)
+        highlighted_settings = config.get("highlighted_settings", {})
+        if highlighted_settings:
+            for key in list(highlighted_settings.keys()):
+                value = highlighted_settings[key]
+                # Replace old_runner_id with new_runner_id in any string values
+                if isinstance(value, str) and old_runner_id in value:
+                    highlighted_settings[key] = value.replace(str(old_runner_id), str(new_runner_id))
+        config["highlighted_settings"] = highlighted_settings
+
+        # Update overridden_settings if present (list of override dicts with persistencePath)
+        overridden_settings = config.get("overridden_settings", [])
+        if overridden_settings and isinstance(overridden_settings, list):
+            for override_dict in overridden_settings:
+                if isinstance(override_dict, dict):
+                    for key in list(override_dict.keys()):
+                        value = override_dict[key]
+                        # Replace old_runner_id with new_runner_id in any string values
+                        if isinstance(value, str) and old_runner_id in value:
+                            override_dict[key] = value.replace(str(old_runner_id), str(new_runner_id))
+        config["overridden_settings"] = overridden_settings
+
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4, sort_keys=True)
+
+        os.replace(tmp_file, config_file)
+
+        return True, (
+            f"config_setting.json updated:\n"
+            f"  runner_id:            {old_runner_id!r} → {new_runner_id!r}\n"
+            f"  runner_nrof_episodes: {old_episodes} → {new_episodes}"
+        )
+    except Exception as exc:
+        try:
+            if os.path.exists(tmp_file):
+                os.remove(tmp_file)
+        except OSError:
+            pass
+        return False, f"Failed to write config_setting.json: {exc}"
 
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -340,6 +443,7 @@ def extract_model(
         source_episode: int,
         target_parent_dir_id: str,
         reports_base: str,
+        episodesig: int = 10,
 ) -> None:
     """
     Core extraction routine for a single matched source directory.
@@ -348,9 +452,9 @@ def extract_model(
         1. Validate config_setting.json
         2. Verify selected episode exists and is readable
         3. Create target directory structure
-        4. Copy and normalize episode to ep/1
-        5. Create _persistence.json from normalized Persistence-Episode@1.json
-        6. Copy config_setting.json to target root
+        4. Copy and normalize episode to ep/SAMPLED_INITIAL_EPISODE
+        5. Create _persistence.json from normalized episode
+        6. Copy config_setting.json to target root, updating runner_id and episode count
         7. Log summary
     """
     log.info("%s", "=" * LINE_LENGTH)
@@ -368,6 +472,7 @@ def extract_model(
     log.info("[EXTRACT] Runner ID:        %s", runner_id)
     log.info("[EXTRACT] Total episodes:   %d", total_episodes)
     log.info("[EXTRACT] Extracting:       %d", source_episode)
+    log.info("[EXTRACT] Episode sig:      %d", episodesig)
 
     # ── Step 2: Verify selected episode exists ────────────────────────────
     ep_root = os.path.join(source_dir, "ep")
@@ -384,12 +489,26 @@ def extract_model(
 
     log.info("[EXTRACT] Episode %d verified and readable", source_episode)
 
+    # ── Step 2b: Compute new runner_id with updated alg+runs ───────────────
+    new_runner_id = runner_id
+    try:
+        alg_runs = extract_alg_and_runs(runner_id)
+        if alg_runs:
+            alg, old_runs = alg_runs
+            new_runner_id = replace_alg_runs_in_runner_id(runner_id, alg, old_runs, episodesig)
+            log.info("[EXTRACT] Updated runner_id: %s → %s", runner_id, new_runner_id)
+        else:
+            log.warning("[EXTRACT] Could not extract alg+runs from runner_id, using original: %s", runner_id)
+    except ValueError as exc:
+        log.error("[EXTRACT] Failed to update runner_id: %s", exc)
+        sys.exit(1)
+
     # ── Step 3: Create target directory structure ─────────────────────────
     target_parent_path = os.path.join(reports_base, target_parent_dir_id)
     target_run_id_path = os.path.join(target_parent_path, "run-id")
     
-    # Use source runner_id as the target run_id folder
-    target_dir = os.path.join(target_run_id_path, runner_id)
+    # Use new runner_id as the target run_id folder
+    target_dir = os.path.join(target_run_id_path, new_runner_id)
 
     try:
         os.makedirs(target_dir, exist_ok=True)
@@ -400,7 +519,7 @@ def extract_model(
 
     log.info("[EXTRACT] Target: %s", target_dir)
 
-    # ── Step 4: Copy and normalize episode to ep/1 ────────────────────────
+    # ── Step 4: Copy and normalize episode ────────────────────────────────
     ok, msg = normalize_episode_to_one(ep_root, os.path.join(target_dir, "ep"), source_episode)
     if not ok:
         log.error("[EXTRACT] %s", msg)
@@ -414,14 +533,21 @@ def extract_model(
         sys.exit(1)
     log.info("[EXTRACT] %s", msg)
 
-    # ── Step 6: Copy config_setting.json ──────────────────────────────────
+    # ── Step 6: Copy and update config_setting.json ───────────────────────
     try:
         src_config = os.path.join(source_dir, "config_setting.json")
         dst_config = os.path.join(target_dir, "config_setting.json")
         shutil.copy2(src_config, dst_config)
         log.info("[EXTRACT] Copied config_setting.json")
+        
+        # Update config_setting.json with new runner_id and episode count
+        ok, update_msg = update_config_setting_for_extraction(target_dir, new_runner_id, episodesig)
+        if not ok:
+            log.error("[EXTRACT] %s", update_msg)
+            sys.exit(1)
+        log.info("[EXTRACT] %s", update_msg)
     except OSError as exc:
-        log.error("[EXTRACT] Failed to copy config_setting.json: %s", exc)
+        log.error("[EXTRACT] Failed to handle config_setting.json: %s", exc)
         sys.exit(1)
 
     # ── Step 7: Summary ───────────────────────────────────────────────────
@@ -429,8 +555,9 @@ def extract_model(
     log.info("[EXTRACT] Done!")
     log.info("[EXTRACT] Source directory : %s", source_dir)
     log.info("[EXTRACT] Target directory : %s", target_dir)
-    log.info("[EXTRACT] Extracted episode: %d (normalized to episode 1)", source_episode)
+    log.info("[EXTRACT] Extracted episode: %d (normalized to episode %d)", source_episode, SAMPLED_INITIAL_EPISODE)
     log.info("[EXTRACT] Output parent ID : %s", target_parent_dir_id)
+    log.info("[EXTRACT] New runner_id    : %s", new_runner_id)
     log.info("%s", "=" * LINE_LENGTH)
 
 
@@ -491,6 +618,15 @@ if __name__ == "__main__":
         ),
     )
 
+    parser.add_argument(
+        "-es", "--episodesig", type=int, required=False, default=10,
+        help=(
+            "Target episode signature (runs count) for the extracted model. "
+            "Replaces alg+runs in the runner_id and updates runner_nrof_episodes. "
+            "Default: 10"
+        ),
+    )
+
     args = parser.parse_args()
 
     # ── Validate: at least one source filter required ─────────────────────
@@ -520,6 +656,7 @@ if __name__ == "__main__":
     log.info("From signature   : %s", args.fromsignature or "(not set)")
     log.info("Config filter    : %s", config_indices or "(not set)")
     log.info("Episode to use   : %s", args.ofepisode or "(highest available)")
+    log.info("Episode sig      : %d", args.episodesig)
     log.info("Output parent ID : %s", args.aspid or f"sampled-{args.parent_dir_id}")
     log.info("%s", "=" * LINE_LENGTH)
 
@@ -574,6 +711,7 @@ if __name__ == "__main__":
             source_episode=episode_to_extract,
             target_parent_dir_id=target_parent_id,
             reports_base=reports_base,
+            episodesig=args.episodesig,
         )
 
     log.info("%s", "=" * LINE_LENGTH)
