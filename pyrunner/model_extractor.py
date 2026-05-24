@@ -14,6 +14,12 @@ Two modes for specifying the source:
   - Signature mode (-fs):  matches run dirs containing alg+runs in their name
   - Config mode    (-c):   matches run dirs by cfg@N pattern (comma/range)
 
+Optional prepfor mode (--prepfor / -f):
+  - Appends additional override key=value pairs to the extracted model's runner_id
+  - Useful for adding extra overrides without needing a pre-existing run with those overrides
+  - Example: extract from 'cfg@36-lfe750' with prepfor 'lfe_pt=True,lfe_rth=True' 
+    results in 'cfg@36-lfe10-lfe_pt@True-lfe_rth@True'
+
 Output naming:
   - By default: prepends 'sampled-<original_pid>' to create a new parent directory
   - With --aspid: uses specified directory as parent instead
@@ -27,6 +33,10 @@ Usage examples:
 
   # Extract to custom parent directory with custom reports path
   python model_extractor.py -pid skripsi-run1 -c 3 --aspid custom-parent -srp D:/reports
+
+  # Extract and append prepfor overrides to runner_id
+  python model_extractor.py -pid lfe-c-ms@0 -c 36 --aspid best-lfe -f "lfe_pt=True,lfe_rth=True"
+  # Result: cfg@36-cg@lf-lfe750-lfe_la@0.25-lfe_pt@True-lfe_rth@True
 """
 
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -248,6 +258,33 @@ def find_highest_episode(ep_root: str) -> Tuple[int, list[str]]:
     return highest, problems
 
 
+def parse_prepfor_overrides(prepfor_string: str) -> dict[str, str]:
+    """
+    Parse prepfor override string into key=value pairs.
+    
+    Format: "key1=value1,key2=value2"
+    Returns: {"key1": "value1", "key2": "value2"}
+    Raises ValueError on invalid format.
+    """
+    overrides = {}
+    if not prepfor_string:
+        return overrides
+    
+    for pair in prepfor_string.split(","):
+        pair = pair.strip()
+        if not pair:
+            continue
+        if "=" not in pair:
+            raise ValueError(f"Invalid override format: '{pair}'. Expected 'key=value'.")
+        key, value = pair.split("=", 1)
+        overrides[key.strip()] = value.strip()
+    
+    return overrides
+
+
+
+
+
 # ------------------------------------------------------------------------------------------------------------------- #
 # EPISODE NORMALIZATION
 # ------------------------------------------------------------------------------------------------------------------- #
@@ -356,6 +393,25 @@ def replace_alg_runs_in_runner_id(runner_id: str, alg: str, old_runs: int, new_r
     return updated
 
 
+def append_prepfor_overrides(runner_id: str, prepfor_overrides: dict[str, str]) -> str:
+    """
+    Append prepfor overrides to runner_id as -key@value pairs.
+    
+    Example:
+        runner_id = "cfg@36-cg@lf-lfe750-lfe_la@0.25"
+        prepfor_overrides = {"lfe_pt": "True", "lfe_rth": "True"}
+        Returns: "cfg@36-cg@lf-lfe750-lfe_la@0.25-lfe_pt@True-lfe_rth@True"
+    """
+    if not prepfor_overrides:
+        return runner_id
+    
+    result = runner_id
+    for key, value in sorted(prepfor_overrides.items()):
+        result += f"-{key}@{value}"
+    
+    return result
+
+
 def update_config_setting_for_extraction(
         full_report_dir: str,
         new_runner_id: str,
@@ -444,6 +500,7 @@ def extract_model(
         target_parent_dir_id: str,
         reports_base: str,
         episodesig: int = 10,
+        prepfor_overrides: Optional[dict[str, str]] = None,
 ) -> None:
     """
     Core extraction routine for a single matched source directory.
@@ -456,6 +513,9 @@ def extract_model(
         5. Create _persistence.json from normalized episode
         6. Copy config_setting.json to target root, updating runner_id and episode count
         7. Log summary
+
+    If prepfor_overrides is provided, appends them to the runner_id as -key@value pairs
+    after episodesig replacement.
     """
     log.info("%s", "=" * LINE_LENGTH)
     log.info("[EXTRACT] Source: %s", source_dir)
@@ -473,6 +533,9 @@ def extract_model(
     log.info("[EXTRACT] Total episodes:   %d", total_episodes)
     log.info("[EXTRACT] Extracting:       %d", source_episode)
     log.info("[EXTRACT] Episode sig:      %d", episodesig)
+    
+    if prepfor_overrides:
+        log.info("[EXTRACT] [PREPFOR] Appending overrides: %s", prepfor_overrides)
 
     # ── Step 2: Verify selected episode exists ────────────────────────────
     ep_root = os.path.join(source_dir, "ep")
@@ -502,6 +565,11 @@ def extract_model(
     except ValueError as exc:
         log.error("[EXTRACT] Failed to update runner_id: %s", exc)
         sys.exit(1)
+
+    # ── Step 2c: Append prepfor overrides if provided ──────────────────────
+    if prepfor_overrides:
+        new_runner_id = append_prepfor_overrides(new_runner_id, prepfor_overrides)
+        log.info("[EXTRACT] After prepfor: %s", new_runner_id)
 
     # ── Step 3: Create target directory structure ─────────────────────────
     target_parent_path = os.path.join(reports_base, target_parent_dir_id)
@@ -558,6 +626,8 @@ def extract_model(
     log.info("[EXTRACT] Extracted episode: %d (normalized to episode %d)", source_episode, SAMPLED_INITIAL_EPISODE)
     log.info("[EXTRACT] Output parent ID : %s", target_parent_dir_id)
     log.info("[EXTRACT] New runner_id    : %s", new_runner_id)
+    if prepfor_overrides:
+        log.info("[EXTRACT] [PREPFOR] Appended overrides: %s", prepfor_overrides)
     log.info("%s", "=" * LINE_LENGTH)
 
 
@@ -627,6 +697,16 @@ if __name__ == "__main__":
         ),
     )
 
+    parser.add_argument(
+        "-f", "--prepfor", type=str, required=False,
+        help=(
+            "Append additional overrides to the extracted model's runner_id. "
+            "Accepts comma-separated key=value pairs (e.g., 'lfe_pt=True,lfe_rth=True'). "
+            "Appended to runner_id as -key@value suffixes after episodesig replacement. "
+            "Example: source 'cfg@36-lfe750' → extracted 'cfg@36-lfe10-lfe_pt@True-lfe_rth@True'"
+        ),
+    )
+
     args = parser.parse_args()
 
     # ── Validate: at least one source filter required ─────────────────────
@@ -635,6 +715,17 @@ if __name__ == "__main__":
 
     # ── Resolve reports base ───────────────────────────────────────────────
     reports_base = normalize_report_base(args.setreportspath or REPORTS_BASE)
+
+    # ── Parse prepfor overrides (if specified) ──────────────────────────────
+    prepfor_overrides: Optional[dict[str, str]] = None
+
+    if args.prepfor:
+        try:
+            prepfor_overrides = parse_prepfor_overrides(args.prepfor)
+            log.info("[PREPFOR] Parsed overrides: %s", prepfor_overrides)
+        except ValueError as exc:
+            log.error("[PREPFOR] Invalid override format: %s", exc)
+            sys.exit(1)
 
     # ── Parse config indices (if given) ──────────────────────────────────
     config_indices: Optional[list[int]] = None
@@ -658,6 +749,8 @@ if __name__ == "__main__":
     log.info("Episode to use   : %s", args.ofepisode or "(highest available)")
     log.info("Episode sig      : %d", args.episodesig)
     log.info("Output parent ID : %s", args.aspid or f"sampled-{args.parent_dir_id}")
+    if args.prepfor:
+        log.info("Prepfor overrides: %s", prepfor_overrides)
     log.info("%s", "=" * LINE_LENGTH)
 
     matched_dirs = None
@@ -712,6 +805,7 @@ if __name__ == "__main__":
             target_parent_dir_id=target_parent_id,
             reports_base=reports_base,
             episodesig=args.episodesig,
+            prepfor_overrides=prepfor_overrides,
         )
 
     log.info("%s", "=" * LINE_LENGTH)
