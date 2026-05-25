@@ -66,8 +66,8 @@ if __package__ in (None, ""):
     
 from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 
-PLOT_RESULTS_DIR = "pyplotters\\plots"
-# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+# PLOT_RESULTS_DIR = "pyplotters\\plots"
+PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 # BESTOF_CMAP = "viridis"
 # BESTOF_CMAP = "magma"
@@ -460,7 +460,7 @@ def plot_bestof_by_episode(
             start = (min_ep // step) * step
             ticks = np.arange(start, max_ep + 1, step)
         plt.xticks(ticks)
-        plt.xlim(left=min_ep)
+        plt.xlim(left=min_ep, right=max_ep)
 
     # Construct title with suptitle and subtitle
     if suptitle.title != "":
