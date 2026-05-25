@@ -188,9 +188,28 @@ def read_json_file(file_path, run_id=None):
 
 
 def retrieve_episode_json_dirs(_run_id_dir) -> list[str]:
-    # Find all JSON files in the run_dir, where "ep" is the episode folder, having subfolders of 1, 2, 3... each ahving a JSON file
+    # Find all JSON files in the run_dir, where "ep" is the episode folder, having subfolders of 1, 2, 3... each having a JSON file
+    # Note: Episode 0 is skipped as it represents the baseline model, not actual training episodes
     episodes_dir = glob.glob(os.path.join(_run_id_dir, "ep", "*"))
-    log.info(f"Found {len(episodes_dir)} episodes directories.")
+    
+    # Filter to only episodes >= 1, sort numerically
+    filtered_episodes = []
+    for episode_dir in episodes_dir:
+        try:
+            ep_num = int(os.path.basename(episode_dir))
+            if ep_num >= 1:  # Skip episode 0 (baseline)
+                filtered_episodes.append((ep_num, episode_dir))
+        except ValueError:
+            # Skip non-integer directory names
+            pass
+    
+    # Sort by episode number
+    filtered_episodes.sort(key=lambda x: x[0])
+    episodes_dir = [ep_dir for _, ep_dir in filtered_episodes]
+    
+    total_dirs = len(glob.glob(os.path.join(_run_id_dir, "ep", "*")))
+    skipped = total_dirs - len(episodes_dir)
+    log.info(f"Found {len(episodes_dir)} training episodes (skipped {skipped} baseline/non-training).")
     episode_jsons_dir = []
 
     for episode_dir in episodes_dir:
