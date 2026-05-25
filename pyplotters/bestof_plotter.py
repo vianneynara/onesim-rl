@@ -111,6 +111,8 @@ LIST_OF_IGNORED_OVERRIDES = [
     "ql500",  # Q-Learning with 500 runs
     "mcn500",
     "lfe500"  # Lévy Flight with 500 runs
+    "ql10"
+    "lfe10"
 ]
 
 @dataclass(frozen=True)
