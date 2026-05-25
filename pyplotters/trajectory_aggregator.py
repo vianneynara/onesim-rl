@@ -407,7 +407,7 @@ def _create_trajectory_plot(
     """
     if use_log_scale:
         # Logarithmic X-axis plot using semilogx
-        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color='darkblue', 
+        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color='purple',
                     label="Probability (PMF)", marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
         ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color='skyblue')
         
@@ -431,7 +431,7 @@ def _create_trajectory_plot(
         for idx, row in df.iterrows():
             x_val = row["trajectory"]
             y_val = row["probability"]
-            ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8, alpha=0.4, 
+            ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8, color='purple', alpha=0.4,
                    linestyle='--', zorder=1)
         
         # Configure linear X-axis
@@ -550,7 +550,7 @@ def plot_aggregated_trajectory_distribution(
             log_title_parts.insert(1, f"({num_episodes} episodes)")
         
         log_final_title = "\n".join(log_title_parts)
-        log_final_title += "(Logarithmic)"
+        log_final_title += " (logarithmic X scale)"
         fig.suptitle(log_final_title, fontweight='bold', fontsize=12, y=suptitle_y)
         
         if _description:

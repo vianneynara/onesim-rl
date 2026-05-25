@@ -94,6 +94,8 @@ CURR_CMAP = "gist_rainbow"
 ANNOTATION_INTERVAL = 50
 USE_PERCENTAGE = True
 
+LINE_STYLES = ["-", "--", "-.", ":"]
+
 LINE_LENGTH = 100
 logging.basicConfig(
     level=logging.INFO,
@@ -452,16 +454,16 @@ def plot_bestof_by_episode(
     if not cmap:
         cmap = 'gist_rainbow'
     palette = sns.color_palette(cmap, n_colors=len(series_by_label))
-    for (label, df), color in zip(series_by_label, palette):
+    for idx, ((label, df), color) in enumerate(zip(series_by_label, palette)):
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
-        sns.lineplot(data=df, x="episodeNumber", y=y_key, label=label, color=color)
+        sns.lineplot(data=df, x="episodeNumber", y=y_key, label=label, color=color, linestyle=LINE_STYLES[idx % len(LINE_STYLES)])
 
     # Add difference annotations if enabled
     if annotate_diff:
         ax = plt.gca()
         
-        for (label, df), color in zip(series_by_label, palette):
+        for idx, ((label, df), color) in enumerate(zip(series_by_label, palette)):
             # Calculate point-to-point differences
             df_sorted = df.sort_values(by="episodeNumber").reset_index(drop=True)
             y_values = pd.to_numeric(df_sorted[y_key], errors="coerce")

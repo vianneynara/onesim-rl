@@ -238,7 +238,7 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
 def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str,
                     _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False,
                     _subtitle: str = None, _description: str = None, _annotate_diff: bool = False, 
-                    _diff_interval: int = None):
+                    _diff_interval: int = ANNOTATION_INTERVAL):
     plt.figure(figsize=(10, 6))
 
     if not _yalias:
@@ -310,7 +310,7 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
 
     # Add difference annotations if enabled
     if _annotate_diff:
-        diff_interval = _diff_interval if _diff_interval is not None else ANNOTATION_INTERVAL
+        diff_interval = _diff_interval
         ax = plt.gca()
         
         # Calculate point-to-point differences
@@ -464,8 +464,8 @@ def plot_trajectoryDistribution(
             fig.subplots_adjust(top=0.92)
 
         ax = plt.gca()
-        plt.xlabel("Trajectory Length")
-        plt.ylabel("Probability / Density")
+        plt.xlabel("Trajectory Length", fontsize=12, fontweight='bold')
+        plt.ylabel("Probability / Density", fontsize=12, fontweight='bold')
         ax.set_xlim(1, x_max)
 
         # Major tick every 200; minor tick every 50 (optional)
@@ -661,6 +661,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _yalias="Reward",
         _description=_description,
         _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -678,6 +679,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _yalias="Cumu. Reward",
         _description=_description,
         _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -697,6 +699,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _yalias="Mean Cumu. Reward",
         _description=_description,
         _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -715,6 +718,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _discrete=True,
         _description=_description,
         _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -733,6 +737,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _discrete=True,
         _description=_description,
         _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
