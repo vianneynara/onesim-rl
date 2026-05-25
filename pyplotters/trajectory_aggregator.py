@@ -15,6 +15,11 @@ This approach provides a consistent baseline where:
 Accepts episode ranges (e.g., "1-5,8,10-15") and validates against available 
 episodes in the ep/ subdirectory structure.
 
+Three modes of operation:
+1. Standard -pid/-rid mode: Process selected runs (with optional config filtering)
+2. Config filtering (-c): Process only specified configs (e.g., "1-5", "1,3,5-7")
+3. Compare-all (--compareall): Aggregate and compare trajectory distributions across all configs
+
 Examples:
   # Aggregate all episodes for a run
   python -m pyplotters.trajectory_aggregator -rid ql-c-ms@0-ls@0
@@ -24,6 +29,15 @@ Examples:
   
   # Using parent_id with episode selection
   python -m pyplotters.trajectory_aggregator -pid ql-p-ms@0 -eps 1,2,3
+  
+  # Filter by specific configs
+  python -m pyplotters.trajectory_aggregator -pid ql-p-ms@0 -c 1-5,10-15
+  
+  # Compare-all mode: aggregate trajectories across configs and generate comparison plot
+  python -m pyplotters.trajectory_aggregator -pid ql-p-ms@0 --compareall
+  
+  # Compare-all with config filtering and episodes
+  python -m pyplotters.trajectory_aggregator -pid ql-p-ms@0 --compareall -c 1-5,18-23 -eps 1-50
 """
 
 import argparse
@@ -31,8 +45,10 @@ import glob
 import json
 import logging
 import os
+import re
 import sys
-from typing import Tuple, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Tuple, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,6 +61,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from pyrunner.batch_shifter import parse_parent_dir_ids
+from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 
 # Configuration
 LINE_LENGTH = 100
@@ -62,16 +79,200 @@ PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 STORE_AS_CSV = False
 
 LIST_OF_IGNORED_OVERRIDES = [
-    "cfg",  # config index
-    "cg",  # config group
+    "cfg",  # config index (e.g., cfg@01)
+    "cg",   # config group (e.g., cg@ql_epsilon)
     "ql500",  # Q-Learning with 500 runs
     "mcn500",
-    "lfe500"  # Lévy Flight with 500 runs
+    "lfe500",  # Lévy Flight with 500 runs
+    "ql10",
+    "lfe10"
 ]
 
 # ===========================================================================================
 # UTILITY FUNCTIONS
 # ===========================================================================================
+
+@dataclass(frozen=True)
+class ParsedRunId:
+    run_id: str
+    tokens: dict[str, str]
+
+
+def _exit_with_warning(msg: str, code: int = 2) -> None:
+    """Exit with a warning message."""
+    log.warning(msg)
+    raise SystemExit(code)
+
+
+def parse_run_id_strict(run_id: str) -> ParsedRunId:
+    """Parse a run-id directory name.
+
+    Expected format: <prefix>-<key>@<value>-<key>@<value>...
+
+    Notes:
+    - The first dash-separated component is treated as prefix and ignored.
+    - All remaining components *must* contain exactly one '@' and non-empty key/value.
+    """
+    parts = run_id.split("-")
+    if len(parts) < 2:
+        _exit_with_warning(
+            f"Run-id '{run_id}' does not match expected format: <prefix>-<key>@<value>-..."
+        )
+
+    tokens: dict[str, str] = {}
+    for raw in parts[1:]:
+        if raw.count("@") != 1:
+            log.warn(
+                f"Run-id '{run_id}' contains invalid token '{raw}'. Expected exactly one '@'."
+            )
+            log.info(f"Skipping the token {raw}")
+            continue
+        k, v = raw.split("@")
+        if not k or not v:
+            _exit_with_warning(
+                f"Run-id '{run_id}' contains empty key/value in token '{raw}'."
+            )
+        if k in tokens:
+            _exit_with_warning(
+                f"Run-id '{run_id}' contains duplicate key '{k}'. This tool requires unique keys."
+            )
+        tokens[k] = v
+
+    return ParsedRunId(run_id=run_id, tokens=tokens)
+
+
+def extract_cfg_index(folder_name: str) -> Optional[int]:
+    """Extract cfg index from folder name like 'cfg@05-ql500-...'.
+    
+    Returns the integer index (1-based) or None if not found.
+    """
+    match = re.match(r"cfg@(\d+)", folder_name)
+    if match:
+        try:
+            return int(match.group(1))
+        except ValueError:
+            pass
+    return None
+
+
+def parse_config_indices(config_string: str) -> list[int]:
+    """Parse config indices from a string supporting:
+    - Single values: "1,2,9"
+    - Ranges: "4-6" (expands to 4,5,6)
+    - Mixed: "1,2,4-6,9,10-17"
+    
+    Returns sorted list of unique integers.
+    Raises ValueError if format is invalid.
+    """
+    configs = set()
+    
+    # Split by comma
+    parts = config_string.split(",")
+    
+    for part in parts:
+        part = part.strip()  # Remove whitespace
+        
+        if "-" in part:
+            # It's a range
+            try:
+                start_str, end_str = part.split("-", 1)  # Use maxsplit=1 to handle negative numbers
+                start = int(start_str.strip())
+                end = int(end_str.strip())
+                
+                if start > end:
+                    raise ValueError(f"Invalid range '{part}', start > end")
+                
+                # Add all values in range (inclusive)
+                for i in range(start, end + 1):
+                    configs.add(i)
+            except ValueError as e:
+                raise ValueError(f"Invalid range format '{part}': {e}")
+        else:
+            # It's a single value
+            try:
+                configs.add(int(part))
+            except ValueError:
+                raise ValueError(f"Invalid config number '{part}' (must be integer)")
+    
+    return sorted(list(configs))
+
+
+def filter_summary_by_configs(summary_df: pd.DataFrame, config_indices: list[int]) -> pd.DataFrame:
+    """Filter summary DataFrame to include only rows matching specified config indices.
+    
+    Matches configuration_directory entries starting with 'cfg@N' where N is in config_indices.
+    
+    Args:
+        summary_df: DataFrame with 'configuration_directory' column
+        config_indices: List of integer config indices to include (1-based)
+    
+    Returns:
+        Filtered DataFrame with only matching rows
+    """
+    if "configuration_directory" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
+    
+    # Track which configs were requested but not found
+    requested_indices = set(config_indices)
+    found_indices = set()
+    
+    # Filter rows by matching cfg@ index
+    mask = pd.Series([False] * len(summary_df), index=summary_df.index)
+    for idx, row in summary_df.iterrows():
+        config_dir = str(row["configuration_directory"])
+        cfg_idx = extract_cfg_index(config_dir)
+        
+        if cfg_idx is not None and cfg_idx in config_indices:
+            mask.iloc[idx] = True
+            found_indices.add(cfg_idx)
+    
+    filtered_df = summary_df[mask]
+    
+    # Warn about missing configs
+    missing_indices = requested_indices - found_indices
+    if missing_indices:
+        for cfg_idx in sorted(missing_indices):
+            log.warning(
+                f"Requested config cfg@{cfg_idx} not found in summary.csv. Skipping."
+            )
+    
+    if len(filtered_df) == 0:
+        _exit_with_warning(
+            f"No runs found matching requested configs: {sorted(config_indices)}"
+        )
+    
+    log.info(f"Filtered to {len(filtered_df)} runs from configs: {sorted(found_indices)}")
+    return filtered_df
+
+
+def key_to_abbr(key: str) -> str:
+    """Convert an override key to its abbreviation.
+
+    Example: "ucb_ec" -> "ec" (substring after last underscore)
+             "ps_iv"  -> "iv"
+             "foo"    -> "foo"
+    """
+    if "_" in key:
+        return key.rsplit("_", 1)[-1]
+    return key
+
+
+def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
+    """Build legend label in the form: '<group> (abbr=value, abbr=value)'.
+
+    Overrides are sorted by abbreviation for stable legends.
+    """
+    # Expand group value with formal wording when available.
+    group_display = GROUP_VALUE_TERMS.get(group_value, group_value)
+
+    items: list[tuple[str, str]] = []
+    for k, v in overrides.items():
+        items.append((key_to_abbr(k), str(v)))
+    items.sort(key=lambda t: t[0])
+
+    overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
+    return f'{group_display} {"("+overrides_str+")" if overrides_str else ""}'
+
 
 def parse_run_description(_run_id: str) -> str:
     """
@@ -496,16 +697,23 @@ def plot_aggregated_trajectory_distribution(
     
     suptitle_y = 0.98 if num_episodes > 0 else 0.95
     
-    # Build summary stats for legend
+    # Build summary stats for legend with programmatic fixed-width formatting
     from matplotlib.lines import Line2D
     total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
-    stat_lines = [
-        f"{'Max trajectory':<20}: {max_len:>6d}",
-        f"{'Highest PMF':<20}: {max_p:>10.3f}",
-        f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
-        f"{'Most probable (mode)':<20}: {mode_len:>6d}",
-        f"{'Sum of all':<20}: {total_sum:>6d}",
+    
+    stat_data = [
+        ('Max trajectory', f'{max_len}'),
+        ('Highest PMF', f'{max_p:.3f}'),
+        ('Mean length (PMF)', f'{mean_len:.2f}'),
+        ('Most probable (mode)', f'{mode_len}'),
+        ('Sum of all', f'{total_sum}'),
     ]
+    
+    # Find max key length for alignment
+    max_key_len = max(len(key) for key, _ in stat_data)
+    
+    # Format entries with padding
+    stat_lines = [f'{key.ljust(max_key_len)} : {value}' for key, value in stat_data]
     
     # ===== PLOT 1: LINEAR X-AXIS =====
     fig = plt.figure(figsize=(12, 6))
@@ -740,6 +948,377 @@ def process_run_aggregation(
     return True
 
 
+def run_compareall(
+    parent_id: str,
+    episodes: List[int] = None,
+    suptitle: str = None,
+    config_indices: Union[list[int], None] = None
+) -> None:
+    """Compare aggregated trajectory distributions across all configs in a parent_id.
+    
+    Loads summary.csv from parent results directory, filters by config indices if specified,
+    and generates aggregated trajectory distribution plots for each matching config.
+    
+    Args:
+        parent_id: Parent results directory under pyplotters/plots (must have summary.csv)
+        episodes: List of episode numbers to aggregate (auto-detect if empty)
+        suptitle: Optional custom title for plots
+        config_indices: Optional list of config indices to filter by
+    """
+    out_dir = os.path.join(PLOT_RESULTS_DIR, parent_id)
+    summary_path = os.path.join(out_dir, "summary.csv")
+
+    if not os.path.exists(out_dir):
+        _exit_with_warning(
+            f"Directory does not exist: {out_dir}. Did you run persistence_plotter.py -pid first?"
+        )
+    if not os.path.exists(summary_path):
+        _exit_with_warning(
+            f"Missing {summary_path}. Did you run persistence_plotter.py -pid first?"
+        )
+
+    summary_df = pd.read_csv(summary_path, sep=";")
+    
+    # Apply config filtering if specified
+    if config_indices is not None:
+        summary_df = filter_summary_by_configs(summary_df, config_indices)
+    
+    # Ensure required columns exist
+    if "configuration_directory" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
+    if "last_episode_cumulative_reward" not in summary_df.columns:
+        _exit_with_warning("summary.csv missing required column 'last_episode_cumulative_reward'.")
+
+    # Convert reward to numeric and sort by reward (descending)
+    summary_df = summary_df.copy()
+    summary_df["last_episode_cumulative_reward"] = pd.to_numeric(
+        summary_df["last_episode_cumulative_reward"], errors="coerce"
+    )
+    if summary_df["last_episode_cumulative_reward"].isna().any():
+        _exit_with_warning("summary.csv contains non-numeric last_episode_cumulative_reward values; aborting.")
+    
+    summary_df = summary_df.sort_values(
+        by="last_episode_cumulative_reward",
+        ascending=False,
+        kind="mergesort"
+    )
+    
+    log.info(LINE_LENGTH * "-")
+    log.info(f"Compare-All mode: aggregating trajectory distributions for {len(summary_df)} configs")
+    
+    # Process each run
+    aggregated_dataframes: list[tuple[str, dict, int, pd.DataFrame]] = []
+    
+    for _, row in summary_df.iterrows():
+        run_id = str(row["configuration_directory"])
+        reward = row['last_episode_cumulative_reward']
+        
+        # Build label showing "Profile <0N>: $(<overrides>)$"
+        try:
+            pr = parse_run_id_strict(run_id)
+            cfg_num = extract_cfg_index(run_id)
+            
+            # Extract parameter overrides (exclude cfg, cg, algorithm identifiers)
+            overrides = {k: v for k, v in pr.tokens.items() 
+                        if k not in LIST_OF_IGNORED_OVERRIDES}
+            
+            # Build formatted label for subplot title
+            if cfg_num is not None:
+                if overrides:
+                    items: list[tuple[str, str]] = []
+                    for k, v in overrides.items():
+                        items.append((key_to_abbr(k), str(v)))
+                    items.sort(key=lambda t: t[0])
+                    overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
+                    title_label = f"Profile {cfg_num:02d}: $({overrides_str})$"
+                else:
+                    title_label = f"Profile {cfg_num:02d}"
+                log_label = f"cfg@{cfg_num} ({overrides_str if overrides else 'no overrides'})"
+            else:
+                title_label = run_id
+                log_label = run_id
+        except SystemExit:
+            title_label = run_id
+            log_label = run_id
+        
+        log.info(f"  {run_id} | reward={reward:.2f} | label={log_label}")
+        
+        # Find run_dir in BASE_REPORTS_DIR
+        run_dir = None
+        for root, dirs, files in os.walk(BASE_REPORTS_DIR):
+            for dir_name in dirs:
+                if dir_name == run_id:
+                    run_dir = os.path.join(root, dir_name)
+                    break
+            if run_dir:
+                break
+        
+        if not run_dir:
+            log.warning(f"Run directory not found in {BASE_REPORTS_DIR} for run_id '{run_id}'. Skipping.")
+            continue
+        
+        # Auto-detect episodes if not specified
+        episodes_to_use = episodes
+        if not episodes_to_use:
+            try:
+                episodes_to_use = auto_detect_episodes(run_dir)
+                log.debug(f"Auto-detected {len(episodes_to_use)} episodes for {run_id}")
+            except FileNotFoundError:
+                log.warning(f"Cannot auto-detect episodes for {run_id}. Skipping.")
+                continue
+        
+        # Aggregate
+        success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes_to_use)
+        if not success or not aggregated:
+            log.warning(f"Failed to aggregate for {run_id}: {status_msg}")
+            continue
+        
+        # Convert to DataFrame
+        df = convert_aggregated_to_dataframe(aggregated)
+        if len(df) == 0:
+            log.warning(f"No valid trajectory data for {run_id}. Skipping.")
+            continue
+        
+        # Store unique trajectory count (each row in df is a unique trajectory length)
+        unique_lengths = len(df)
+        aggregated_dataframes.append((title_label, overrides, unique_lengths, df))
+    
+    log.info(LINE_LENGTH * "-")
+    
+    if not aggregated_dataframes:
+        _exit_with_warning("No valid runs found to compare.")
+    
+    # Generate comparison plot
+    log.info(f"Generating comparison plot for {len(aggregated_dataframes)} configs")
+    plot_compareall_trajectory_distribution(
+        dataframes_with_labels=aggregated_dataframes,
+        out_dir=out_dir,
+        title=suptitle
+    )
+
+
+def plot_compareall_trajectory_distribution(
+    dataframes_with_labels: list[tuple[str, dict, int, pd.DataFrame]],
+    out_dir: str,
+    title: Optional[str] = None
+) -> None:
+    """Plot aggregated trajectory distributions from multiple configs for comparison.
+    
+    Args:
+        dataframes_with_labels: List of (title_label, overrides_dict, unique_lengths, dataframe) tuples
+        out_dir: Output directory for comparison plot
+        title: Optional custom title
+    """
+    if not dataframes_with_labels:
+        log.warning("No dataframes to plot")
+        return
+    
+    os.makedirs(out_dir, exist_ok=True)
+    
+    # Create figure with multiple subplots (one per config)
+    num_configs = len(dataframes_with_labels)
+    
+    # Calculate grid layout (try to make it roughly square)
+    cols = int(np.ceil(np.sqrt(num_configs)))
+    rows = int(np.ceil(num_configs / cols))
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(16, 4 * rows))
+    
+    # Flatten axes array for easier iteration
+    if num_configs == 1:
+        axes = [axes]
+    else:
+        axes = axes.flatten()
+    
+    final_title = title or "Aggregated Trajectory Distribution Comparison (All Configs)"
+    fig.suptitle(final_title, fontweight='bold', fontsize=14, y=0.995)
+    
+    # Plot each config
+    for idx, (title_label, overrides, unique_lengths, df) in enumerate(dataframes_with_labels):
+        ax = axes[idx]
+        
+        if len(df) == 0:
+            ax.text(0.5, 0.5, f"No data for {title_label}", ha='center', va='center',
+                   transform=ax.transAxes, fontsize=10, color='red')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            continue
+        
+        # Calculate summary statistics
+        max_len = int(df["trajectory"].max()) if len(df) > 0 else 0
+        mean_len = float((df["trajectory"] * df["probability"]).sum()) if len(df) > 0 else 0
+        max_p = float(df["probability"].max()) if len(df) > 0 else 0
+        mode_len = int(df.loc[df["probability"] == max_p, "trajectory"].min()) if max_p > 0 else 0
+        total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
+        
+        # Plot trajectory distribution
+        sns.lineplot(ax=ax, data=df, x="trajectory", y="probability",
+                    linewidth=2, color='purple', label='Probability (PMF)')
+        
+        # Add scatter overlay if few data points
+        if len(df) < 5:
+            sns.scatterplot(ax=ax, data=df, x="trajectory", y="probability",
+                           s=15, marker='o', color='darkblue', alpha=0.7,
+                           edgecolor='navy', linewidth=1.5, zorder=5, legend=False)
+        
+        # Add horizontal grid lines
+        for _, row in df.iterrows():
+            x_val = row["trajectory"]
+            y_val = row["probability"]
+            ax.plot([0, x_val], [y_val, y_val], 'purple', linewidth=0.8,
+                   alpha=0.3, linestyle='--', zorder=1)
+        
+        # Configure axes
+        ax.xaxis.set_major_locator(MultipleLocator(50))
+        ax.xaxis.set_minor_locator(MultipleLocator(10))
+        ax.set_xlabel("Trajectory Length", fontsize=10, fontweight='bold')
+        ax.set_ylabel("Probability Density", fontsize=10, fontweight='bold')
+        ax.set_xlim(1, max(500, df["trajectory"].max() * 1.1))
+        ax.grid(True, alpha=0.5, which='both', linestyle='--')
+        ax.margins(x=0)
+        
+        # Set title with formatted label (includes LaTeX if present)
+        ax.set_title(title_label, fontsize=10, fontweight='bold')
+        
+        # Add legend with statistics
+        from matplotlib.lines import Line2D
+        handles, labels = ax.get_legend_handles_labels()
+        
+        # Build legend entries for statistics with programmatic fixed-width formatting
+        # Using monospace font ensures proper column alignment
+        stat_data = [
+            ('Max trajectory', f'{max_len}'),
+            ('Highest PMF', f'{max_p:.3f}'),
+            ('Mean Length (PMF)', f'{mean_len:.2f}'),
+            ('Most probable (mode)', f'{mode_len}'),
+            ('Sum of all', f'{total_sum}'),
+            ('Unique Lengths', f'{unique_lengths}'),
+        ]
+        
+        # Find max key length for alignment
+        max_key_len = max(len(key) for key, _ in stat_data)
+        
+        # Format entries with padding
+        stat_entries = [
+            Line2D([], [], linestyle='none', color='none', 
+                  label=f'{key.ljust(max_key_len)} : {value}')
+            for key, value in stat_data
+        ]
+        
+        handles.extend(stat_entries)
+        # Use monospace font for proper alignment of tabular data
+        ax.legend(handles=handles, loc='upper right', fontsize=8, framealpha=0.9, 
+                 prop={'family': 'monospace'})
+    
+    # Hide unused subplots
+    for idx in range(num_configs, len(axes)):
+        axes[idx].set_visible(False)
+    
+    plt.tight_layout()
+    plot_file = os.path.join(out_dir, "Aggregated Trajectory Distribution (Compare-All).png")
+    plt.savefig(plot_file, bbox_inches='tight', dpi=100)
+    plt.close()
+    log.info(f"Saved comparison plot: {plot_file}")
+
+
+def process_run_aggregation(
+    run_dir: str,
+    run_id: str,
+    parent_id: Optional[str],
+    episodes: List[int],
+    title: Optional[str],
+    _describe: bool = False
+) -> bool:
+    """
+    Process trajectory aggregation for a single run.
+    
+    Args:
+        run_dir: Full path to run directory
+        run_id: Run identifier (for logging)
+        parent_id: Parent directory ID (for output path)
+        episodes: List of episode numbers to aggregate
+        title: Custom plot title
+        _describe: Whether to add run description to plot
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    log.info("=" * LINE_LENGTH)
+    log.info(f"Processing run: {run_id}")
+    log.info("=" * LINE_LENGTH)
+    
+    # Auto-detect episodes if not specified
+    if not episodes:
+        try:
+            available = auto_detect_episodes(run_dir)
+            log.info(f"Auto-detected {len(available)} episodes: {available[0]}-{available[-1]}")
+            episodes = available
+        except FileNotFoundError as e:
+            log.error(f"Failed to auto-detect episodes: {e}")
+            return False
+    
+    # Validate episodes
+    try:
+        available = auto_detect_episodes(run_dir)
+    except FileNotFoundError as e:
+        log.error(f"Cannot access episode directory: {e}")
+        return False
+    
+    is_valid, errors = validate_episodes(available, episodes)
+    if not is_valid:
+        for error in errors:
+            log.error(error)
+        log.error("Exiting due to missing episodes")
+        return False
+    
+    log.info(f"Aggregating {len(episodes)} episodes: {episodes}")
+    
+    # Aggregate trajectoryFrequencies
+    success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes)
+    log.info(status_msg)
+    
+    if not success or not aggregated:
+        log.error("Failed to aggregate trajectory frequencies")
+        return False
+    
+    # Convert to DataFrame and plot
+    df = convert_aggregated_to_dataframe(aggregated)
+    
+    if len(df) == 0:
+        log.error("No valid trajectory data to plot")
+        return False
+    
+    # Output directory: pyplotters/plots[/<parent>]/<run_id>/
+    parent_results_dir = os.path.join(PLOT_RESULTS_DIR, parent_id) if parent_id else PLOT_RESULTS_DIR
+    run_out_dir = os.path.join(parent_results_dir, run_id)
+    os.makedirs(run_out_dir, exist_ok=True)
+    
+    # Generate description if --describe flag is set
+    _description = parse_run_description(run_id) if _describe else None
+    
+    # Save plot
+    plot_file = os.path.join(run_out_dir, f"Average Trajectory Distribution (of {len(episodes)} episodes).png")
+    plot_aggregated_trajectory_distribution(
+        df,
+        plot_file,
+        title=title,
+        num_episodes=len(episodes),
+        _description=_description
+    )
+    
+    # Save aggregated data as JSON
+    json_file = os.path.join(run_out_dir, "aggregated_trajectory_frequencies.json")
+    save_aggregated_data_json(aggregated, json_file, episodes)
+    
+    # Optionally save as CSV
+    if STORE_AS_CSV:
+        csv_file = os.path.join(run_out_dir, "aggregated_trajectory_frequencies.csv")
+        save_aggregated_data_csv(df, csv_file, episodes)
+    
+    log.info(f"Successfully processed run: {run_id}")
+    return True
+
+
 # ===========================================================================================
 # MAIN
 # ===========================================================================================
@@ -775,11 +1354,30 @@ def main():
              "Defaults to all available episodes if not specified."
     )
     
+    parser.add_argument(
+        "-c", "--config", type=str, required=False,
+        help="Config indices to filter by (e.g. '1', '1-5', '1,3,5-7'). If not provided, all configs are processed."
+    )
+    
+    parser.add_argument(
+        "--compareall", action="store_true",
+        help="Compare aggregated trajectory distributions across all configs in -pid. Requires -pid with summary.csv."
+    )
+    
     args = parser.parse_args()
     
     if not args.parent_id and not args.run_id:
         parser.print_help()
         sys.exit()
+    
+    # Parse and validate --config if provided
+    config_indices: Union[list[int], None] = None
+    if args.config:
+        try:
+            config_indices = parse_config_indices(args.config)
+            log.info(f"Config filtering enabled: {args.config} → indices {config_indices}")
+        except ValueError as e:
+            _exit_with_warning(f"Invalid config format: {e}")
     
     # Parse episode specification
     requested_episodes = []
@@ -793,7 +1391,28 @@ def main():
     
     check_exists_source_dir(BASE_REPORTS_DIR)
     
-    # Process parent_id(s)
+    # Route to compareall mode if flag is set
+    if args.compareall:
+        if not args.parent_id:
+            _exit_with_warning("--compareall requires -pid/--parent_id to be specified")
+        
+        log.info("=" * LINE_LENGTH)
+        log.info("COMPARE-ALL MODE: Aggregating and comparing trajectory distributions across configs")
+        log.info("=" * LINE_LENGTH)
+        
+        run_compareall(
+            parent_id=args.parent_id,
+            episodes=requested_episodes if requested_episodes else None,
+            suptitle=args.title,
+            config_indices=config_indices
+        )
+        
+        log.info("=" * LINE_LENGTH)
+        log.info("Trajectory comparison complete")
+        log.info("=" * LINE_LENGTH)
+        return
+    
+    # Process parent_id(s) in standard mode (with optional config filtering)
     if args.parent_id:
         parent_dir_ids = parse_parent_dir_ids(args.parent_id)
         
@@ -811,6 +1430,17 @@ def main():
             if not run_dirs:
                 log.info("No run-id directories found; checking for direct subdirectories")
                 run_dirs = glob.glob(os.path.join(parent_id_dir, "*"))
+            
+            # Filter by config indices if specified
+            if config_indices is not None:
+                run_dirs = [
+                    run_dir for run_dir in run_dirs
+                    if extract_cfg_index(os.path.basename(run_dir)) in config_indices
+                ]
+                if not run_dirs:
+                    log.warning(f"No runs found matching requested configs: {config_indices}")
+                    continue
+                log.info(f"Filtered to {len(run_dirs)} runs matching configs: {config_indices}")
             
             os.makedirs(os.path.join(PLOT_RESULTS_DIR, parent_id), exist_ok=True)
             
