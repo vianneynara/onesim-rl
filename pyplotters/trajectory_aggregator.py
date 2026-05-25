@@ -61,7 +61,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from pyrunner.batch_shifter import parse_parent_dir_ids
-from pyplotters.term_dictionary import GROUP_VALUE_TERMS
+from pyplotters.term_dictionary import GROUP_VALUE_TERMS, CONFIG_GROUP_TERMS
 
 # Configuration
 LINE_LENGTH = 100
@@ -81,7 +81,11 @@ STORE_AS_CSV = False
 LIST_OF_IGNORED_OVERRIDES = [
     "cfg",  # config index (e.g., cfg@01)
     "cg",   # config group (e.g., cg@ql_epsilon)
-    "rth",  # reset trajectory history (e.g., rth@True)
+    "qlm_pt",  # paused trining (e.g., qlm_pt@True)
+    "qlm_rth",  # reset trajectory history (e.g., qlm_rth@True)
+    "mcnm_pt",  # paused trining (e.g., mcnm_pt@True)
+    "mcnm_rth",  # reset trajectory history (e.g., mcnm_rth@True)
+    "lfe_rth",  # reset trajectory history (e.g., lfe_rth@True)
     "ql500",  # Q-Learning with 500 runs
     "mcn500",
     "lfe500",  # Lévy Flight with 500 runs
@@ -153,6 +157,18 @@ def extract_cfg_index(folder_name: str) -> Optional[int]:
             return int(match.group(1))
         except ValueError:
             pass
+    return None
+
+
+def extract_cg_value(folder_name: str) -> Optional[str]:
+    """Extract config group value from run_id pattern like 'cg@lf-...'
+
+    Example: "cfg@36-cg@lf-lfe10-lfe_la@0.25" → "lf"
+    """
+    # Match cg@ followed by any characters until - or @ or end of string
+    match = re.search(r"cg@([^-@]+)", folder_name)
+    if match:
+        return match.group(1)
     return None
 
 
@@ -1018,12 +1034,17 @@ def run_compareall(
         try:
             pr = parse_run_id_strict(run_id)
             cfg_num = extract_cfg_index(run_id)
+            config_group = extract_cg_value(run_id)
+            log.info(f"Processing run {rank}: {run_id} (Profile {cfg_num}, {config_group})")
+
+            # Grab the config group 'cg' key (cg@<config_group>) from pr.tokens
+            config_group_str = CONFIG_GROUP_TERMS.get(config_group, "N/A") if config_group else "N/A"
             
             # Extract parameter overrides (exclude cfg, cg, algorithm identifiers)
             overrides = {k: v for k, v in pr.tokens.items() 
                         if k not in LIST_OF_IGNORED_OVERRIDES}
             
-            # Build formatted label for subplot title with rank
+            # Build formatted label for subplot title with rank (2-line format)
             if cfg_num is not None:
                 if overrides:
                     items: list[tuple[str, str]] = []
@@ -1031,12 +1052,12 @@ def run_compareall(
                         items.append((key_to_abbr(k), str(v)))
                     items.sort(key=lambda t: t[0])
                     overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
-                    title_label = f"Rank: #{rank}, Profile {cfg_num:02d}: $({overrides_str})$"
+                    title_label = f"Rank #{rank}, Profile {cfg_num:02d}, {config_group_str}\n$({overrides_str})$"
                 else:
-                    title_label = f"Rank: #{rank}, Profile {cfg_num:02d}"
+                    title_label = f"Rank #{rank}, Profile {cfg_num:02d}, {config_group_str}"
                 log_label = f"cfg@{cfg_num} ({overrides_str if overrides else 'no overrides'})"
             else:
-                title_label = f"Rank: #{rank}, {run_id}"
+                title_label = f"Rank #{rank}, {run_id}"
                 log_label = run_id
         except SystemExit:
             title_label = f"Rank: #{rank}, {run_id}"
@@ -1132,7 +1153,10 @@ def plot_compareall_trajectory_distribution(
         axes = axes.flatten()
     
     final_title = title or "Aggregated Trajectory Distribution Comparison (All Configs)"
-    fig.suptitle(final_title, fontweight='bold', fontsize=14, y=0.995)
+    fig.suptitle(final_title, fontweight='bold', fontsize=14, y=0.98)
+    
+    # Adjust figure spacing to accommodate 2-line subplot titles
+    fig.subplots_adjust(top=0.95, hspace=0.35)
     
     # Plot each config
     for idx, (rank, title_label, overrides, unique_lengths, df) in enumerate(dataframes_with_labels):
@@ -1152,34 +1176,28 @@ def plot_compareall_trajectory_distribution(
         mode_len = int(df.loc[df["probability"] == max_p, "trajectory"].min()) if max_p > 0 else 0
         total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
         
-        # Plot trajectory distribution
-        sns.lineplot(ax=ax, data=df, x="trajectory", y="probability",
-                    linewidth=2, color='purple', label='Probability (PMF)')
+        # Plot trajectory distribution using logarithmic X-axis
+        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color='purple',
+                    label="Probability (PMF)", marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
+        ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color='skyblue')
         
-        # Add scatter overlay if few data points
-        if len(df) < 5:
-            sns.scatterplot(ax=ax, data=df, x="trajectory", y="probability",
-                           s=15, marker='o', color='darkblue', alpha=0.7,
-                           edgecolor='navy', linewidth=1.5, zorder=5, legend=False)
+        # Configure logarithmic X-axis
+        ax.xaxis.set_major_locator(LogLocator(base=10, numticks=10))
+        ax.xaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10) * 0.1))
+        ax.xaxis.set_major_formatter(LogFormatterSciNotation(base=10))
+        ax.set_xlabel("Step Length $l$ (log scale)", fontsize=10, fontweight='bold')
+        ax.set_ylabel("Probability Density $P(l)$", fontsize=10, fontweight='bold')
+        ax.set_xlim(1, max(500, df["trajectory"].max() * 1.0))
         
-        # Add horizontal grid lines
-        for _, row in df.iterrows():
-            x_val = row["trajectory"]
-            y_val = row["probability"]
-            ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8,
-                   alpha=0.3, linestyle='--', zorder=1)
+        # Configure Y-axis with fixed ticks from 0 to 1.0 with 0.1 step
+        ax.set_yticks(np.arange(0, 1.1, 0.1))
+        ax.set_ylim(0, 1.0)
         
-        # Configure axes
-        ax.xaxis.set_major_locator(MultipleLocator(50))
-        ax.xaxis.set_minor_locator(MultipleLocator(10))
-        ax.set_xlabel("Trajectory Length", fontsize=10, fontweight='bold')
-        ax.set_ylabel("Probability Density", fontsize=10, fontweight='bold')
-        ax.set_xlim(1, max(500, df["trajectory"].max() * 1.1))
         ax.grid(True, alpha=0.5, which='both', linestyle='--')
         ax.margins(x=0)
         
-        # Set title with formatted label (includes LaTeX if present)
-        ax.set_title(title_label, fontsize=10, fontweight='bold')
+        # Set title with formatted label (includes LaTeX if present) - 2-line format with reduced height
+        ax.set_title(title_label, fontsize=10, fontweight='bold', pad=0, multialignment='center')
         
         # Add legend with statistics
         from matplotlib.lines import Line2D
@@ -1208,7 +1226,7 @@ def plot_compareall_trajectory_distribution(
         
         handles.extend(stat_entries)
         # Use monospace font for proper alignment of tabular data
-        ax.legend(handles=handles, loc='upper right', fontsize=8, framealpha=0.9, 
+        ax.legend(handles=handles, loc='best', fontsize=8, framealpha=0.9,
                  prop={'family': 'monospace'})
     
     # Hide unused subplots
