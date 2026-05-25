@@ -40,11 +40,18 @@ BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
 PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 LIST_OF_IGNORED_OVERRIDES = [
-    "cfg",  # config index
-    "cg",  # config group
+    "cfg",  # config index (e.g., cfg@01)
+    "cg",   # config group (e.g., cg@ql_epsilon)
+    "qlm_pt",  # paused trining (e.g., qlm_pt@True)
+    "qlm_rth",  # reset trajectory history (e.g., qlm_rth@True)
+    "mcnm_pt",  # paused trining (e.g., mcnm_pt@True)
+    "mcnm_rth",  # reset trajectory history (e.g., mcnm_rth@True)
+    "lfe_rth",  # reset trajectory history (e.g., lfe_rth@True)
     "ql500",  # Q-Learning with 500 runs
     "mcn500",
-    "lfe500"  # Lévy Flight with 500 runs
+    "lfe500",  # Lévy Flight with 500 runs
+    "ql10",
+    "lfe10",
 ]
 
 SUMMARY_KEYS = [
