@@ -81,11 +81,12 @@ STORE_AS_CSV = False
 LIST_OF_IGNORED_OVERRIDES = [
     "cfg",  # config index (e.g., cfg@01)
     "cg",   # config group (e.g., cg@ql_epsilon)
+    "rth",  # reset trajectory history (e.g., rth@True)
     "ql500",  # Q-Learning with 500 runs
     "mcn500",
     "lfe500",  # Lévy Flight with 500 runs
     "ql10",
-    "lfe10"
+    "lfe10",
 ]
 
 # ===========================================================================================
@@ -619,7 +620,7 @@ def _create_trajectory_plot(
         ax.set_xlabel("Step Length $l$ (log scale)", fontsize=12, fontweight='bold')
     else:
         # Linear X-axis plot
-        sns.lineplot(ax=ax, data=df, x="trajectory", y="probability", 
+        sns.lineplot(ax=ax, data=df, x="trajectory", y="probability", color='purple',
                     label="Probability (PMF)", linewidth=2)
         
         # Add scatter plot overlay to show data points only if dataframe has less than 5 rows
@@ -632,7 +633,7 @@ def _create_trajectory_plot(
         for idx, row in df.iterrows():
             x_val = row["trajectory"]
             y_val = row["probability"]
-            ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8, color='purple', alpha=0.4,
+            ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8, color='gray', alpha=0.4,
                    linestyle='--', zorder=1)
         
         # Configure linear X-axis
@@ -1007,13 +1008,13 @@ def run_compareall(
     log.info(f"Compare-All mode: aggregating trajectory distributions for {len(summary_df)} configs")
     
     # Process each run
-    aggregated_dataframes: list[tuple[str, dict, int, pd.DataFrame]] = []
+    aggregated_dataframes: list[tuple[int, str, dict, int, pd.DataFrame]] = []
     
-    for _, row in summary_df.iterrows():
+    for rank, (_, row) in enumerate(summary_df.iterrows(), start=1):
         run_id = str(row["configuration_directory"])
         reward = row['last_episode_cumulative_reward']
         
-        # Build label showing "Profile <0N>: $(<overrides>)$"
+        # Build label showing "Rank: #N, Profile <0N>: $(<overrides>)$"
         try:
             pr = parse_run_id_strict(run_id)
             cfg_num = extract_cfg_index(run_id)
@@ -1022,7 +1023,7 @@ def run_compareall(
             overrides = {k: v for k, v in pr.tokens.items() 
                         if k not in LIST_OF_IGNORED_OVERRIDES}
             
-            # Build formatted label for subplot title
+            # Build formatted label for subplot title with rank
             if cfg_num is not None:
                 if overrides:
                     items: list[tuple[str, str]] = []
@@ -1030,18 +1031,18 @@ def run_compareall(
                         items.append((key_to_abbr(k), str(v)))
                     items.sort(key=lambda t: t[0])
                     overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
-                    title_label = f"Profile {cfg_num:02d}: $({overrides_str})$"
+                    title_label = f"Rank: #{rank}, Profile {cfg_num:02d}: $({overrides_str})$"
                 else:
-                    title_label = f"Profile {cfg_num:02d}"
+                    title_label = f"Rank: #{rank}, Profile {cfg_num:02d}"
                 log_label = f"cfg@{cfg_num} ({overrides_str if overrides else 'no overrides'})"
             else:
-                title_label = run_id
+                title_label = f"Rank: #{rank}, {run_id}"
                 log_label = run_id
         except SystemExit:
-            title_label = run_id
+            title_label = f"Rank: #{rank}, {run_id}"
             log_label = run_id
         
-        log.info(f"  {run_id} | reward={reward:.2f} | label={log_label}")
+        log.info(f"  Rank #{rank}: {run_id} | reward={reward:.2f} | label={log_label}")
         
         # Find run_dir in BASE_REPORTS_DIR
         run_dir = None
@@ -1081,7 +1082,7 @@ def run_compareall(
         
         # Store unique trajectory count (each row in df is a unique trajectory length)
         unique_lengths = len(df)
-        aggregated_dataframes.append((title_label, overrides, unique_lengths, df))
+        aggregated_dataframes.append((rank, title_label, overrides, unique_lengths, df))
     
     log.info(LINE_LENGTH * "-")
     
@@ -1098,14 +1099,14 @@ def run_compareall(
 
 
 def plot_compareall_trajectory_distribution(
-    dataframes_with_labels: list[tuple[str, dict, int, pd.DataFrame]],
+    dataframes_with_labels: list[tuple[int, str, dict, int, pd.DataFrame]],
     out_dir: str,
     title: Optional[str] = None
 ) -> None:
     """Plot aggregated trajectory distributions from multiple configs for comparison.
     
     Args:
-        dataframes_with_labels: List of (title_label, overrides_dict, unique_lengths, dataframe) tuples
+        dataframes_with_labels: List of (rank, title_label, overrides_dict, unique_lengths, dataframe) tuples
         out_dir: Output directory for comparison plot
         title: Optional custom title
     """
@@ -1134,7 +1135,7 @@ def plot_compareall_trajectory_distribution(
     fig.suptitle(final_title, fontweight='bold', fontsize=14, y=0.995)
     
     # Plot each config
-    for idx, (title_label, overrides, unique_lengths, df) in enumerate(dataframes_with_labels):
+    for idx, (rank, title_label, overrides, unique_lengths, df) in enumerate(dataframes_with_labels):
         ax = axes[idx]
         
         if len(df) == 0:
@@ -1165,7 +1166,7 @@ def plot_compareall_trajectory_distribution(
         for _, row in df.iterrows():
             x_val = row["trajectory"]
             y_val = row["probability"]
-            ax.plot([0, x_val], [y_val, y_val], 'purple', linewidth=0.8,
+            ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8,
                    alpha=0.3, linestyle='--', zorder=1)
         
         # Configure axes
