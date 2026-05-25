@@ -459,7 +459,10 @@ def plot_bestof_by_episode(
     for idx, ((label, df), color) in enumerate(zip(series_by_label, palette)):
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
-        sns.lineplot(data=df, x="episodeNumber", y=y_key, label=label, color=color, linestyle=LINE_STYLES[idx % len(LINE_STYLES)])
+
+        # final_line_style = LINE_STYLES[idx % len(LINE_STYLES)] # may be cutting the data points, ending up confusing the plot
+        final_line_style = 'solid'
+        sns.lineplot(data=df, x="episodeNumber", y=y_key, label=label, color=color, linestyle=final_line_style)
 
     # Add difference annotations if enabled
     if annotate_diff:

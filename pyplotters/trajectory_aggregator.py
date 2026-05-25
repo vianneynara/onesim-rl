@@ -93,6 +93,11 @@ LIST_OF_IGNORED_OVERRIDES = [
     "lfe10",
 ]
 
+BESTOF_CMAP = "bright"
+
+# Line styles matching bestof_plotter for consistent visualization across configs
+LINE_STYLES = ["-", "--", "-.", ":"]
+
 # ===========================================================================================
 # UTILITY FUNCTIONS
 # ===========================================================================================
@@ -1024,11 +1029,12 @@ def run_compareall(
     log.info(f"Compare-All mode: aggregating trajectory distributions for {len(summary_df)} configs")
     
     # Process each run
-    aggregated_dataframes: list[tuple[int, str, dict, int, pd.DataFrame]] = []
+    aggregated_dataframes: list[tuple[int, str, dict, int, pd.DataFrame, Optional[str]]] = []
     
     for rank, (_, row) in enumerate(summary_df.iterrows(), start=1):
         run_id = str(row["configuration_directory"])
         reward = row['last_episode_cumulative_reward']
+        config_group = None
         
         # Build label showing "Rank: #N, Profile <0N>: $(<overrides>)$"
         try:
@@ -1062,6 +1068,7 @@ def run_compareall(
         except SystemExit:
             title_label = f"Rank: #{rank}, {run_id}"
             log_label = run_id
+            config_group = None
         
         log.info(f"  Rank #{rank}: {run_id} | reward={reward:.2f} | label={log_label}")
         
@@ -1103,7 +1110,7 @@ def run_compareall(
         
         # Store unique trajectory count (each row in df is a unique trajectory length)
         unique_lengths = len(df)
-        aggregated_dataframes.append((rank, title_label, overrides, unique_lengths, df))
+        aggregated_dataframes.append((rank, title_label, overrides, unique_lengths, df, config_group))
     
     log.info(LINE_LENGTH * "-")
     
@@ -1120,14 +1127,17 @@ def run_compareall(
 
 
 def plot_compareall_trajectory_distribution(
-    dataframes_with_labels: list[tuple[int, str, dict, int, pd.DataFrame]],
+    dataframes_with_labels: list[tuple[int, str, dict, int, pd.DataFrame, Optional[str]]],
     out_dir: str,
     title: Optional[str] = None
 ) -> None:
     """Plot aggregated trajectory distributions from multiple configs for comparison.
     
+    Colors are assigned based on alphabetically sorted config_groups to match bestof_plotter's behavior.
+    Configs without a config_group are assigned colors after groups, in their original order.
+    
     Args:
-        dataframes_with_labels: List of (rank, title_label, overrides_dict, unique_lengths, dataframe) tuples
+        dataframes_with_labels: List of (rank, title_label, overrides_dict, unique_lengths, dataframe, config_group) tuples
         out_dir: Output directory for comparison plot
         title: Optional custom title
     """
@@ -1136,6 +1146,19 @@ def plot_compareall_trajectory_distribution(
         return
     
     os.makedirs(out_dir, exist_ok=True)
+    
+    # Build mapping from config_group to color index
+    # Sort config groups alphabetically, then assign remaining None values at the end
+    config_groups = sorted(set(cg for _, _, _, _, _, cg in dataframes_with_labels if cg is not None))
+    cg_to_color_idx = {cg: idx for idx, cg in enumerate(config_groups)}
+    
+    # For None values, assign indices after all config groups
+    none_count = sum(1 for _, _, _, _, _, cg in dataframes_with_labels if cg is None)
+    next_idx = len(config_groups)
+    
+    log.debug(f"Config groups (alphabetically sorted): {config_groups}")
+    log.debug(f"Color mapping: {cg_to_color_idx}")
+    log.debug(f"Number of runs without config_group: {none_count}")
     
     # Create figure with multiple subplots (one per config)
     num_configs = len(dataframes_with_labels)
@@ -1158,9 +1181,22 @@ def plot_compareall_trajectory_distribution(
     # Adjust figure spacing to accommodate 2-line subplot titles
     fig.subplots_adjust(top=0.95, hspace=0.35)
     
+    # Generate color palette matching bestof_plotter for consistent colors across configs
+    # Need enough colors for all unique config_groups + configs without group
+    num_unique_colors = len(config_groups) + none_count
+    palette = sns.color_palette(BESTOF_CMAP, n_colors=num_unique_colors)
+    
     # Plot each config
-    for idx, (rank, title_label, overrides, unique_lengths, df) in enumerate(dataframes_with_labels):
-        ax = axes[idx]
+    none_idx = 0  # Counter for None config_group indices
+    for plot_idx, (rank, title_label, overrides, unique_lengths, df, config_group) in enumerate(dataframes_with_labels):
+        ax = axes[plot_idx]
+        
+        # Determine color index based on config_group
+        if config_group is not None:
+            color_idx = cg_to_color_idx[config_group]
+        else:
+            color_idx = len(config_groups) + none_idx
+            none_idx += 1
         
         if len(df) == 0:
             ax.text(0.5, 0.5, f"No data for {title_label}", ha='center', va='center',
@@ -1177,9 +1213,12 @@ def plot_compareall_trajectory_distribution(
         total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
         
         # Plot trajectory distribution using logarithmic X-axis
-        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color='purple',
-                    label="Probability (PMF)", marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
-        ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color='skyblue')
+        color = palette[color_idx]
+        # linestyle = LINE_STYLES[color_idx % len(LINE_STYLES)] # might be cutting off the data, so stick to regular lines
+        linestyle = 'solid'
+        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color=color,
+                    linestyle=linestyle, label="Probability (PMF)", marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
+        ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color=color)
         
         # Configure logarithmic X-axis
         ax.xaxis.set_major_locator(LogLocator(base=10, numticks=10))
