@@ -79,7 +79,6 @@ BESTOF_CMAP = "bright"
 # BESTOF_CMAP = "gist_rainbow"
 
 # CURR_CMAP = "Set1"
-# CURR_CMAP = "Set2"
 # CURR_CMAP = "Set3"
 # CURR_CMAP = "Spectral"
 # CURR_CMAP = "PuOr"
@@ -90,6 +89,10 @@ CURR_CMAP = "gist_rainbow"
 # CURR_CMAP = "hsv"
 # CURR_CMAP = "cool"
 # CURR_CMAP = "winter"
+
+# Constants for episode difference annotations
+ANNOTATION_INTERVAL = 50
+USE_PERCENTAGE = True
 
 LINE_LENGTH = 100
 logging.basicConfig(
@@ -430,6 +433,8 @@ def plot_bestof_by_episode(
     suptitle: SuptitleFormat = None,
     legend_outside: bool = False,
     cmap: str = None,
+    annotate_diff: bool = False,
+    diff_interval: int = ANNOTATION_INTERVAL,
 ):
     if not series_by_label:
         _exit_with_warning("No best-of series to plot.")
@@ -451,6 +456,47 @@ def plot_bestof_by_episode(
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
         sns.lineplot(data=df, x="episodeNumber", y=y_key, label=label, color=color)
+
+    # Add difference annotations if enabled
+    if annotate_diff:
+        ax = plt.gca()
+        
+        for (label, df), color in zip(series_by_label, palette):
+            # Calculate point-to-point differences
+            df_sorted = df.sort_values(by="episodeNumber").reset_index(drop=True)
+            y_values = pd.to_numeric(df_sorted[y_key], errors="coerce")
+            episode_numbers = df_sorted["episodeNumber"]
+            
+            # Iterate through data points, starting from index 1 (skip first point)
+            for i in range(1, len(df_sorted)):
+                current_episode = episode_numbers.iloc[i]
+                
+                # Only annotate at interval boundaries
+                if current_episode % diff_interval == 0:
+                    current_y = y_values.iloc[i]
+                    previous_y = y_values.iloc[i - 1]
+                    
+                    # Skip if either value is NaN
+                    if pd.isna(current_y) or pd.isna(previous_y):
+                        continue
+                    
+                    # Calculate difference
+                    if USE_PERCENTAGE:
+                        if previous_y != 0:
+                            diff = ((current_y - previous_y) / abs(previous_y)) * 100
+                            label_text = f"{diff:+.2f}%"
+                        else:
+                            continue
+                    else:
+                        diff = current_y - previous_y
+                        label_text = f"{diff:+.2f}"
+                    
+                    # Annotate the point with line's color
+                    ax.annotate(label_text,
+                               xy=(current_episode, current_y),
+                               xytext=(0, 10),
+                               textcoords='offset points',
+                               ha='center', fontsize=8, color=color)
 
     if max_ep is not None and min_ep is not None:
         if max_ep <= 20:
@@ -505,7 +551,7 @@ def plot_bestof_by_episode(
     plt.close()
 
 
-def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
+def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False) -> None:
     """Compare all available configurations (no grouping, no best-of selection).
     
     Plots all configs with legend labels showing cfg@N and parameter overrides.
@@ -539,7 +585,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
     if "last_episode_cumulative_reward" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'last_episode_cumulative_reward'.")
-    
+
     # Convert reward to numeric and sort by reward (descending)
     summary_df = summary_df.copy()
     summary_df["last_episode_cumulative_reward"] = pd.to_numeric(
@@ -624,11 +670,12 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
             out_file=out_file,
             suptitle=suptitle,
             legend_outside=True,
+            annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
 
 
-def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
+def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False) -> None:
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
@@ -694,12 +741,13 @@ def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str]
             ylabel=ylabel,
             out_file=out_file,
             suptitle=suptitle,
-            cmap=BESTOF_CMAP
+            cmap=BESTOF_CMAP,
+            annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
 
 
-def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
+def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False) -> None:
     """Compare all runs matching a config-group key.
     
     Filters runs by cg@KEY, plots all matching runs sorted by reward (descending).
@@ -817,6 +865,7 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
             out_file=out_file,
             suptitle=suptitle,
             legend_outside=True,
+            annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
 
@@ -871,7 +920,12 @@ def main(argv: Union[list[str], None] = None) -> None:
         required=False,
         help="Custom title for plots (appears as main suptitle, with subplot titles as subtitles).",
     )
-
+    parser.add_argument(
+        "-ad",
+        "--annotatediff",
+        action="store_true",
+        help="Annotate episode-to-episode differences on the plot. Each line's annotations will use that line's color.",
+    )
     args = parser.parse_args(argv)
     
     # Count how many modes are specified (exactly one must be set)
@@ -933,11 +987,11 @@ def main(argv: Union[list[str], None] = None) -> None:
     
     # Route to appropriate function
     if args.compareall:
-        run_compareall(args.parent_id, ftitle, config_indices)
+        run_compareall(args.parent_id, ftitle, config_indices, args.annotatediff)
     elif args.configgroup:
-        run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices)
+        run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices, args.annotatediff)
     else:
-        run_bestof(args.parent_id, args.comparekey, addparams, ftitle, config_indices)
+        run_bestof(args.parent_id, args.comparekey, addparams, ftitle, config_indices, args.annotatediff)
 
 
 class SuptitleFormat:
