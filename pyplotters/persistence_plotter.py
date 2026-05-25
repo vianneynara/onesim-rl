@@ -429,6 +429,7 @@ def plot_trajectoryDistribution(
     mean_len = None
     max_p = None
     mode_len = None
+    unique_lengths = None
     if len(_df) > 0 and float(_df["probability"].sum()) > 0:
         max_len = int(_df["trajectory"].max())
         # Expected trajectory length under PMF
@@ -436,6 +437,8 @@ def plot_trajectoryDistribution(
         # Most probable trajectory length (mode); in ties pick the smallest length
         max_p = _df["probability"].max()
         mode_len = int(_df.loc[_df["probability"] == max_p, "trajectory"].min())
+        # Count unique trajectory lengths (each row is a unique length)
+        unique_lengths = len(_df)
 
     suptitle_y = 0.98
     if not logarithmic_x:
@@ -480,12 +483,21 @@ def plot_trajectoryDistribution(
         handles, labels = ax.get_legend_handles_labels()
         if max_len is not None:
             from matplotlib.lines import Line2D
-            stat_lines = [
-                f"{'Max trajectory':<20}: {max_len:>6d}",
-                f"{'Highest PMF':<20}: {max_p:>10.3f}",
-                f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
-                f"{'Most probable (mode)':<20}: {mode_len:>6d}",
+            
+            # Build statistics with programmatic fixed-width formatting
+            stat_data = [
+                ('Max trajectory', f'{max_len}'),
+                ('Highest PMF', f'{max_p:.3f}'),
+                ('Mean length (PMF)', f'{mean_len:.2f}'),
+                ('Most probable (mode)', f'{mode_len}'),
+                ('Unique Lengths', f'{unique_lengths}'),
             ]
+            
+            # Find max key length for alignment
+            max_key_len = max(len(key) for key, _ in stat_data)
+            
+            # Format entries with padding
+            stat_lines = [f'{key.ljust(max_key_len)} : {value}' for key, value in stat_data]
             handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
 
@@ -540,12 +552,21 @@ def plot_trajectoryDistribution(
         handles, labels = ax.get_legend_handles_labels()
         if max_len is not None:
             from matplotlib.lines import Line2D
-            stat_lines = [
-                f"{'Max trajectory':<20}: {max_len:>10d}",
-                f"{'Highest PMF':<20}: {max_p:>10.6f}",
-                f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
-                f"{'Most probable (mode)':<20}: {mode_len:>10d}",
+            
+            # Build statistics with programmatic fixed-width formatting
+            stat_data = [
+                ('Max trajectory', f'{max_len}'),
+                ('Highest PMF', f'{max_p:.6f}'),
+                ('Mean length (PMF)', f'{mean_len:.2f}'),
+                ('Most probable (mode)', f'{mode_len}'),
+                ('Unique Lengths', f'{unique_lengths}'),
             ]
+            
+            # Find max key length for alignment
+            max_key_len = max(len(key) for key, _ in stat_data)
+            
+            # Format entries with padding
+            stat_lines = [f'{key.ljust(max_key_len)} : {value}' for key, value in stat_data]
             handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
 
