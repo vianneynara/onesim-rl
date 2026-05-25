@@ -435,6 +435,19 @@ def plot_aggregated_trajectory_distribution(
     # Plot
     sns.lineplot(data=df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
     
+    # Add scatter plot overlay to show data points only if dataframe has less than 5 rows
+    if len(df) < 5:
+        sns.scatterplot(data=df, x="trajectory", y="probability", s=15, marker='o', color='darkblue',
+                        alpha=0.7, edgecolor='navy', linewidth=1.5, zorder=5, legend=False)
+    
+    # Add horizontal pointer lines from each point to the Y-axis
+    ax = plt.gca()
+    for idx, row in df.iterrows():
+        x_val = row["trajectory"]
+        y_val = row["probability"]
+        # Draw horizontal line from Y-axis to data point
+        ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8, alpha=0.4, linestyle='--', zorder=1)
+    
     # Construct title with subtitle
     title_parts = [title or "Average Trajectory Distribution"]
     if num_episodes > 0:
@@ -470,11 +483,13 @@ def plot_aggregated_trajectory_distribution(
     handles, labels = ax.get_legend_handles_labels()
     if max_len > 0:
         from matplotlib.lines import Line2D
+        total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
         stat_lines = [
             f"{'Max trajectory':<20}: {max_len:>6d}",
             f"{'Highest PMF':<20}: {max_p:>10.3f}",
             f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
             f"{'Most probable (mode)':<20}: {mode_len:>6d}",
+            f"{'Sum of all':<20}: {total_sum:>6d}",
         ]
         handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
     
@@ -504,11 +519,15 @@ def save_aggregated_data_json(
         file_path: Output JSON file path
         episodes: List of episodes aggregated
     """
+    # Calculate total sum across all trajectories
+    total_sum = sum(data.get("sum", 0) for data in aggregated.values())
+    
     output = {
         "metadata": {
             "episodes_aggregated": episodes,
             "num_episodes": len(episodes),
-            "format": "aggregated_trajectory_frequencies"
+            "format": "aggregated_trajectory_frequencies",
+            "total_sum": total_sum
         },
         "aggregated_data": aggregated
     }
