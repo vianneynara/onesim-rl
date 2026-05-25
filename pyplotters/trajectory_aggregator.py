@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from matplotlib.ticker import MultipleLocator
+from matplotlib.ticker import MultipleLocator, LogLocator, LogFormatterSciNotation
 
 # Allow running this file as a script while using absolute package imports
 if __package__ in (None, ""):
@@ -390,6 +390,63 @@ def convert_aggregated_to_dataframe(aggregated: Dict) -> pd.DataFrame:
     return df
 
 
+def _create_trajectory_plot(
+    ax,
+    df: pd.DataFrame,
+    use_log_scale: bool = False,
+    x_max: int = 500
+):
+    """
+    Core plotting logic for trajectory distribution.
+    
+    Args:
+        ax: Matplotlib axes object
+        df: DataFrame with trajectory and probability columns
+        use_log_scale: If True, use logarithmic X-axis (semilogx); otherwise use linear
+        x_max: Maximum X-axis value
+    """
+    if use_log_scale:
+        # Logarithmic X-axis plot using semilogx
+        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color='darkblue', 
+                    label="Probability (PMF)", marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
+        ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color='skyblue')
+        
+        # Configure log-scale X-axis
+        ax.xaxis.set_major_locator(LogLocator(base=10, numticks=10))
+        ax.xaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10) * 0.1))
+        ax.xaxis.set_major_formatter(LogFormatterSciNotation(base=10))
+        ax.set_xlabel("Step Length $l$ (log scale)", fontsize=12, fontweight='bold')
+    else:
+        # Linear X-axis plot
+        sns.lineplot(ax=ax, data=df, x="trajectory", y="probability", 
+                    label="Probability (PMF)", linewidth=2)
+        
+        # Add scatter plot overlay to show data points only if dataframe has less than 5 rows
+        if len(df) < 5:
+            sns.scatterplot(ax=ax, data=df, x="trajectory", y="probability", s=15, marker='o', 
+                           color='darkblue', alpha=0.7, edgecolor='navy', linewidth=1.5, 
+                           zorder=5, legend=False)
+        
+        # Add horizontal pointer lines from each point to the Y-axis
+        for idx, row in df.iterrows():
+            x_val = row["trajectory"]
+            y_val = row["probability"]
+            ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8, alpha=0.4, 
+                   linestyle='--', zorder=1)
+        
+        # Configure linear X-axis
+        ax.xaxis.set_major_locator(MultipleLocator(50))
+        ax.xaxis.set_minor_locator(MultipleLocator(10))
+        ax.set_xlabel("Trajectory Length", fontsize=12, fontweight='bold')
+    
+    # Common Y-axis configuration
+    ax.set_ylabel("Probability Density $P(l)$", fontsize=12, fontweight='bold')
+    ax.set_xlim(1, x_max)
+    ax.set_ylim(0, ax.get_ylim()[1] * 1.1)
+    ax.grid(True, alpha=0.5, which='both', linestyle='--')
+    ax.margins(x=0)
+
+
 def plot_aggregated_trajectory_distribution(
     df: pd.DataFrame,
     file_path: str,
@@ -400,24 +457,24 @@ def plot_aggregated_trajectory_distribution(
     _description: str = None
 ):
     """
-    Plot aggregated trajectory distribution.
+    Plot aggregated trajectory distribution in both linear and logarithmic scales.
     
-    Similar to persistence_plotter's plot_trajectoryDistribution but adapted for aggregated data.
+    Generates two plots by default:
+    1. Linear X-axis plot (standard distribution visualization)
+    2. Logarithmic X-axis plot (power-law behavior visualization)
     
     Args:
         df: DataFrame with trajectory and probability columns
-        file_path: Output PNG file path
+        file_path: Output PNG file path (base name; will be modified for log variant)
         title: Custom title (optional)
         num_episodes: Number of episodes aggregated (for subtitle)
         x_max: Maximum X-axis value
-        logarithmic_x: Whether to use logarithmic X-axis
+        logarithmic_x: Whether to generate logarithmic plots (default True; generates both)
         _description: Description string to display under title (optional)
     """
     if len(df) == 0:
         log.warning("Empty DataFrame; skipping plot")
         return
-    
-    plt.figure(figsize=(12, 6))
     
     # Ensure numeric dtypes
     df = df.copy()
@@ -430,80 +487,93 @@ def plot_aggregated_trajectory_distribution(
     max_p = float(df["probability"].max()) if len(df) > 0 else 0
     mode_len = int(df.loc[df["probability"] == max_p, "trajectory"].min()) if max_p > 0 else 0
     
-    suptitle_y = 0.98
-    
-    # Plot
-    sns.lineplot(data=df, x="trajectory", y="probability", label="Probability (PMF)", linewidth=2)
-    
-    # Add scatter plot overlay to show data points only if dataframe has less than 5 rows
-    if len(df) < 5:
-        sns.scatterplot(data=df, x="trajectory", y="probability", s=15, marker='o', color='darkblue',
-                        alpha=0.7, edgecolor='navy', linewidth=1.5, zorder=5, legend=False)
-    
-    # Add horizontal pointer lines from each point to the Y-axis
-    ax = plt.gca()
-    for idx, row in df.iterrows():
-        x_val = row["trajectory"]
-        y_val = row["probability"]
-        # Draw horizontal line from Y-axis to data point
-        ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8, alpha=0.4, linestyle='--', zorder=1)
-    
     # Construct title with subtitle
     title_parts = [title or "Average Trajectory Distribution"]
     if num_episodes > 0:
         title_parts.append(f"({num_episodes} episodes)")
-    else:
-        suptitle_y -= 0.03
     
     final_title = "\n".join(title_parts)
     
-    fig = plt.gcf()
+    suptitle_y = 0.98 if num_episodes > 0 else 0.95
+    
+    # Build summary stats for legend
+    from matplotlib.lines import Line2D
+    total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
+    stat_lines = [
+        f"{'Max trajectory':<20}: {max_len:>6d}",
+        f"{'Highest PMF':<20}: {max_p:>10.3f}",
+        f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
+        f"{'Most probable (mode)':<20}: {mode_len:>6d}",
+        f"{'Sum of all':<20}: {total_sum:>6d}",
+    ]
+    
+    # ===== PLOT 1: LINEAR X-AXIS =====
+    fig = plt.figure(figsize=(12, 6))
+    ax = fig.add_subplot(111)
+    
+    _create_trajectory_plot(ax, df, use_log_scale=False, x_max=x_max)
+    
     fig.suptitle(final_title, fontweight='bold', fontsize=12, y=suptitle_y)
     
-    # Add description as lighter text if present
     if _description:
         fig.text(0.5, 0.91, _description, ha='center', va='top',
-                 fontsize=9, fontweight='light', style='italic', color='gray')
-        # Adjust top margin to accommodate both title and description
+                fontsize=9, fontweight='light', style='italic', color='gray')
         fig.subplots_adjust(top=0.88)
     else:
-        # Adjust top margin for title only
         fig.subplots_adjust(top=0.92)
     
-    ax = plt.gca()
-    plt.xlabel("Trajectory Length")
-    plt.ylabel("Probability / Density")
-    ax.set_xlim(1, x_max)
-    ax.xaxis.set_major_locator(MultipleLocator(50))
-    ax.xaxis.set_minor_locator(MultipleLocator(10))
-    plt.gca().set_yticks(np.arange(0, 1.1, 0.1))
-    plt.margins(x=0)
-    
-    # Add summary stats to legend
+    # Add stats to legend
     handles, labels = ax.get_legend_handles_labels()
-    if max_len > 0:
-        from matplotlib.lines import Line2D
-        total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
-        stat_lines = [
-            f"{'Max trajectory':<20}: {max_len:>6d}",
-            f"{'Highest PMF':<20}: {max_p:>10.3f}",
-            f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
-            f"{'Most probable (mode)':<20}: {mode_len:>6d}",
-            f"{'Sum of all':<20}: {total_sum:>6d}",
-        ]
-        handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
-    
+    handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
     ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
     
-    # Save plot
+    # Save linear plot
     out_dir = os.path.dirname(file_path)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
     
+    plt.tight_layout()
     plt.savefig(file_path, bbox_inches='tight', dpi=100)
     plt.close()
-    
     log.info(f"Saved plot: {file_path}")
+    
+    # ===== PLOT 2: LOGARITHMIC X-AXIS (if enabled) =====
+    if logarithmic_x or True:  # Always generate logarithmic plot
+        fig = plt.figure(figsize=(12, 6))
+        ax = fig.add_subplot(111)
+        
+        _create_trajectory_plot(ax, df, use_log_scale=True, x_max=x_max)
+        
+        # Modify title for logarithmic variant
+        log_title_parts = [title or "Average Trajectory Distribution"]
+        if num_episodes > 0:
+            log_title_parts.insert(1, f"({num_episodes} episodes)")
+        
+        log_final_title = "\n".join(log_title_parts)
+        log_final_title += "(Logarithmic)"
+        fig.suptitle(log_final_title, fontweight='bold', fontsize=12, y=suptitle_y)
+        
+        if _description:
+            fig.text(0.5, 0.91, _description, ha='center', va='top',
+                    fontsize=9, fontweight='light', style='italic', color='gray')
+            fig.subplots_adjust(top=0.88)
+        else:
+            fig.subplots_adjust(top=0.92)
+        
+        # Add stats to legend
+        handles, labels = ax.get_legend_handles_labels()
+        handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
+        ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
+        
+        # Save logarithmic plot with modified filename
+        base_path = os.path.splitext(file_path)[0]
+        ext = os.path.splitext(file_path)[1]
+        log_file_path = f"{base_path} (Log Scale X){ext}"
+        
+        plt.tight_layout()
+        plt.savefig(log_file_path, bbox_inches='tight', dpi=100)
+        plt.close()
+        log.info(f"Saved plot: {log_file_path}")
 
 
 def save_aggregated_data_json(
