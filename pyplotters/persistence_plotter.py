@@ -21,6 +21,10 @@ if __package__ in (None, ""):
 
 from pyrunner.batch_shifter import parse_parent_dir_ids
 
+# Constants for episode difference annotations
+ANNOTATION_INTERVAL = 10
+USE_PERCENTAGE = False
+
 LINE_LENGTH = 100
 logging.basicConfig(
     level=logging.INFO,
@@ -233,7 +237,8 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
 
 def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str,
                     _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False,
-                    _subtitle: str = None, _description: str = None):
+                    _subtitle: str = None, _description: str = None, _annotate_diff: bool = False, 
+                    _diff_interval: int = None):
     plt.figure(figsize=(10, 6))
 
     if not _yalias:
@@ -302,6 +307,47 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
 
     plt.margins(x=0)
     plt.xlim(left=min_episodes)
+
+    # Add difference annotations if enabled
+    if _annotate_diff:
+        diff_interval = _diff_interval if _diff_interval is not None else ANNOTATION_INTERVAL
+        ax = plt.gca()
+        
+        # Calculate point-to-point differences
+        df_sorted = _df.sort_values(by="episodeNumber").reset_index(drop=True)
+        y_values = pd.to_numeric(df_sorted[_key], errors="coerce")
+        episode_numbers = df_sorted["episodeNumber"]
+        
+        # Iterate through data points, starting from index 1 (skip first point)
+        for i in range(1, len(df_sorted)):
+            current_episode = episode_numbers.iloc[i]
+            
+            # Only annotate at interval boundaries
+            if current_episode % diff_interval == 0:
+                current_y = y_values.iloc[i]
+                previous_y = y_values.iloc[i - 1]
+                
+                # Skip if either value is NaN
+                if pd.isna(current_y) or pd.isna(previous_y):
+                    continue
+                
+                # Calculate difference
+                if USE_PERCENTAGE:
+                    if previous_y != 0:
+                        diff = ((current_y - previous_y) / abs(previous_y)) * 100
+                        label = f"{diff:+.2f}%"
+                    else:
+                        continue
+                else:
+                    diff = current_y - previous_y
+                    label = f"{diff:+.2f}"
+                
+                # Annotate the point
+                ax.annotate(label,
+                           xy=(current_episode, current_y),
+                           xytext=(0, 10),
+                           textcoords='offset points',
+                           ha='center', fontsize=8, color='tab:blue')
 
     # Add summary stats into legend without adding visual lines to the plot.
     ax = plt.gca()
@@ -614,6 +660,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _subtitle="Current Episode Reward",
         _yalias="Reward",
         _description=_description,
+        _annotate_diff=True,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -630,6 +677,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _subtitle="Current Cumulative Reward",
         _yalias="Cumu. Reward",
         _description=_description,
+        _annotate_diff=True,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -648,6 +696,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _subtitle="Mean Cumulative Reward (across episodes)",
         _yalias="Mean Cumu. Reward",
         _description=_description,
+        _annotate_diff=True,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -665,6 +714,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _yalias="Detection",
         _discrete=True,
         _description=_description,
+        _annotate_diff=True,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -682,6 +732,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _yalias="Uniq. Detection",
         _discrete=True,
         _description=_description,
+        _annotate_diff=True,
         # _ema_line=True,
         # _ma_line=True
     )
