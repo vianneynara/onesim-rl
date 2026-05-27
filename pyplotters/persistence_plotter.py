@@ -734,7 +734,7 @@ if __name__ == "__main__":
             summary_df.to_csv(os.path.join(PLOT_RESULTS_DIR, parent_id, "summary.csv"), index=False, sep=";",
                               header=True)
 
-    elif args.run_id:
+    if args.run_id:
         # Finds the args.run_id directory under BASE_REPORTS_DIR and store it in run_dir if found
         run_dir = None
 
@@ -753,31 +753,56 @@ if __name__ == "__main__":
 
         process_reports(run_dir, None, args.title, args.describe)
 
-        # =====================================================================================
-        # FINAL JSON VALIDATION SUMMARY
-        # =====================================================================================
+    # =====================================================================================
+    # FINAL JSON VALIDATION SUMMARY
+    # =====================================================================================
 
-        log.info("=" * LINE_LENGTH)
-        log.info("JSON VALIDATION SUMMARY")
-        log.info("=" * LINE_LENGTH)
+    print("=" * LINE_LENGTH)
+    print("JSON VALIDATION SUMMARY")
+    print("=" * LINE_LENGTH)
 
-        if not FAILED_JSON_FILES:
-            log.info("No invalid JSON files detected.")
+    # Separate into JSON-problem entries and missing-file entries
+    json_problem_entries = [e for e in FAILED_JSON_FILES if e["error"] != "File not found"]
+    missing_file_entries = [e for e in FAILED_JSON_FILES if e["error"] == "File not found"]
 
-        else:
-            log.warning(f"Total failed JSON files: {len(FAILED_JSON_FILES)}")
+    if not FAILED_JSON_FILES:
+        print("All JSON files validated successfully. No issues detected.")
+
+    else:
+        # ── JSON Problems ──────────────────────────────────────────────────────────────
+        if json_problem_entries:
+            print(f"WARNING: Total failed JSON files: {len(json_problem_entries)}")
+            print("-" * LINE_LENGTH)
 
             # Group by run_id
             grouped_errors = {}
-
-            for entry in FAILED_JSON_FILES:
+            for entry in json_problem_entries:
                 grouped_errors.setdefault(entry["run_id"], []).append(entry)
 
             for run_id, errors in grouped_errors.items():
-                log.warning("-" * LINE_LENGTH)
-                log.warning(f"RUN CONFIG: {run_id}")
-                log.warning(f"FAILED FILE COUNT: {len(errors)}")
-
+                print(f"RUN CONFIG: {run_id}")
+                print(f"FAILED FILE COUNT: {len(errors)}")
                 for i, err in enumerate(errors, start=1):
-                    log.warning(f"[{i}] FILE  : {err['file']}")
-                    log.warning(f"    ERROR : {err['error']}")
+                    print(f"[{i}] FILE  : {err['file']}")
+                    print(f"    ERROR : {err['error']}")
+                print("-" * LINE_LENGTH)
+
+        # ── Missing Files ──────────────────────────────────────────────────────────────
+        if missing_file_entries:
+            print()
+            print("=" * LINE_LENGTH)
+            print("MISSING FILES SUMMARY")
+            print("=" * LINE_LENGTH)
+            print(f"WARNING: Total missing files: {len(missing_file_entries)}")
+            print("-" * LINE_LENGTH)
+
+            grouped_missing = {}
+            for entry in missing_file_entries:
+                grouped_missing.setdefault(entry["run_id"], []).append(entry)
+
+            for run_id, entries in grouped_missing.items():
+                print(f"RUN CONFIG: {run_id}")
+                print(f"MISSING FILE COUNT: {len(entries)}")
+                for i, entry in enumerate(entries, start=1):
+                    print(f"[{i}] FILE  : {entry['file']}")
+                print("-" * LINE_LENGTH)
