@@ -1,4 +1,4 @@
-# 24-05-2026 Skripsi Data Processing Journal
+# 25-05-2026 Skripsi Data Processing Journal
 
 ## 1. Changes on Trajectory Distribution Aggregator
 
@@ -42,9 +42,9 @@ This will rank the performance of each algorith, sorted by `last_episode_cumulat
 New trajectory_aggregator `--compareall` flag:
 
 ```shell
-python pyplotters/trajectory_aggregator.py -pid best-ql-c-ms@0 --compareall --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-ql-c-ms@0 --compareall --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe
 python pyplotters/trajectory_aggregator.py -pid best-ql-c-ms@1 --compareall --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe
-python pyplotters/trajectory_aggregator.py -pid best-ql-p-ms@0 --compareall --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/trajectory_aggregator.py -pid best-ql-p-ms@0 --compareall --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe
 python pyplotters/trajectory_aggregator.py -pid best-ql-p-ms@1 --compareall --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe
 
 ```
