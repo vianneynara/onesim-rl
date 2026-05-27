@@ -4,13 +4,19 @@ Trajectory Aggregator Module
 Aggregates trajectoryFrequencies from episodic Persistence JSON files across 
 selected episodes using simple division aggregation for scientific empirical plotting.
 
-Method: Each trajectory's average is computed as:
-    average = sum_of_frequencies_across_episodes / total_episodes
+Two aggregation modes:
 
-This approach provides a consistent baseline where:
-- Trajectories missing from some episodes are implicitly treated as 0
-- Results are directly comparable with other statistical analyses
-- Proper scientific representation of expected values per episode
+1. STANDARD MODE (default):
+   Each trajectory's average is computed as:
+       average = sum_of_frequencies_across_episodes / total_episodes
+   This provides a consistent baseline where trajectories missing from some episodes 
+   are implicitly treated as 0.
+
+2. USE LAST EPISODE MODE (--ule / --uselastepisode):
+   Treats the last episode's frequencies as cumulative probability values.
+   Normalizes these by their total to compute a probability distribution:
+       probability = frequency_in_last_episode / sum_of_all_frequencies_in_last_episode
+   All other episodes are ignored.
 
 Accepts episode ranges (e.g., "1-5,8,10-15") and validates against available 
 episodes in the ep/ subdirectory structure.
@@ -21,7 +27,7 @@ Three modes of operation:
 3. Compare-all (--compareall): Aggregate and compare trajectory distributions across all configs
 
 Examples:
-  # Aggregate all episodes for a run
+  # Aggregate all episodes for a run (standard mode)
   python -m pyplotters.trajectory_aggregator -rid ql-c-ms@0-ls@0
   
   # Aggregate specific episodes with custom title
@@ -29,6 +35,9 @@ Examples:
   
   # Using parent_id with episode selection
   python -m pyplotters.trajectory_aggregator -pid ql-p-ms@0 -eps 1,2,3
+  
+  # Use last episode mode: probability distribution from final episode
+  python -m pyplotters.trajectory_aggregator -rid ql-c-ms@0-ls@0 -eps 1-100 --ule
   
   # Filter by specific configs
   python -m pyplotters.trajectory_aggregator -pid ql-p-ms@0 -c 1-5,10-15
@@ -38,6 +47,9 @@ Examples:
   
   # Compare-all with config filtering and episodes
   python -m pyplotters.trajectory_aggregator -pid ql-p-ms@0 --compareall -c 1-5,18-23 -eps 1-50
+  
+  # Compare-all with last episode mode
+  python -m pyplotters.trajectory_aggregator -pid ql-p-ms@0 --compareall --ule
 """
 
 import argparse
@@ -577,6 +589,93 @@ def aggregate_trajectory_frequencies(
     return success, aggregated, status_msg
 
 
+def aggregate_trajectory_frequencies_last_episode(
+    run_dir: str,
+    episodes: List[int]
+) -> Tuple[bool, Dict[str, Dict], str]:
+    """
+    Aggregate trajectoryFrequencies using the last episode as cumulative probabilities.
+    
+    The last episode's frequencies are treated as cumulative probability values.
+    Each trajectory's probability is normalized by the total sum:
+    probability = frequency_in_last_episode / sum_of_all_frequencies_in_last_episode
+    
+    Args:
+        run_dir: Run directory containing ep/ subdirectory
+        episodes: List of episode numbers (only the last one is used)
+        
+    Returns:
+        Tuple of (success, aggregated_dict, status_message)
+        
+    Aggregated dict format:
+        {
+            "trajectory_length_str": {
+                "sum": frequency_value_from_last_episode,
+                "average": normalized_probability_value
+            },
+            ...
+        }
+    """
+    if not episodes:
+        return False, {}, "No episodes provided"
+    
+    last_episode = episodes[-1]
+    persistence_path = os.path.join(
+        run_dir, "ep", str(last_episode),
+        f"Persistence-Episode@{last_episode}.json"
+    )
+    
+    if not os.path.exists(persistence_path):
+        error_msg = f"Last episode {last_episode} file not found at {persistence_path}"
+        log.error(error_msg)
+        return False, {}, error_msg
+    
+    json_data = read_persistence_json(persistence_path)
+    if json_data is None:
+        error_msg = f"Failed to read or parse persistence JSON for episode {last_episode}"
+        log.error(error_msg)
+        return False, {}, error_msg
+    
+    traj_freq = extract_trajectory_frequencies(json_data)
+    if traj_freq is None:
+        error_msg = f"No trajectoryFrequencies found in episode {last_episode}"
+        log.error(error_msg)
+        return False, {}, error_msg
+    
+    # Calculate total sum of all frequencies
+    total_sum = 0
+    for traj_len_str, frequency in traj_freq.items():
+        try:
+            freq_val = int(frequency)
+            total_sum += freq_val
+        except (ValueError, TypeError):
+            log.warning(f"Invalid frequency value for trajectory {traj_len_str}: {frequency}")
+            continue
+    
+    if total_sum == 0:
+        error_msg = f"Total frequency sum is zero in episode {last_episode}"
+        log.error(error_msg)
+        return False, {}, error_msg
+    
+    # Build aggregated dict with normalized probabilities
+    aggregated = {}
+    for traj_len_str, frequency in traj_freq.items():
+        try:
+            freq_val = int(frequency)
+        except (ValueError, TypeError):
+            continue
+        
+        # Probability is frequency divided by total
+        probability = freq_val / total_sum
+        aggregated[traj_len_str] = {
+            "sum": freq_val,
+            "average": probability
+        }
+    
+    status_msg = f"Loaded episode {last_episode} (last episode mode); total_sum={total_sum}"
+    return True, aggregated, status_msg
+
+
 def convert_aggregated_to_dataframe(aggregated: Dict) -> pd.DataFrame:
     """
     Convert aggregated trajectory frequencies to DataFrame for plotting.
@@ -878,7 +977,8 @@ def process_run_aggregation(
     parent_id: Optional[str],
     episodes: List[int],
     title: Optional[str],
-    _describe: bool = False
+    _describe: bool = False,
+    use_last_episode: bool = False
 ) -> bool:
     """
     Process trajectory aggregation for a single run.
@@ -890,12 +990,17 @@ def process_run_aggregation(
         episodes: List of episode numbers to aggregate
         title: Custom plot title
         _describe: Whether to add run description to plot
+        use_last_episode: If True, use last episode mode (treat final episode frequencies as probabilities)
         
     Returns:
         True if successful, False otherwise
     """
     log.info("=" * LINE_LENGTH)
     log.info(f"Processing run: {run_id}")
+    if use_last_episode:
+        log.info("Mode: USE LAST EPISODE (probability-based)")
+    else:
+        log.info("Mode: STANDARD (frequency summing)")
     log.info("=" * LINE_LENGTH)
     
     # Auto-detect episodes if not specified
@@ -922,10 +1027,16 @@ def process_run_aggregation(
         log.error("Exiting due to missing episodes")
         return False
     
-    log.info(f"Aggregating {len(episodes)} episodes: {episodes}")
+    if use_last_episode:
+        log.info(f"Using last episode {episodes[-1]} for probability distribution")
+    else:
+        log.info(f"Aggregating {len(episodes)} episodes: {episodes}")
     
     # Aggregate trajectoryFrequencies
-    success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes)
+    if use_last_episode:
+        success, aggregated, status_msg = aggregate_trajectory_frequencies_last_episode(run_dir, episodes)
+    else:
+        success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes)
     log.info(status_msg)
     
     if not success or not aggregated:
@@ -974,7 +1085,8 @@ def run_compareall(
     parent_id: str,
     episodes: List[int] = None,
     suptitle: str = None,
-    config_indices: Union[list[int], None] = None
+    config_indices: Union[list[int], None] = None,
+    use_last_episode: bool = False
 ) -> None:
     """Compare aggregated trajectory distributions across all configs in a parent_id.
     
@@ -986,6 +1098,7 @@ def run_compareall(
         episodes: List of episode numbers to aggregate (auto-detect if empty)
         suptitle: Optional custom title for plots
         config_indices: Optional list of config indices to filter by
+        use_last_episode: If True, use last episode mode (treat final episode frequencies as probabilities)
     """
     out_dir = os.path.join(PLOT_RESULTS_DIR, parent_id)
     summary_path = os.path.join(out_dir, "summary.csv")
@@ -1097,7 +1210,10 @@ def run_compareall(
                 continue
         
         # Aggregate
-        success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes_to_use)
+        if use_last_episode:
+            success, aggregated, status_msg = aggregate_trajectory_frequencies_last_episode(run_dir, episodes_to_use)
+        else:
+            success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes_to_use)
         if not success or not aggregated:
             log.warning(f"Failed to aggregate for {run_id}: {status_msg}")
             continue
@@ -1279,103 +1395,6 @@ def plot_compareall_trajectory_distribution(
     log.info(f"Saved comparison plot: {plot_file}")
 
 
-def process_run_aggregation(
-    run_dir: str,
-    run_id: str,
-    parent_id: Optional[str],
-    episodes: List[int],
-    title: Optional[str],
-    _describe: bool = False
-) -> bool:
-    """
-    Process trajectory aggregation for a single run.
-    
-    Args:
-        run_dir: Full path to run directory
-        run_id: Run identifier (for logging)
-        parent_id: Parent directory ID (for output path)
-        episodes: List of episode numbers to aggregate
-        title: Custom plot title
-        _describe: Whether to add run description to plot
-        
-    Returns:
-        True if successful, False otherwise
-    """
-    log.info("=" * LINE_LENGTH)
-    log.info(f"Processing run: {run_id}")
-    log.info("=" * LINE_LENGTH)
-    
-    # Auto-detect episodes if not specified
-    if not episodes:
-        try:
-            available = auto_detect_episodes(run_dir)
-            log.info(f"Auto-detected {len(available)} episodes: {available[0]}-{available[-1]}")
-            episodes = available
-        except FileNotFoundError as e:
-            log.error(f"Failed to auto-detect episodes: {e}")
-            return False
-    
-    # Validate episodes
-    try:
-        available = auto_detect_episodes(run_dir)
-    except FileNotFoundError as e:
-        log.error(f"Cannot access episode directory: {e}")
-        return False
-    
-    is_valid, errors = validate_episodes(available, episodes)
-    if not is_valid:
-        for error in errors:
-            log.error(error)
-        log.error("Exiting due to missing episodes")
-        return False
-    
-    log.info(f"Aggregating {len(episodes)} episodes: {episodes}")
-    
-    # Aggregate trajectoryFrequencies
-    success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes)
-    log.info(status_msg)
-    
-    if not success or not aggregated:
-        log.error("Failed to aggregate trajectory frequencies")
-        return False
-    
-    # Convert to DataFrame and plot
-    df = convert_aggregated_to_dataframe(aggregated)
-    
-    if len(df) == 0:
-        log.error("No valid trajectory data to plot")
-        return False
-    
-    # Output directory: pyplotters/plots[/<parent>]/<run_id>/
-    parent_results_dir = os.path.join(PLOT_RESULTS_DIR, parent_id) if parent_id else PLOT_RESULTS_DIR
-    run_out_dir = os.path.join(parent_results_dir, run_id)
-    os.makedirs(run_out_dir, exist_ok=True)
-    
-    # Generate description if --describe flag is set
-    _description = parse_run_description(run_id) if _describe else None
-    
-    # Save plot
-    plot_file = os.path.join(run_out_dir, f"Average Trajectory Distribution (of {len(episodes)} episodes).png")
-    plot_aggregated_trajectory_distribution(
-        df,
-        plot_file,
-        title=title,
-        num_episodes=len(episodes),
-        _description=_description
-    )
-    
-    # Save aggregated data as JSON
-    json_file = os.path.join(run_out_dir, "aggregated_trajectory_frequencies.json")
-    save_aggregated_data_json(aggregated, json_file, episodes)
-    
-    # Optionally save as CSV
-    if STORE_AS_CSV:
-        csv_file = os.path.join(run_out_dir, "aggregated_trajectory_frequencies.csv")
-        save_aggregated_data_csv(df, csv_file, episodes)
-    
-    log.info(f"Successfully processed run: {run_id}")
-    return True
-
 
 # ===========================================================================================
 # MAIN
@@ -1422,6 +1441,13 @@ def main():
         help="Compare aggregated trajectory distributions across all configs in -pid. Requires -pid with summary.csv."
     )
     
+    parser.add_argument(
+        "-ule", "--uselastepisode", action="store_true",
+        help="Use last episode mode: treat the last episode's frequencies as cumulative probabilities. "
+             "Normalizes frequencies by their total to compute a probability distribution. "
+             "All other episodes are ignored."
+    )
+    
     args = parser.parse_args()
     
     if not args.parent_id and not args.run_id:
@@ -1462,7 +1488,8 @@ def main():
             parent_id=args.parent_id,
             episodes=requested_episodes if requested_episodes else None,
             suptitle=args.title,
-            config_indices=config_indices
+            config_indices=config_indices,
+            use_last_episode=args.uselastepisode
         )
         
         log.info("=" * LINE_LENGTH)
@@ -1511,7 +1538,8 @@ def main():
                         parent_id,
                         requested_episodes,
                         args.title,
-                        args.describe
+                        args.describe,
+                        use_last_episode=args.uselastepisode
                     )
     
     elif args.run_id:
@@ -1535,7 +1563,8 @@ def main():
             None,
             requested_episodes,
             args.title,
-            args.describe
+            args.describe,
+            use_last_episode=args.uselastepisode
         )
     
     log.info("=" * LINE_LENGTH)
