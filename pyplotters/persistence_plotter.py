@@ -62,6 +62,12 @@ SUMMARY_KEYS = [
     "mean_cumulative_reward",
     "max_cumulative_true_detections",
     "max_trajectory_length",
+    "min_true_det",
+    "avg_true_det",
+    "max_true_det",
+    "min_uniq_det",
+    "avg_uniq_det",
+    "max_uniq_det",
 ]
 
 
@@ -664,6 +670,16 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
 
     # Calculate last episode's cumulative reward (final performance)
     _run_summary["last_episode_cumulative_reward"] = common_df["currentCumulativeReward"].iloc[-1]
+
+    # Calculate true detection metrics (min, avg, max)
+    _run_summary["min_true_det"] = float(common_df["currentTrueDetections"].min())
+    _run_summary["avg_true_det"] = float(common_df["currentTrueDetections"].mean())
+    _run_summary["max_true_det"] = float(common_df["currentTrueDetections"].max())
+
+    # Calculate unique detection metrics (min, avg, max)
+    _run_summary["min_uniq_det"] = float(common_df["currentUniqueDetections"].min())
+    _run_summary["avg_uniq_det"] = float(common_df["currentUniqueDetections"].mean())
+    _run_summary["max_uniq_det"] = float(common_df["currentUniqueDetections"].max())
 
     # Output directory: pyplotters/plots[/<parent>]/<run_id>/
     _parent_results_dir = os.path.join(PLOT_RESULTS_DIR, _parent_dir) if _parent_dir else PLOT_RESULTS_DIR
