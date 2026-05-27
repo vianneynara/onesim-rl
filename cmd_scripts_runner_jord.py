@@ -12,6 +12,14 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 #     r'python pyrunner/batch_shifter.py -pid mcn-p-ms@1',
 # ]
 
+# # Commands to run (batch shifter)
+# commands = [
+#     r'python pyrunner/group_key_upgrader.py -pid mcn-c-ms@0',
+#     r'python pyrunner/group_key_upgrader.py -pid mcn-c-ms@1',
+#     r'python pyrunner/group_key_upgrader.py -pid mcn-p-ms@0',
+#     r'python pyrunner/group_key_upgrader.py -pid mcn-p-ms@1',
+# ]
+
 # # Commands to run (batch running)
 # # First Visit (fv=True)
 # commands = [
@@ -38,18 +46,18 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 #     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 54-70',
 # ]
 
-# Commands to run (batch running)
-# UCB EC 1.25, 1.75, 2.25
-commands = [
-    r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 14,16,18',
-    r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 14,16,18',
-    r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 14,16,18',
-    r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 14,16,18',
-    r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 49,51,53',
-    r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 49,51,53',
-    r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 49,51,53',
-    r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 49,51,53',
-]
+# # Commands to run (batch running)
+# # UCB EC 1.25, 1.75, 2.25
+# commands = [
+#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 14,16,18',
+#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 14,16,18',
+#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 14,16,18',
+#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 14,16,18',
+#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 49,51,53',
+#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 49,51,53',
+#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 49,51,53',
+#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 49,51,53',
+# ]
 
 
 # # Verified Continue
@@ -66,18 +74,18 @@ commands = [
 #     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 19-35 -vc',
 # ]
 #
-# # Commands to run (batch running)
-# # First Visit (fv=False)
-# commands = [
-#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 36-48,50,52 -vc',
-#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 36-48,50,52 -vc',
-#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 36-48,50,52 -vc',
-#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 36-48,50,52 -vc',
-#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 54-70 -vc',
-#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 54-70 -vc',
-#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 54-70 -vc',
-#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 54-70 -vc',
-# ]
+# Commands to run (batch running)
+# First Visit (fv=False)
+commands = [
+    r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 36-48,50,52 -vc',
+    r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 36-48,50,52 -vc',
+    r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 36-48,50,52 -vc',
+    r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 36-48,50,52 -vc',
+    r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 54-70 -vc',
+    r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 54-70 -vc',
+    r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 54-70 -vc',
+    r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 54-70 -vc',
+]
 #
 # # Commands to run (batch running)
 # # UCB EC 1.25, 1.75, 2.25

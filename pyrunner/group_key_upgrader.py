@@ -49,7 +49,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Default config import (fallback)
-from pyrunner.batch_configs import LIST_OF_CONFIGS
+from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
 
 from pyrunner.utils.path import normalize_report_base
 
