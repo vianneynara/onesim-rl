@@ -58,6 +58,9 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 	public static final String LEARNING_SEED_S   = "learningSeed";
 	public static final String FIRST_VISIT_S     = "firstVisit";
 
+	public static final String PAUSE_TRANING_S = "pauseTraining";
+	public static final String RESET_TRAJECTORY_HISTORY_S = "resetTrajectoryHistory";
+
 	// [Configuration - Fixed parameters]
 	private final double agentSpeed;
 	private final double targetCooldown;
@@ -115,6 +118,8 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 	private final List<Double> episodeRewards;
 
 	public static Random learningRNG;
+	public final boolean pauseTraining;
+	public final boolean resetTrajectoryHistory;
 
 	static {
 		DTNSim.registerForReset(MCMovementEnd.class.getCanonicalName());
@@ -156,6 +161,9 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 		this.direction       = rng.nextDouble() * 2 * Math.PI;
 		this.currentPosition = null;
 
+		this.pauseTraining = s.getBoolean(PAUSE_TRANING_S, false);
+		this.resetTrajectoryHistory = s.getBoolean(RESET_TRAJECTORY_HISTORY_S, false);
+
 		this.firstVisit       = s.getBoolean(FIRST_VISIT_S, true);
 		this.stateActionCount = new HashMap<>();
 		this.episodeStates    = new ArrayList<>();
@@ -192,6 +200,8 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 		this.currentTrajectorySteps         = proto.currentTrajectorySteps;
 		this.direction                      = proto.direction;
 		this.firstVisit                     = proto.firstVisit;
+		this.pauseTraining					= proto.pauseTraining;
+		this.resetTrajectoryHistory			= proto.resetTrajectoryHistory;
 		this.stateActionCount               = new HashMap<>(proto.stateActionCount);
 
 		// Deep-copy episode buffers
@@ -357,7 +367,10 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 			}
 
 			currentEpisodeReward += reward;
-			update(s_t, a_t, reward, s_tp1, availableActions);
+
+			if (!this.pauseTraining) {
+				update(s_t, a_t, reward, s_tp1, availableActions);
+			}
 		}
 
 		if (currentAction == -1) {
@@ -553,9 +566,11 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 
 		/* Loading trajectory recorder */
 		trajectoryFrequencies.clear();
-		if (epd.trajectoryFrequencies != null) {
-			for (var entry : epd.trajectoryFrequencies.entrySet()) {
-				trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+		if(!this.resetTrajectoryHistory){
+			if (epd.trajectoryFrequencies != null) {
+				for (var entry : epd.trajectoryFrequencies.entrySet()) {
+					trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+				}
 			}
 		}
 
