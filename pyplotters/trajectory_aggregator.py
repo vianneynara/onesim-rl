@@ -762,7 +762,7 @@ def _create_trajectory_plot(
         ax.set_xlabel("Trajectory Length", fontsize=12, fontweight='bold')
     
     # Common Y-axis configuration
-    ax.set_ylabel("Probability Density $P(l)$", fontsize=12, fontweight='bold')
+    ax.set_ylabel("Probability $P(l)$", fontsize=12, fontweight='bold')
     ax.set_xlim(1, x_max)
     ax.set_ylim(0, ax.get_ylim()[1] * 1.1)
     ax.grid(True, alpha=0.5, which='both', linestyle='--')
@@ -825,7 +825,7 @@ def plot_aggregated_trajectory_distribution(
     stat_data = [
         ('Max trajectory', f'{max_len}'),
         ('Highest PMF', f'{max_p:.3f}'),
-        ('Mean length (PMF)', f'{mean_len:.2f}'),
+        ('Mean traj. length', f'{mean_len:.2f}'),
         ('Most probable (mode)', f'{mode_len}'),
         ('Sum of all', f'{total_sum}'),
     ]
@@ -1341,7 +1341,7 @@ def plot_compareall_trajectory_distribution(
         ax.xaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10) * 0.1))
         ax.xaxis.set_major_formatter(LogFormatterSciNotation(base=10))
         ax.set_xlabel("Step Length $l$ (log scale)", fontsize=10, fontweight='bold')
-        ax.set_ylabel("Probability Density $P(l)$", fontsize=10, fontweight='bold')
+        ax.set_ylabel("Probability $P(l)$", fontsize=10, fontweight='bold')
         ax.set_xlim(1, max(500, df["trajectory"].max() * 1.0))
         
         # Configure Y-axis with fixed ticks from 0 to 1.0 with 0.1 step
@@ -1363,10 +1363,10 @@ def plot_compareall_trajectory_distribution(
         stat_data = [
             ('Max trajectory', f'{max_len}'),
             ('Highest PMF', f'{max_p:.3f}'),
-            ('Mean Length (PMF)', f'{mean_len:.2f}'),
+            ('Mean traj. length', f'{mean_len:.2f}'),
             ('Most probable (mode)', f'{mode_len}'),
             ('Sum of all', f'{total_sum}'),
-            ('Unique Lengths', f'{unique_lengths}'),
+            ('Unique lengths', f'{unique_lengths}'),
         ]
         
         # Find max key length for alignment
