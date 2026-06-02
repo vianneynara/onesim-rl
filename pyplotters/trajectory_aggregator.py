@@ -618,27 +618,32 @@ def aggregate_trajectory_frequencies_last_episode(
     """
     if not episodes:
         return False, {}, "No episodes provided"
-    
-    last_episode = episodes[-1]
-    persistence_path = os.path.join(
-        run_dir, "ep", str(last_episode),
-        f"Persistence-Episode@{last_episode}.json"
-    )
-    
-    if not os.path.exists(persistence_path):
-        error_msg = f"Last episode {last_episode} file not found at {persistence_path}"
-        log.error(error_msg)
-        return False, {}, error_msg
-    
-    json_data = read_persistence_json(persistence_path)
-    if json_data is None:
-        error_msg = f"Failed to read or parse persistence JSON for episode {last_episode}"
-        log.error(error_msg)
-        return False, {}, error_msg
-    
-    traj_freq = extract_trajectory_frequencies(json_data)
-    if traj_freq is None:
-        error_msg = f"No trajectoryFrequencies found in episode {last_episode}"
+
+    last_episode = None
+    persistence_path = None
+    json_data = None
+    traj_freq = None
+    for episode_num in reversed(episodes):
+        candidate_path = os.path.join(
+            run_dir, "ep", str(episode_num),
+            f"Persistence-Episode@{episode_num}.json"
+        )
+        if not os.path.exists(candidate_path):
+            continue
+        candidate_json = read_persistence_json(candidate_path)
+        if candidate_json is None:
+            continue
+        candidate_traj_freq = extract_trajectory_frequencies(candidate_json)
+        if candidate_traj_freq is None:
+            continue
+        last_episode = episode_num
+        persistence_path = candidate_path
+        json_data = candidate_json
+        traj_freq = candidate_traj_freq
+        break
+
+    if last_episode is None or json_data is None or traj_freq is None:
+        error_msg = "No valid persistence JSON found in requested episodes"
         log.error(error_msg)
         return False, {}, error_msg
     
@@ -672,7 +677,10 @@ def aggregate_trajectory_frequencies_last_episode(
             "average": probability
         }
     
-    status_msg = f"Loaded episode {last_episode} (last episode mode); total_sum={total_sum}"
+    status_msg = (
+        f"Loaded episode {last_episode} (last episode mode); total_sum={total_sum}; "
+        f"file={persistence_path}"
+    )
     return True, aggregated, status_msg
 
 
@@ -939,30 +947,29 @@ def save_aggregated_data_json(
         log.error(f"Failed to save aggregated data JSON: {e}")
 
 
-def save_aggregated_data_csv(
-    df: pd.DataFrame,
-    file_path: str,
-    episodes: List[int]
-):
+def load_aggregated_data_json(file_path: str) -> Tuple[bool, Dict[str, Dict], Optional[Dict], str]:
+    """Load aggregated trajectory frequencies from JSON.
+
+    Returns:
+        (success, aggregated_data, metadata, status_message)
     """
-    Save aggregated trajectory frequencies as CSV.
-    
-    Args:
-        df: DataFrame from convert_aggregated_to_dataframe()
-        file_path: Output CSV file path
-        episodes: List of episodes aggregated
-    """
+    if not os.path.exists(file_path):
+        return False, {}, None, f"Aggregated JSON not found: {file_path}"
+
     try:
-        # Add metadata as comments at the top
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(f"# Episodes aggregated: {episodes}\n")
-            f.write(f"# Total episodes: {len(episodes)}\n")
-        
-        # Append data
-        df.to_csv(file_path, index=False, sep=";", header=True, mode='a')
-        log.info(f"Saved aggregated data CSV: {file_path}")
+        with open(file_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except json.JSONDecodeError as e:
+        return False, {}, None, f"Failed to parse aggregated JSON: {e}"
     except Exception as e:
-        log.error(f"Failed to save aggregated data CSV: {e}")
+        return False, {}, None, f"Failed to read aggregated JSON: {e}"
+
+    aggregated = payload.get("aggregated_data") if isinstance(payload, dict) else None
+    if not isinstance(aggregated, dict) or not aggregated:
+        return False, {}, None, "Aggregated JSON missing or empty aggregated_data"
+
+    metadata = payload.get("metadata") if isinstance(payload, dict) else None
+    return True, aggregated, metadata, f"Loaded aggregated JSON: {file_path}"
 
 
 def check_exists_source_dir(dir_path):
@@ -1184,40 +1191,24 @@ def run_compareall(
             config_group = None
         
         log.info(f"  Rank #{rank}: {run_id} | reward={reward:.2f} | label={log_label}")
-        
-        # Find run_dir in BASE_REPORTS_DIR
-        run_dir = None
-        for root, dirs, files in os.walk(BASE_REPORTS_DIR):
-            for dir_name in dirs:
-                if dir_name == run_id:
-                    run_dir = os.path.join(root, dir_name)
-                    break
-            if run_dir:
-                break
-        
-        if not run_dir:
-            log.warning(f"Run directory not found in {BASE_REPORTS_DIR} for run_id '{run_id}'. Skipping.")
+
+        plot_run_dir = os.path.join(PLOT_RESULTS_DIR, parent_id, run_id)
+        cached_json_path = os.path.join(plot_run_dir, "aggregated_trajectory_frequencies.json")
+        if not os.path.exists(cached_json_path):
+            log.warning(f"Missing cached aggregated JSON for {run_id}; skipping: {cached_json_path}")
             continue
-        
-        # Auto-detect episodes if not specified
-        episodes_to_use = episodes
-        if not episodes_to_use:
-            try:
-                episodes_to_use = auto_detect_episodes(run_dir)
-                log.debug(f"Auto-detected {len(episodes_to_use)} episodes for {run_id}")
-            except FileNotFoundError:
-                log.warning(f"Cannot auto-detect episodes for {run_id}. Skipping.")
-                continue
-        
-        # Aggregate
-        if use_last_episode:
-            success, aggregated, status_msg = aggregate_trajectory_frequencies_last_episode(run_dir, episodes_to_use)
-        else:
-            success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes_to_use)
+
+        success, aggregated, metadata, status_msg = load_aggregated_data_json(cached_json_path)
         if not success or not aggregated:
-            log.warning(f"Failed to aggregate for {run_id}: {status_msg}")
+            log.warning(f"Failed to load cached aggregated JSON for {run_id}: {status_msg}")
             continue
-        
+
+        if metadata and isinstance(metadata, dict):
+            episodes_used = metadata.get("episodes_aggregated")
+            num_episodes = metadata.get("num_episodes")
+            if episodes_used is not None:
+                log.info(f"  Cached episodes: {num_episodes} | last={episodes_used[-1] if episodes_used else 'N/A'}")
+
         # Convert to DataFrame
         df = convert_aggregated_to_dataframe(aggregated)
         if len(df) == 0:
@@ -1276,123 +1267,148 @@ def plot_compareall_trajectory_distribution(
     log.debug(f"Color mapping: {cg_to_color_idx}")
     log.debug(f"Number of runs without config_group: {none_count}")
     
-    # Create figure with multiple subplots (one per config)
-    num_configs = len(dataframes_with_labels)
-    
-    # Calculate grid layout (try to make it roughly square)
-    cols = int(np.ceil(np.sqrt(num_configs)))
-    rows = int(np.ceil(num_configs / cols))
-    
-    fig, axes = plt.subplots(rows, cols, figsize=(16, 4 * rows))
-    
-    # Flatten axes array for easier iteration
-    if num_configs == 1:
-        axes = [axes]
-    else:
-        axes = axes.flatten()
-    
-    final_title = title or "Aggregated Trajectory Distribution Comparison (All Configs)"
-    fig.suptitle(final_title, fontweight='bold', fontsize=14, y=0.98)
-    
-    # Adjust figure spacing to accommodate 2-line subplot titles
-    fig.subplots_adjust(top=0.95, hspace=0.35)
-    
-    # Generate color palette matching bestof_plotter for consistent colors across configs
-    # Need enough colors for all unique config_groups + configs without group
-    num_unique_colors = len(config_groups) + none_count
-    palette = sns.color_palette(BESTOF_CMAP, n_colors=num_unique_colors)
-    
-    # Plot each config
-    none_idx = 0  # Counter for None config_group indices
-    for plot_idx, (rank, title_label, overrides, unique_lengths, df, config_group) in enumerate(dataframes_with_labels):
-        ax = axes[plot_idx]
-        
-        # Determine color index based on config_group
-        if config_group is not None:
-            color_idx = cg_to_color_idx[config_group]
+    def _plot_compareall_scale(use_log_scale: bool, file_name: str, title_suffix: str = None) -> None:
+        # Create figure with multiple subplots (one per config)
+        num_configs = len(dataframes_with_labels)
+
+        # Calculate grid layout (try to make it roughly square)
+        cols = int(np.ceil(np.sqrt(num_configs)))
+        rows = int(np.ceil(num_configs / cols))
+
+        fig, axes = plt.subplots(rows, cols, figsize=(16, 4 * rows))
+
+        # Flatten axes array for easier iteration
+        if num_configs == 1:
+            axes = [axes]
         else:
-            color_idx = len(config_groups) + none_idx
-            none_idx += 1
-        
-        if len(df) == 0:
-            ax.text(0.5, 0.5, f"No data for {title_label}", ha='center', va='center',
-                   transform=ax.transAxes, fontsize=10, color='red')
-            ax.set_xticks([])
-            ax.set_yticks([])
-            continue
-        
-        # Calculate summary statistics
-        max_len = int(df["trajectory"].max()) if len(df) > 0 else 0
-        mean_len = float((df["trajectory"] * df["probability"]).sum()) if len(df) > 0 else 0
-        max_p = float(df["probability"].max()) if len(df) > 0 else 0
-        mode_len = int(df.loc[df["probability"] == max_p, "trajectory"].min()) if max_p > 0 else 0
-        total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
-        
-        # Plot trajectory distribution using logarithmic X-axis
-        color = palette[color_idx]
-        # linestyle = LINE_STYLES[color_idx % len(LINE_STYLES)] # might be cutting off the data, so stick to regular lines
-        linestyle = 'solid'
-        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color=color,
-                    linestyle=linestyle, label="Probability (PMF)", marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
-        ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color=color)
-        
-        # Configure logarithmic X-axis
-        ax.xaxis.set_major_locator(LogLocator(base=10, numticks=10))
-        ax.xaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10) * 0.1))
-        ax.xaxis.set_major_formatter(LogFormatterSciNotation(base=10))
-        ax.set_xlabel("Step Length $l$ (log scale)", fontsize=10, fontweight='bold')
-        ax.set_ylabel("Probability $P(l)$", fontsize=10, fontweight='bold')
-        ax.set_xlim(1, max(500, df["trajectory"].max() * 1.0))
-        
-        # Configure Y-axis with fixed ticks from 0 to 1.0 with 0.1 step
-        ax.set_yticks(np.arange(0, 1.1, 0.1))
-        ax.set_ylim(0, 1.0)
-        
-        ax.grid(True, alpha=0.5, which='both', linestyle='--')
-        ax.margins(x=0)
-        
-        # Set title with formatted label (includes LaTeX if present) - 2-line format with reduced height
-        ax.set_title(title_label, fontsize=10, fontweight='bold', pad=0, multialignment='center')
-        
-        # Add legend with statistics
-        from matplotlib.lines import Line2D
-        handles, labels = ax.get_legend_handles_labels()
-        
-        # Build legend entries for statistics with programmatic fixed-width formatting
-        # Using monospace font ensures proper column alignment
-        stat_data = [
-            ('Max trajectory', f'{max_len}'),
-            ('Highest PMF', f'{max_p:.3f}'),
-            ('Mean traj. length', f'{mean_len:.2f}'),
-            ('Most probable (mode)', f'{mode_len}'),
-            ('Sum of all', f'{total_sum}'),
-            ('Unique lengths', f'{unique_lengths}'),
-        ]
-        
-        # Find max key length for alignment
-        max_key_len = max(len(key) for key, _ in stat_data)
-        
-        # Format entries with padding
-        stat_entries = [
-            Line2D([], [], linestyle='none', color='none', 
-                  label=f'{key.ljust(max_key_len)} : {value}')
-            for key, value in stat_data
-        ]
-        
-        handles.extend(stat_entries)
-        # Use monospace font for proper alignment of tabular data
-        ax.legend(handles=handles, loc='best', fontsize=8, framealpha=0.9,
-                 prop={'family': 'monospace'})
-    
-    # Hide unused subplots
-    for idx in range(num_configs, len(axes)):
-        axes[idx].set_visible(False)
-    
-    plt.tight_layout()
-    plot_file = os.path.join(out_dir, "Aggregated Trajectory Distribution (Compare-All).png")
-    plt.savefig(plot_file, bbox_inches='tight', dpi=100)
-    plt.close()
-    log.info(f"Saved comparison plot: {plot_file}")
+            axes = axes.flatten()
+
+        final_title = title or "Aggregated Trajectory Distribution Comparison (All Configs)"
+        if title_suffix:
+            final_title = f"{final_title} {title_suffix}"
+        fig.suptitle(final_title, fontweight='bold', fontsize=14, y=0.98)
+
+        # Adjust figure spacing to accommodate 2-line subplot titles
+        fig.subplots_adjust(top=0.95, hspace=0.35)
+
+        # Generate color palette matching bestof_plotter for consistent colors across configs
+        # Need enough colors for all unique config_groups + configs without group
+        num_unique_colors = len(config_groups) + none_count
+        palette = sns.color_palette(BESTOF_CMAP, n_colors=num_unique_colors)
+
+        # Plot each config
+        none_idx = 0  # Counter for None config_group indices
+        for plot_idx, (rank, title_label, overrides, unique_lengths, df, config_group) in enumerate(dataframes_with_labels):
+            ax = axes[plot_idx]
+
+            # Determine color index based on config_group
+            if config_group is not None:
+                color_idx = cg_to_color_idx[config_group]
+            else:
+                color_idx = len(config_groups) + none_idx
+                none_idx += 1
+
+            if len(df) == 0:
+                ax.text(0.5, 0.5, f"No data for {title_label}", ha='center', va='center',
+                       transform=ax.transAxes, fontsize=10, color='red')
+                ax.set_xticks([])
+                ax.set_yticks([])
+                continue
+
+            # Calculate summary statistics
+            max_len = int(df["trajectory"].max()) if len(df) > 0 else 0
+            mean_len = float((df["trajectory"] * df["probability"]).sum()) if len(df) > 0 else 0
+            max_p = float(df["probability"].max()) if len(df) > 0 else 0
+            mode_len = int(df.loc[df["probability"] == max_p, "trajectory"].min()) if max_p > 0 else 0
+            total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
+
+            # Plot trajectory distribution
+            color = palette[color_idx]
+            linestyle = 'solid'
+            if use_log_scale:
+                ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color=color,
+                            linestyle=linestyle, label="Probability (PMF)",
+                            marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
+                ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color=color)
+
+                # Configure logarithmic X-axis
+                ax.xaxis.set_major_locator(LogLocator(base=10, numticks=10))
+                ax.xaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10) * 0.1))
+                ax.xaxis.set_major_formatter(LogFormatterSciNotation(base=10))
+                ax.set_xlabel("Step Length $l$ (log scale)", fontsize=10, fontweight='bold')
+            else:
+                ax.plot(df["trajectory"], df["probability"], linewidth=2.5, color=color,
+                        linestyle=linestyle, label="Probability (PMF)",
+                        marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
+                ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color=color)
+
+                # Configure linear X-axis
+                ax.xaxis.set_major_locator(MultipleLocator(50))
+                ax.xaxis.set_minor_locator(MultipleLocator(10))
+                ax.set_xlabel("Step Length $l$", fontsize=10, fontweight='bold')
+
+            ax.set_ylabel("Probability $P(l)$", fontsize=10, fontweight='bold')
+            ax.set_xlim(1, max(500, df["trajectory"].max() * 1.0))
+
+            # Configure Y-axis with fixed ticks from 0 to 1.0 with 0.1 step
+            ax.set_yticks(np.arange(0, 1.1, 0.1))
+            ax.set_ylim(0, 1.0)
+
+            ax.grid(True, alpha=0.5, which='both', linestyle='--')
+            ax.margins(x=0)
+
+            # Set title with formatted label (includes LaTeX if present) - 2-line format with reduced height
+            ax.set_title(title_label, fontsize=10, fontweight='bold', pad=0, multialignment='center')
+
+            # Add legend with statistics
+            from matplotlib.lines import Line2D
+            handles, labels = ax.get_legend_handles_labels()
+
+            # Build legend entries for statistics with programmatic fixed-width formatting
+            # Using monospace font ensures proper column alignment
+            stat_data = [
+                ('Max trajectory', f'{max_len}'),
+                ('Highest PMF', f'{max_p:.3f}'),
+                ('Mean traj. length', f'{mean_len:.2f}'),
+                ('Most probable (mode)', f'{mode_len}'),
+                ('Sum of all', f'{total_sum}'),
+                ('Unique lengths', f'{unique_lengths}'),
+            ]
+
+            # Find max key length for alignment
+            max_key_len = max(len(key) for key, _ in stat_data)
+
+            # Format entries with padding
+            stat_entries = [
+                Line2D([], [], linestyle='none', color='none',
+                      label=f'{key.ljust(max_key_len)} : {value}')
+                for key, value in stat_data
+            ]
+
+            handles.extend(stat_entries)
+            # Use monospace font for proper alignment of tabular data
+            ax.legend(handles=handles, loc='best', fontsize=8, framealpha=0.9,
+                     prop={'family': 'monospace'})
+
+        # Hide unused subplots
+        for idx in range(num_configs, len(axes)):
+            axes[idx].set_visible(False)
+
+        plt.tight_layout()
+        plot_file = os.path.join(out_dir, file_name)
+        plt.savefig(plot_file, bbox_inches='tight', dpi=100)
+        plt.close()
+        log.info(f"Saved comparison plot: {plot_file}")
+
+    _plot_compareall_scale(
+        use_log_scale=False,
+        file_name="Aggregated Trajectory Distribution (Compare-All).png",
+    )
+    _plot_compareall_scale(
+        use_log_scale=True,
+        file_name="Aggregated Trajectory Distribution (Compare-All) (Log Scale X).png",
+        title_suffix="(logarithmic X scale)"
+    )
 
 
 
