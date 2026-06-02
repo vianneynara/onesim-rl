@@ -481,7 +481,7 @@ def plot_trajectoryDistribution(
 
         ax = plt.gca()
         plt.xlabel("Trajectory Length", fontsize=12, fontweight='bold')
-        plt.ylabel("Probability / Density", fontsize=12, fontweight='bold')
+        plt.ylabel("Probability $P(l)$", fontsize=12, fontweight='bold')
         ax.set_xlim(1, x_max)
 
         # Major tick every 200; minor tick every 50 (optional)
@@ -547,7 +547,7 @@ def plot_trajectoryDistribution(
 
         ax = plt.gca()
         plt.xlabel("Trajectory Length (log scale)")
-        plt.ylabel("Probability / Density")
+        plt.ylabel("Probability $P(l)$")
 
         # Set X-axis to logarithmic scale with dynamic range
         ax.set_xscale('log')
