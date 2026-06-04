@@ -356,7 +356,7 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	@Override
 	public Path getPath() {
 		/* Perform Q-Learning update only if we have previous action */
-		if (prevAction != -1 && !pauseTraining) {
+		if (prevAction != -1) {
 			// to make it easier to understand
 			int s_t = prevState;
 			int a_t = prevAction;
@@ -386,7 +386,9 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 //			if (now % 1000 == 1 || reward > 1) System.out.printf("Current Cumulative Reward: %s%n", currentEpisodeReward);
 //				s_t, a_t, reward, s_tp1, availableActions);
-			update(s_t, a_t, reward, s_tp1, availableActions);
+			if (!pauseTraining) {
+				update(s_t, a_t, reward, s_tp1, availableActions);
+			}
 		}
 
 		/* Determining the next state s = (n = n + d), based on the previous action */

@@ -48,6 +48,8 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 	public static final String TARGET_COOLDOWN_S = "targetCooldown";
 	public static final String LEARNING_SEED_S = "learningSeed";
 
+	public static final String RESET_TRAJECTORY_HISTORY_S = "resetTrajectoryHistory";
+
 	public static final double DEFAULT_ALPHA = 1.5;
 	public static final double DEFAULT_XM = 1;
 	public static final String DEFAULT_TARGET_PREFIX = "T";
@@ -73,6 +75,8 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 	 */
 	public static Random learningRNG;
 
+	public final boolean resetTrajectoryHistory;
+
 	// static initialization of all movement models' random number generator
 	static {
 		DTNSim.registerForReset(LevyFlightEpisodic.class.getCanonicalName());
@@ -97,6 +101,9 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		this.targetCooldown = s.getDouble(TARGET_COOLDOWN_S, 0.0);
 		this.stepPenalty = s.getDouble(STEP_PENALTY_S, 0.01);
 		this.foundReward = s.getDouble(FOUND_REWARD_S, 10);
+
+		// Whether to reset trajectory history at the beginning of each episode, to avoid skewing the distribution with old trajectories.
+		this.resetTrajectoryHistory = s.getBoolean(RESET_TRAJECTORY_HISTORY_S, false);
 
 		this.lastWaypoint = null;
 
@@ -124,6 +131,8 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 		this.targetCooldown = proto.targetCooldown;
 		this.stepPenalty = proto.stepPenalty;
 		this.foundReward = proto.foundReward;
+
+		this.resetTrajectoryHistory = proto.resetTrajectoryHistory;
 
 		if (proto.lastWaypoint != null) {
 			this.lastWaypoint = new Coord(proto.lastWaypoint.getX(), proto.lastWaypoint.getY());
@@ -384,9 +393,12 @@ public class LevyFlightEpisodic extends MovementModel implements EpisodicPersist
 
 		/* Loading trajectory recorder */
 		trajectoryFrequencies.clear();
-		if (epd.trajectoryFrequencies != null) {
-			for (var entry : epd.trajectoryFrequencies.entrySet()) {
-				this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+
+		if (!this.resetTrajectoryHistory) {
+			if (epd.trajectoryFrequencies != null) {
+				for (var entry : epd.trajectoryFrequencies.entrySet()) {
+					this.trajectoryFrequencies.put(Integer.valueOf(entry.getKey()), entry.getValue());
+				}
 			}
 		}
 

@@ -21,6 +21,10 @@ if __package__ in (None, ""):
 
 from pyrunner.batch_shifter import parse_parent_dir_ids
 
+# Constants for episode difference annotations
+ANNOTATION_INTERVAL = 10
+USE_PERCENTAGE = False
+
 LINE_LENGTH = 100
 logging.basicConfig(
     level=logging.INFO,
@@ -29,28 +33,66 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-BASE_REPORTS_DIR = r"reports\\skripsi"
-PLOT_RESULTS_DIR = r"pyplotters\\plots"
+# BASE_REPORTS_DIR = r"reports\\skripsi"
+# PLOT_RESULTS_DIR = r"pyplotters\\plots"
 
-# BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
-# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
+PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 LIST_OF_IGNORED_OVERRIDES = [
-    "cfg",  # config index
-    "cg",  # config group
+    "cfg",  # config index (e.g., cfg@01)
+    "cg",   # config group (e.g., cg@ql_epsilon)
+    "qlm_pt",  # paused trining (e.g., qlm_pt@True)
+    "qlm_rth",  # reset trajectory history (e.g., qlm_rth@True)
+    "mcnm_pt",  # paused trining (e.g., mcnm_pt@True)
+    "mcnm_rth",  # reset trajectory history (e.g., mcnm_rth@True)
+    "lfe_rth",  # reset trajectory history (e.g., lfe_rth@True)
     "ql500",  # Q-Learning with 500 runs
     "mcn500",
-    "lfe500"  # Lévy Flight with 500 runs
+    "lfe500",  # Lévy Flight with 500 runs
+    "ql10",
+    "lfe10",
 ]
 
 SUMMARY_KEYS = [
     "configuration_directory",
+    "group",
     "max_cumulative_reward",
     "last_episode_cumulative_reward",
     "mean_cumulative_reward",
     "max_cumulative_true_detections",
     "max_trajectory_length",
+    "min_true_det",
+    "avg_true_det",
+    "max_true_det",
+    "min_uniq_det",
+    "avg_uniq_det",
+    "max_uniq_det",
 ]
+
+
+def extract_group_from_run_id(_run_id: str) -> str:
+    """
+    Extract the config group (cg@<groupkey>) from run_id.
+    
+    Example: "ql-movseed@0-cg@ql_epsilon" -> "ql_epsilon"
+    If no cg@ token found, returns "NA".
+    
+    Args:
+        _run_id: The run identifier string
+        
+    Returns:
+        Group value (string) or "NA" if cg@ not present
+    """
+    tokens = _run_id.split("-")
+    
+    for token in tokens:
+        if "@" in token:
+            key, value = token.split("@", 1)
+            if key == "cg":
+                return value
+    
+    return "NA"
 
 
 def check_exists_source_dir(dir_path):
@@ -163,9 +205,28 @@ def read_json_file(file_path, run_id=None):
 
 
 def retrieve_episode_json_dirs(_run_id_dir) -> list[str]:
-    # Find all JSON files in the run_dir, where "ep" is the episode folder, having subfolders of 1, 2, 3... each ahving a JSON file
+    # Find all JSON files in the run_dir, where "ep" is the episode folder, having subfolders of 1, 2, 3... each having a JSON file
+    # Note: Episode 0 is skipped as it represents the baseline model, not actual training episodes
     episodes_dir = glob.glob(os.path.join(_run_id_dir, "ep", "*"))
-    log.info(f"Found {len(episodes_dir)} episodes directories.")
+    
+    # Filter to only episodes >= 1, sort numerically
+    filtered_episodes = []
+    for episode_dir in episodes_dir:
+        try:
+            ep_num = int(os.path.basename(episode_dir))
+            if ep_num >= 1:  # Skip episode 0 (baseline)
+                filtered_episodes.append((ep_num, episode_dir))
+        except ValueError:
+            # Skip non-integer directory names
+            pass
+    
+    # Sort by episode number
+    filtered_episodes.sort(key=lambda x: x[0])
+    episodes_dir = [ep_dir for _, ep_dir in filtered_episodes]
+    
+    total_dirs = len(glob.glob(os.path.join(_run_id_dir, "ep", "*")))
+    skipped = total_dirs - len(episodes_dir)
+    log.info(f"Found {len(episodes_dir)} training episodes (skipped {skipped} baseline/non-training).")
     episode_jsons_dir = []
 
     for episode_dir in episodes_dir:
@@ -189,7 +250,8 @@ def sequence_of_currentEpisodeReward(json_data) -> list[int]:
 
 def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _ylabel: str, file_path: str,
                     _yalias: str = None, _discrete: bool = False, _ema_line: bool = False, _ma_line: bool = False,
-                    _subtitle: str = None, _description: str = None):
+                    _subtitle: str = None, _description: str = None, _annotate_diff: bool = False, 
+                    _diff_interval: int = ANNOTATION_INTERVAL):
     plt.figure(figsize=(10, 6))
 
     if not _yalias:
@@ -258,6 +320,47 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
 
     plt.margins(x=0)
     plt.xlim(left=min_episodes)
+
+    # Add difference annotations if enabled
+    if _annotate_diff:
+        diff_interval = _diff_interval
+        ax = plt.gca()
+        
+        # Calculate point-to-point differences
+        df_sorted = _df.sort_values(by="episodeNumber").reset_index(drop=True)
+        y_values = pd.to_numeric(df_sorted[_key], errors="coerce")
+        episode_numbers = df_sorted["episodeNumber"]
+        
+        # Iterate through data points, starting from index 1 (skip first point)
+        for i in range(1, len(df_sorted)):
+            current_episode = episode_numbers.iloc[i]
+            
+            # Only annotate at interval boundaries
+            if current_episode % diff_interval == 0:
+                current_y = y_values.iloc[i]
+                previous_y = y_values.iloc[i - 1]
+                
+                # Skip if either value is NaN
+                if pd.isna(current_y) or pd.isna(previous_y):
+                    continue
+                
+                # Calculate difference
+                if USE_PERCENTAGE:
+                    if previous_y != 0:
+                        diff = ((current_y - previous_y) / abs(previous_y)) * 100
+                        label = f"{diff:+.2f}%"
+                    else:
+                        continue
+                else:
+                    diff = current_y - previous_y
+                    label = f"{diff:+.2f}"
+                
+                # Annotate the point
+                ax.annotate(label,
+                           xy=(current_episode, current_y),
+                           xytext=(0, 10),
+                           textcoords='offset points',
+                           ha='center', fontsize=8, color='tab:blue')
 
     # Add summary stats into legend without adding visual lines to the plot.
     ax = plt.gca()
@@ -339,6 +442,7 @@ def plot_trajectoryDistribution(
     mean_len = None
     max_p = None
     mode_len = None
+    unique_lengths = None
     if len(_df) > 0 and float(_df["probability"].sum()) > 0:
         max_len = int(_df["trajectory"].max())
         # Expected trajectory length under PMF
@@ -346,6 +450,8 @@ def plot_trajectoryDistribution(
         # Most probable trajectory length (mode); in ties pick the smallest length
         max_p = _df["probability"].max()
         mode_len = int(_df.loc[_df["probability"] == max_p, "trajectory"].min())
+        # Count unique trajectory lengths (each row is a unique length)
+        unique_lengths = len(_df)
 
     suptitle_y = 0.98
     if not logarithmic_x:
@@ -374,8 +480,8 @@ def plot_trajectoryDistribution(
             fig.subplots_adjust(top=0.92)
 
         ax = plt.gca()
-        plt.xlabel("Trajectory Length")
-        plt.ylabel("Probability / Density")
+        plt.xlabel("Trajectory Length", fontsize=12, fontweight='bold')
+        plt.ylabel("Probability / Density", fontsize=12, fontweight='bold')
         ax.set_xlim(1, x_max)
 
         # Major tick every 200; minor tick every 50 (optional)
@@ -390,12 +496,21 @@ def plot_trajectoryDistribution(
         handles, labels = ax.get_legend_handles_labels()
         if max_len is not None:
             from matplotlib.lines import Line2D
-            stat_lines = [
-                f"{'Max trajectory':<20}: {max_len:>6d}",
-                f"{'Highest PMF':<20}: {max_p:>10.3f}",
-                f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
-                f"{'Most probable (mode)':<20}: {mode_len:>6d}",
+            
+            # Build statistics with programmatic fixed-width formatting
+            stat_data = [
+                ('Max trajectory', f'{max_len}'),
+                ('Highest PMF', f'{max_p:.3f}'),
+                ('Mean length (PMF)', f'{mean_len:.2f}'),
+                ('Most probable (mode)', f'{mode_len}'),
+                ('Unique Lengths', f'{unique_lengths}'),
             ]
+            
+            # Find max key length for alignment
+            max_key_len = max(len(key) for key, _ in stat_data)
+            
+            # Format entries with padding
+            stat_lines = [f'{key.ljust(max_key_len)} : {value}' for key, value in stat_data]
             handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
 
@@ -450,12 +565,21 @@ def plot_trajectoryDistribution(
         handles, labels = ax.get_legend_handles_labels()
         if max_len is not None:
             from matplotlib.lines import Line2D
-            stat_lines = [
-                f"{'Max trajectory':<20}: {max_len:>10d}",
-                f"{'Highest PMF':<20}: {max_p:>10.6f}",
-                f"{'Mean length (PMF)':<20}: {mean_len:>10.2f}",
-                f"{'Most probable (mode)':<20}: {mode_len:>10d}",
+            
+            # Build statistics with programmatic fixed-width formatting
+            stat_data = [
+                ('Max trajectory', f'{max_len}'),
+                ('Highest PMF', f'{max_p:.6f}'),
+                ('Mean length (PMF)', f'{mean_len:.2f}'),
+                ('Most probable (mode)', f'{mode_len}'),
+                ('Unique Lengths', f'{unique_lengths}'),
             ]
+            
+            # Find max key length for alignment
+            max_key_len = max(len(key) for key, _ in stat_data)
+            
+            # Format entries with padding
+            stat_lines = [f'{key.ljust(max_key_len)} : {value}' for key, value in stat_data]
             handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
 
@@ -482,6 +606,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
 
     _run_summary = {key: float("-inf") for key in SUMMARY_KEYS}
     _run_summary["configuration_directory"] = _run_id_dir.split("\\")[-1]
+    _run_summary["group"] = extract_group_from_run_id(run_id)
 
     COMMON_IDX = ["episodeNumber", "currentEpisodeReward", "currentCumulativeReward", "previousCumulativeReward",
                   "currentTrueDetections", "currentUniqueDetections", "currentCumulativeTrueDetections",
@@ -546,6 +671,16 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
     # Calculate last episode's cumulative reward (final performance)
     _run_summary["last_episode_cumulative_reward"] = common_df["currentCumulativeReward"].iloc[-1]
 
+    # Calculate true detection metrics (min, avg, max)
+    _run_summary["min_true_det"] = float(common_df["currentTrueDetections"].min())
+    _run_summary["avg_true_det"] = float(common_df["currentTrueDetections"].mean())
+    _run_summary["max_true_det"] = float(common_df["currentTrueDetections"].max())
+
+    # Calculate unique detection metrics (min, avg, max)
+    _run_summary["min_uniq_det"] = float(common_df["currentUniqueDetections"].min())
+    _run_summary["avg_uniq_det"] = float(common_df["currentUniqueDetections"].mean())
+    _run_summary["max_uniq_det"] = float(common_df["currentUniqueDetections"].max())
+
     # Output directory: pyplotters/plots[/<parent>]/<run_id>/
     _parent_results_dir = os.path.join(PLOT_RESULTS_DIR, _parent_dir) if _parent_dir else PLOT_RESULTS_DIR
     run_out_dir = os.path.join(_parent_results_dir, run_id)
@@ -569,6 +704,8 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _subtitle="Current Episode Reward",
         _yalias="Reward",
         _description=_description,
+        _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -585,6 +722,8 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _subtitle="Current Cumulative Reward",
         _yalias="Cumu. Reward",
         _description=_description,
+        _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -603,6 +742,8 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _subtitle="Mean Cumulative Reward (across episodes)",
         _yalias="Mean Cumu. Reward",
         _description=_description,
+        _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -620,6 +761,8 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _yalias="Detection",
         _discrete=True,
         _description=_description,
+        _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )
@@ -637,6 +780,8 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _yalias="Uniq. Detection",
         _discrete=True,
         _description=_description,
+        _annotate_diff=True,
+        _diff_interval=50,
         # _ema_line=True,
         # _ma_line=True
     )

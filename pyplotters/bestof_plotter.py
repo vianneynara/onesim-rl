@@ -71,12 +71,14 @@ PLOT_RESULTS_DIR = "pyplotters\\plots"
 
 # BESTOF_CMAP = "viridis"
 # BESTOF_CMAP = "magma"
-# BESTOF_CMAP = "plasma"
+BESTOF_CMAP = "bright"
+# BESTOF_CMAP = "deep"
+# BESTOF_CMAP = "dark"
 # BESTOF_CMAP = "gnuplot2"
-BESTOF_CMAP = "inferno"
+# BESTOF_CMAP = "inferno"
+# BESTOF_CMAP = "gist_rainbow"
 
 # CURR_CMAP = "Set1"
-# CURR_CMAP = "Set2"
 # CURR_CMAP = "Set3"
 # CURR_CMAP = "Spectral"
 # CURR_CMAP = "PuOr"
@@ -87,6 +89,12 @@ CURR_CMAP = "gist_rainbow"
 # CURR_CMAP = "hsv"
 # CURR_CMAP = "cool"
 # CURR_CMAP = "winter"
+
+# Constants for episode difference annotations
+ANNOTATION_INTERVAL = 50
+USE_PERCENTAGE = True
+
+LINE_STYLES = ["-", "--", "-.", ":"]
 
 LINE_LENGTH = 100
 logging.basicConfig(
@@ -102,7 +110,10 @@ LIST_OF_IGNORED_OVERRIDES = [
     "cg",   # config group (e.g., cg@ql_epsilon)
     "ql500",  # Q-Learning with 500 runs
     "mcn500",
+    "mcn750"
     "lfe500"  # Lévy Flight with 500 runs
+    "ql10"
+    "lfe10"
 ]
 
 @dataclass(frozen=True)
@@ -427,6 +438,8 @@ def plot_bestof_by_episode(
     suptitle: SuptitleFormat = None,
     legend_outside: bool = False,
     cmap: str = None,
+    annotate_diff: bool = False,
+    diff_interval: int = ANNOTATION_INTERVAL,
 ):
     if not series_by_label:
         _exit_with_warning("No best-of series to plot.")
@@ -444,10 +457,54 @@ def plot_bestof_by_episode(
     if not cmap:
         cmap = 'gist_rainbow'
     palette = sns.color_palette(cmap, n_colors=len(series_by_label))
-    for (label, df), color in zip(series_by_label, palette):
+    for idx, ((label, df), color) in enumerate(zip(series_by_label, palette)):
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
-        sns.lineplot(data=df, x="episodeNumber", y=y_key, label=label, color=color)
+
+        # final_line_style = LINE_STYLES[idx % len(LINE_STYLES)] # may be cutting the data points, ending up confusing the plot
+        final_line_style = 'solid'
+        sns.lineplot(data=df, x="episodeNumber", y=y_key, label=label, color=color, linestyle=final_line_style)
+
+    # Add difference annotations if enabled
+    if annotate_diff:
+        ax = plt.gca()
+        
+        for idx, ((label, df), color) in enumerate(zip(series_by_label, palette)):
+            # Calculate point-to-point differences
+            df_sorted = df.sort_values(by="episodeNumber").reset_index(drop=True)
+            y_values = pd.to_numeric(df_sorted[y_key], errors="coerce")
+            episode_numbers = df_sorted["episodeNumber"]
+            
+            # Iterate through data points, starting from index 1 (skip first point)
+            for i in range(1, len(df_sorted)):
+                current_episode = episode_numbers.iloc[i]
+                
+                # Only annotate at interval boundaries
+                if current_episode % diff_interval == 0:
+                    current_y = y_values.iloc[i]
+                    previous_y = y_values.iloc[i - 1]
+                    
+                    # Skip if either value is NaN
+                    if pd.isna(current_y) or pd.isna(previous_y):
+                        continue
+                    
+                    # Calculate difference
+                    if USE_PERCENTAGE:
+                        if previous_y != 0:
+                            diff = ((current_y - previous_y) / abs(previous_y)) * 100
+                            label_text = f"{diff:+.2f}%"
+                        else:
+                            continue
+                    else:
+                        diff = current_y - previous_y
+                        label_text = f"{diff:+.2f}"
+                    
+                    # Annotate the point with line's color
+                    ax.annotate(label_text,
+                               xy=(current_episode, current_y),
+                               xytext=(0, 10),
+                               textcoords='offset points',
+                               ha='center', fontsize=8, color=color)
 
     if max_ep is not None and min_ep is not None:
         if max_ep <= 20:
@@ -457,7 +514,7 @@ def plot_bestof_by_episode(
             start = (min_ep // step) * step
             ticks = np.arange(start, max_ep + 1, step)
         plt.xticks(ticks)
-        plt.xlim(left=min_ep)
+        plt.xlim(left=min_ep, right=max_ep)
 
     # Construct title with suptitle and subtitle
     if suptitle.title != "":
@@ -502,12 +559,12 @@ def plot_bestof_by_episode(
     plt.close()
 
 
-def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
+def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False) -> None:
     """Compare all available configurations (no grouping, no best-of selection).
-    
+
     Plots all configs with legend labels showing cfg@N and parameter overrides.
     Runs are sorted by last_episode_cumulative_reward (descending) for ordering.
-    
+
     Args:
         all_of: Parent results directory under pyplotters/plots
         suptitle: Optional custom title for plots
@@ -526,17 +583,17 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
-    
+
     # Apply config filtering if specified
     if config_indices is not None:
         summary_df = filter_summary_by_configs(summary_df, config_indices)
-    
+
     # Ensure required columns exist
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
     if "last_episode_cumulative_reward" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'last_episode_cumulative_reward'.")
-    
+
     # Convert reward to numeric and sort by reward (descending)
     summary_df = summary_df.copy()
     summary_df["last_episode_cumulative_reward"] = pd.to_numeric(
@@ -544,25 +601,25 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
     )
     if summary_df["last_episode_cumulative_reward"].isna().any():
         _exit_with_warning("summary.csv contains non-numeric last_episode_cumulative_reward values; aborting.")
-    
+
     summary_df = summary_df.sort_values(
         by="last_episode_cumulative_reward",
         ascending=False,
         kind="mergesort"
     )
-    
+
     log.info(LINE_LENGTH * "-")
     log.info(f"Compare-All mode: plotting {len(summary_df)} configurations")
-    
+
     tmp: list[tuple[str, pd.DataFrame]] = []
     for _, row in summary_df.iterrows():
         run_id = str(row["configuration_directory"])
         reward = row['last_episode_cumulative_reward']
-        
+
         # Parse run_id to extract cfg index and all tokens for legend label
         cfg_idx = extract_cfg_index(run_id)
         cfg_str = f"cfg@{cfg_idx}" if cfg_idx is not None else run_id
-        
+
         # Parse all tokens from run_id and build legend label
         try:
             pr = parse_run_id_strict(run_id)
@@ -581,26 +638,26 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
         except SystemExit:
             # If parse_run_id_strict exits, use cfg_str as fallback
             legend_label = cfg_str
-        
+
         log.info(f"  {cfg_str}: {run_id} | reward={reward:.2f}")
-        
+
         common_path = os.path.join(out_dir, run_id, "common_data.csv")
         if not os.path.exists(common_path):
             log.warning(f"Missing {common_path}. Skipping this run.")
             continue
-        
+
         try:
             df = pd.read_csv(common_path, sep=";")
             tmp.append((legend_label, df))
         except Exception as e:
             log.warning(f"Error reading {common_path}: {e}. Skipping this run.")
             continue
-    
+
     log.info(LINE_LENGTH * "-")
-    
+
     if not tmp:
         _exit_with_warning("No valid runs found to plot.")
-    
+
     series_by_label: list[tuple[str, pd.DataFrame]] = tmp
 
     comparisons = [
@@ -620,12 +677,13 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
             ylabel=ylabel,
             out_file=out_file,
             suptitle=suptitle,
-            legend_outside=True,
+            legend_outside=legend_outside,
+            annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
 
 
-def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
+def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False) -> None:
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
@@ -639,11 +697,11 @@ def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str]
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
-    
+
     # Apply config filtering if specified
     if config_indices is not None:
         summary_df = filter_summary_by_configs(summary_df, config_indices)
-    
+
     winners = best_of_by_group(summary_df, comparison_key, addparams)
 
     log.info(LINE_LENGTH * "-")
@@ -691,17 +749,19 @@ def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str]
             ylabel=ylabel,
             out_file=out_file,
             suptitle=suptitle,
-            cmap=BESTOF_CMAP
+            cmap=BESTOF_CMAP,
+            legend_outside=legend_outside,
+            annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
 
 
-def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None) -> None:
+def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False) -> None:
     """Compare all runs matching a config-group key.
-    
+
     Filters runs by cg@KEY, plots all matching runs sorted by reward (descending).
     Legend labels show parameter overrides only (no cg@ or cfg@ prefixes).
-    
+
     Args:
         all_of: Parent results directory under pyplotters/plots
         cg_key: The config-group value to filter by (e.g., 'ql_epsilon')
@@ -721,14 +781,14 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
-    
+
     # Filter by config-group key
     summary_df = filter_summary_by_configgroup(summary_df, cg_key)
-    
+
     # Apply config filtering if specified (can combine with config-group filtering)
     if config_indices is not None:
         summary_df = filter_summary_by_configs(summary_df, config_indices)
-    
+
     # Ensure required columns exist
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
@@ -742,21 +802,21 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
     )
     if summary_df["last_episode_cumulative_reward"].isna().any():
         _exit_with_warning("summary.csv contains non-numeric last_episode_cumulative_reward values; aborting.")
-    
+
     summary_df = summary_df.sort_values(
         by="last_episode_cumulative_reward",
         ascending=False,
         kind="mergesort"
     )
-    
+
     log.info(LINE_LENGTH * "-")
     log.info(f"Config-Group mode: cg@{cg_key}, plotting {len(summary_df)} runs")
-    
+
     tmp: list[tuple[str, pd.DataFrame]] = []
     for _, row in summary_df.iterrows():
         run_id = str(row["configuration_directory"])
         reward = row['last_episode_cumulative_reward']
-        
+
         # Build legend label showing only parameter overrides (no cfg@, no cg@)
         try:
             pr = parse_run_id_strict(run_id)
@@ -774,26 +834,26 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
         except SystemExit:
             # If parse_run_id_strict exits, use run_id as fallback
             legend_label = run_id
-        
+
         log.info(f"  {run_id} | reward={reward:.2f} | label={legend_label}")
-        
+
         common_path = os.path.join(out_dir, run_id, "common_data.csv")
         if not os.path.exists(common_path):
             log.warning(f"Missing {common_path}. Skipping this run.")
             continue
-        
+
         try:
             df = pd.read_csv(common_path, sep=";")
             tmp.append((legend_label, df))
         except Exception as e:
             log.warning(f"Error reading {common_path}: {e}. Skipping this run.")
             continue
-    
+
     log.info(LINE_LENGTH * "-")
-    
+
     if not tmp:
         _exit_with_warning("No valid runs found to plot.")
-    
+
     series_by_label: list[tuple[str, pd.DataFrame]] = tmp
 
     comparisons = [
@@ -813,7 +873,8 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
             ylabel=ylabel,
             out_file=out_file,
             suptitle=suptitle,
-            legend_outside=True,
+            legend_outside=legend_outside,
+            annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
 
@@ -868,20 +929,31 @@ def main(argv: Union[list[str], None] = None) -> None:
         required=False,
         help="Custom title for plots (appears as main suptitle, with subplot titles as subtitles).",
     )
-
+    parser.add_argument(
+        "-ad",
+        "--annotatediff",
+        action="store_true",
+        help="Annotate episode-to-episode differences on the plot. Each line's annotations will use that line's color.",
+    )
+    parser.add_argument(
+        "--legend-outside",
+        action="store_true",
+        default=False,
+        help="Place the legend outside/below the plot (default: False = legend is placed inside the plot).",
+    )
     args = parser.parse_args(argv)
-    
+
     # Count how many modes are specified (exactly one must be set)
     modes_specified = sum([bool(args.compareall), bool(args.comparekey), bool(args.configgroup)])
-    
+
     if modes_specified != 1:
         _exit_with_warning(
             "Exactly one mode must be specified: --group, --compareall, or --configgroup"
         )
-    
+
     if args.compareall and args.addparams:
         log.warning("--compareall flag is set; --addparams argument will be ignored.")
-    
+
     # Parse and validate --config if provided
     config_indices: Union[list[int], None] = None
     if args.config:
@@ -890,10 +962,10 @@ def main(argv: Union[list[str], None] = None) -> None:
             log.info(f"Config filtering enabled: {args.config} → indices {config_indices}")
         except ValueError as e:
             _exit_with_warning(f"Invalid config format: {e}")
-    
+
     if args.compareall and args.addparams:
         log.warning("--compareall flag is set; --addparams argument will be ignored.")
-    
+
     # Parse and validate --addparams if provided (only used in best-of mode)
     addparams: Union[dict[str, str], None] = None
     if args.addparams and args.comparekey:
@@ -911,7 +983,7 @@ def main(argv: Union[list[str], None] = None) -> None:
                     f"Invalid addparam '{param}': key or value is empty."
                 )
             addparams[key] = value
-        
+
         # Sort by key alphabetically for stable/deterministic injection order
         addparams = dict(sorted(addparams.items()))
         log.info(f"Phantom addparams provided: {addparams}")
@@ -927,14 +999,16 @@ def main(argv: Union[list[str], None] = None) -> None:
         )
         line_count = args.title.count("\n") + 1
         ftitle = SuptitleFormat(args.title, line_count)
-    
+
+    legend_outside: bool = args.legend_outside
+
     # Route to appropriate function
     if args.compareall:
-        run_compareall(args.parent_id, ftitle, config_indices)
+        run_compareall(args.parent_id, ftitle, config_indices, args.annotatediff, legend_outside)
     elif args.configgroup:
-        run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices)
+        run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices, args.annotatediff, legend_outside)
     else:
-        run_bestof(args.parent_id, args.comparekey, addparams, ftitle, config_indices)
+        run_bestof(args.parent_id, args.comparekey, addparams, ftitle, config_indices, args.annotatediff, legend_outside)
 
 
 class SuptitleFormat:
@@ -944,4 +1018,3 @@ class SuptitleFormat:
 
 if __name__ == "__main__":
     main()
-

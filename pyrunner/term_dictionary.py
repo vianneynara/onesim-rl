@@ -4,6 +4,10 @@ ALG_BASE_SETTINGS_PATH = {
     "ql-c-ms@1": "settings/skripsi/randomsearch-qlearn-ql-c-ms@1.cfg",
     "ql-p-ms@0": "settings/skripsi/randomsearch-qlearn-ql-p-ms@0.cfg",
     "ql-p-ms@1": "settings/skripsi/randomsearch-qlearn-ql-p-ms@1.cfg",
+    "ql-g-ms@0": "settings/skripsi/randomsearch-qlearn-ql-g-ms@0.cfg",
+    "ql-g-ms@1": "settings/skripsi/randomsearch-qlearn-ql-g-ms@1.cfg",
+    "ql-nsg-ms@0": "settings/skripsi/randomsearch-qlearn-ql-nsg-ms@0.cfg",
+    "ql-nsg-ms@1": "settings/skripsi/randomsearch-qlearn-ql-nsg-ms@1.cfg",
 
     "mcn": "settings/skripsi/randomsearch-mcn.cfg",
     "mcn-c-ms@0": "settings/skripsi/randomsearch-mcn-mc-c-ms@0.cfg",
@@ -16,6 +20,10 @@ ALG_BASE_SETTINGS_PATH = {
     "lfe-c-ms@1": "settings/skripsi/randomsearch-lf-episodic-lfe-c-ms@1.cfg",
     "lfe-p-ms@0": "settings/skripsi/randomsearch-lf-episodic-lfe-p-ms@0.cfg",
     "lfe-p-ms@1": "settings/skripsi/randomsearch-lf-episodic-lfe-p-ms@1.cfg",
+    "lfe-g-ms@0": "settings/skripsi/randomsearch-lf-episodic-lfe-g-ms@0.cfg",
+    "lfe-g-ms@1": "settings/skripsi/randomsearch-lf-episodic-lfe-g-ms@1.cfg",
+    "lfe-nsg-ms@0": "settings/skripsi/randomsearch-lf-episodic-lfe-nsg-ms@0.cfg",
+    "lfe-nsg-ms@1": "settings/skripsi/randomsearch-lf-episodic-lfe-nsg-ms@1.cfg",
 }
 
 ALG_ABBREVIATIONS = {
@@ -47,6 +55,8 @@ KEY_ABBREVIATIONS = {
     "qlm_sp": "QLearningMovement.stepPenalty",
     "qlm_fr": "QLearningMovement.foundReward",
     "qlm_as": "QLearningMovement.agentSpeed",
+    "qlm_pt": "QLearningMovement.pauseTraining",
+    "qlm_rth": "QLearningMovement.resetTrajectoryHistory",
 
     # [ Monte-Carlo Movement settings ]
     "mcnm_bp": "MCMovementEnd.behaviorPolicy",
@@ -58,6 +68,8 @@ KEY_ABBREVIATIONS = {
     "mcnm_fr": "MCMovementEnd.foundReward",
     "mcnm_as": "MCMovementEnd.agentSpeed",
     "mcnm_fv": "MCMovementEnd.firstVisit",
+    "mcnm_pt": "MCMovementEnd.pauseTraining",
+    "mcnm_rth": "MCMovementEnd.resetTrajectoryHistory",
 
     # [ Lévy Flight Episodic Movement settings ]
     "lfe_la": "LevyFlightEpisodic.levyAlpha",
@@ -66,6 +78,7 @@ KEY_ABBREVIATIONS = {
     "lfe_fs": "LevyFlightEpisodic.flightSpeed",
     "lfe_sp": "LevyFlightEpisodic.stepPenalty",
     "lfe_fr": "LevyFlightEpisodic.foundReward",
+    "lfe_rth": "LevyFlightEpisodic.resetTrajectoryHistory",
 
     # [ EpsilonGreedyBehavior settings ]
     "eg_ip": "BehaviorPolicy.EpsilonGreedy.epsilon",

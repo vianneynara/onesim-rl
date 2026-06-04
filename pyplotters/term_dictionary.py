@@ -16,6 +16,18 @@ GROUP_VALUE_TERMS: dict[str, str] = {
     "lfe": "Lévy Flight"
 }
 
+CONFIG_GROUP_TERMS: dict[str, str] = {
+    "ql_epsilon": "Epsilon Greedy",
+    "ql_ucb": "Upper Confidence Bound",
+    "ql_ps_gts": "Gaussian Thompson Sampling",
+    "ql_ps_bbts": "Beta-Binomial Thompson Sampling",
+    "mcnm_epsilon": "Epsilon Greedy",
+    "mcnm_ucb": "Upper Confidence Bound",
+    "mcnm_ps_gts": "Gaussian Thompson Sampling",
+    "mcnm_ps_bbts": "Beta-Binomial Thompson Sampling",
+    "lf": "Lévy Flight"
+}
+
 # Parameter abbreviation -> formal wording.
 # (Legends currently use abbreviations, but this dict is kept for future tooltips/annotations.)
 PARAM_ABBR_TERMS: dict[str, str] = {

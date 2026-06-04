@@ -170,69 +170,69 @@ LIST_OF_CONFIGS = [
      },
 
     # [ Q-Learning with Thompson Sampling ] (indices 23-33 (34,35 uses Bayesian))
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 0.5,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 1.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 2.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 3.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 4.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 5.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 6.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 7.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 8.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 9.0,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_gts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_iv": 10.0,
      }
      },
     ## Additional Thompson Sampling that use purer bayesian (alpha-beta) with BetaDistribution sampling
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_bbts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_betabinomial": True,
          "ps_reset": True,
      }
      },
-    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps", "id": "ql5-bp=ps",
+    {"alg": "ql", "runs": 750, "bp": "ps", "group": "ql_ps_bbts", "id": "ql5-bp=ps",
      "overrides": {
          "ps_betabinomial": True,
          "ps_reset": False,
