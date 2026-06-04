@@ -8,11 +8,6 @@ python pyplotters/persistence_plotter.py -pid lfe-c-ms@1 --title "Lévy Flight o
 python pyplotters/persistence_plotter.py -pid lfe-p-ms@0 --title "Lévy Flight on Stochastic Stationary Object Poisson Distributed Targets" --describe
 python pyplotters/persistence_plotter.py -pid lfe-p-ms@1 --title "Lévy Flight on Fixed Stationary Object Poisson Distributed Targets" --describe
 
-python pyplotters/persistence_plotter.py -pid mcn-c-ms@0 --title "Monte Carlo Reinforcement Learning on Stochastic Stationary Object Clustered Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid mcn-c-ms@1 --title "Monte Carlo Reinforcement Learning on Fixed Stationary Object Clustered Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid mcn-p-ms@0 --title "Monte Carlo Reinforcement Learning on Stochastic Stationary Object Poisson Distributed Targets" --describe
-python pyplotters/persistence_plotter.py -pid mcn-p-ms@1 --title "Monte Carlo Reinforcement Learning on Fixed Stationary Object Poisson Distributed Targets" --describe
-
 python pyplotters/persistence_plotter.py -pid ql-c-ms@0 --title "Q-Learning on Stochastic Stationary Clustered Distributed Targets" --describe
 python pyplotters/persistence_plotter.py -pid ql-c-ms@1 --title "Q-Learning on Fixed Stationary Clustered Distributed Targets" --describe
 python pyplotters/persistence_plotter.py -pid ql-p-ms@0 --title "Q-Learning on Stochastic Stationary Poisson Distributed Targets" --describe
@@ -27,11 +22,6 @@ python pyplotters/summary_merger.py -mf lfe-c-ms@0 -mt ql-c-ms@0 --mvplots
 python pyplotters/summary_merger.py -mf lfe-c-ms@1 -mt ql-c-ms@1 --mvplots
 python pyplotters/summary_merger.py -mf lfe-p-ms@0 -mt ql-p-ms@0 --mvplots
 python pyplotters/summary_merger.py -mf lfe-p-ms@1 -mt ql-p-ms@1 --mvplots
-
-python pyplotters/summary_merger.py -mf lfe-c-ms@0 -mt mcn-c-ms@0 --mvplots
-python pyplotters/summary_merger.py -mf lfe-c-ms@1 -mt mcn-c-ms@1 --mvplots
-python pyplotters/summary_merger.py -mf lfe-p-ms@0 -mt mcn-p-ms@0 --mvplots
-python pyplotters/summary_merger.py -mf lfe-p-ms@1 -mt mcn-p-ms@1 --mvplots
 
 ```
 
@@ -56,11 +46,6 @@ python pyplotters/bestof_plotter.py -pid ql-c-ms@1 --comparekey qlm_bp --addpara
 python pyplotters/bestof_plotter.py -pid ql-p-ms@0 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$'
 python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --comparekey qlm_bp --addparams qlm_bp@lfe --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$'
 
-python pyplotters/bestof_plotter.py -pid mcn-c-ms@0 --comparekey mcnm_bp --addparams mcnm_bp@lfe --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Clustered Distributed, Resampled Locations)}$"
-python pyplotters/bestof_plotter.py -pid mcn-c-ms@1 --comparekey mcnm_bp --addparams mcnm_bp@lfe --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Clustered Distributed, Fixed Locations)}$"
-python pyplotters/bestof_plotter.py -pid mcn-p-ms@0 --comparekey mcnm_bp --addparams mcnm_bp@lfe --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$"
-python pyplotters/bestof_plotter.py -pid mcn-p-ms@1 --comparekey mcnm_bp --addparams mcnm_bp@lfe --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$"
-
 ```
 
 Using group-specific (cg@GROUP)
@@ -75,15 +60,10 @@ python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --comparekey cg --addparams c
 ## Best of Plotters Compare All
 
 ```sh
-python pyplotters/bestof_plotter.py -pid ql-c-ms@0 --compareall --title 'Bulk Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Resampled Locations)}$'
-python pyplotters/bestof_plotter.py -pid ql-c-ms@1 --compareall --title 'Bulk Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Fixed Locations)}$'
-python pyplotters/bestof_plotter.py -pid ql-p-ms@0 --compareall --title 'Bulk Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$'
-python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --compareall --title 'Bulk Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$'
-
-python pyplotters/bestof_plotter.py -pid mcn-c-ms@0 --compareall --title "Bulk Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Clustered Distributed, Resampled Locations)}$"
-python pyplotters/bestof_plotter.py -pid mcn-c-ms@1 --compareall --title "Bulk Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Clustered Distributed, Fixed Locations)}$"
-python pyplotters/bestof_plotter.py -pid mcn-p-ms@0 --compareall --title "Bulk Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$"
-python pyplotters/bestof_plotter.py -pid mcn-p-ms@1 --compareall --title "Bulk Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$"
+python pyplotters/bestof_plotter.py -pid ql-c-ms@0 --compareall --title "Bulk Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Resampled Locations)}$"
+python pyplotters/bestof_plotter.py -pid ql-c-ms@1 --compareall --title "Bulk Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Clustered Distributed, Fixed Locations)}$"
+python pyplotters/bestof_plotter.py -pid ql-p-ms@0 --compareall --title "Bulk Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Resampled Locations)}$"
+python pyplotters/bestof_plotter.py -pid ql-p-ms@1 --compareall --title "Bulk Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Poisson Distributed, Fixed Locations)}$"
 
 ```
 
@@ -114,27 +94,6 @@ python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup ql_ucb --title 
 python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup ql_ps_gts --title "Group Performance of Q-Learning with Gaussian Thompson Sampling\n$\\text{(Poisson Distributed, Fixed Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup ql_ps_bbts --title "Group Performance of Q-Learning with Beta-Binomial Thompson Sampling\n$\\text{(Poisson Distributed, Fixed Locations)}$"
 python -m pyplotters.bestof_plotter -pid ql-p-ms@1 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Poisson Distributed, Fixed Locations)}$"
-
-# Clustered Distributed, Resampled Locations
-python -m pyplotters.bestof_plotter -pid mcn-c-ms@0 --configgroup mcn_epsilon --title "Group Performance of Monte Carlo Reinforcement Learning with Epsilon Greedy\n$\\text{(Clustered Distributed, Resampled Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-c-ms@0 --configgroup mcn_ucb --title "Group Performance of Monte Carlo Reinforcement Learning with Upper Confidence Bound\n$\\text{(Clustered Distributed, Resampled Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-c-ms@0 --configgroup mcn_ps --title "Group Performance of Monte Carlo Reinforcement Learning with Posterior Sampling\n$\\text{(Clustered Distributed, Resampled Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-c-ms@0 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Clustered Distributed, Resampled Locations)}$"
-# Clustered Distributed, Fixed Locations
-python -m pyplotters.bestof_plotter -pid mcn-c-ms@1 --configgroup mcn_epsilon --title "Group Performance of Monte Carlo Reinforcement Learning with Epsilon Greedy\n$\\text{(Clustered Distributed, Fixed Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-c-ms@1 --configgroup mcn_ucb --title "Group Performance of Monte Carlo Reinforcement Learning with Upper Confidence Bound\n$\\text{(Clustered Distributed, Fixed Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-c-ms@1 --configgroup mcn_ps --title "Group Performance of Monte Carlo Reinforcement Learning with Posterior Sampling\n$\\text{(Clustered Distributed, Fixed Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-c-ms@1 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Clustered Distributed, Fixed Locations)}$"
-# Poisson Distributed, Resampled Locations
-python -m pyplotters.bestof_plotter -pid mcn-p-ms@0 --configgroup mcn_epsilon --title "Group Performance of Monte Carlo Reinforcement Learning with Epsilon Greedy\n$\\text{(Poisson Distributed, Resampled Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-p-ms@0 --configgroup mcn_ucb --title "Group Performance of Monte Carlo Reinforcement Learning with Upper Confidence Bound\n$\\text{(Poisson Distributed, Resampled Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-p-ms@0 --configgroup mcn_ps --title "Group Performance of Monte Carlo Reinforcement Learning with Posterior Sampling\n$\\text{(Poisson Distributed, Resampled Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-p-ms@0 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Poisson Distributed, Resampled Locations)}$"
-# Poisson Distributed, Fixed Locations
-python -m pyplotters.bestof_plotter -pid mcn-p-ms@1 --configgroup mcn_epsilon --title "Group Performance of Monte Carlo Reinforcement Learning with Epsilon Greedy\n$\\text{(Poisson Distributed, Fixed Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-p-ms@1 --configgroup mcn_ucb --title "Group Performance of Monte Carlo Reinforcement Learning with Upper Confidence Bound\n$\\text{(Poisson Distributed, Fixed Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-p-ms@1 --configgroup mcn_ps --title "Group Performance of Monte Carlo Reinforcement Learning with Posterior Sampling\n$\\text{(Poisson Distributed, Fixed Locations)}$"
-python -m pyplotters.bestof_plotter -pid mcn-p-ms@1 --configgroup lf --title "Group Performance of Lévy Flight\n$\\text{(Poisson Distributed, Fixed Locations)}$"
 
 ```
 

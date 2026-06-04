@@ -849,6 +849,16 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--aspid", type=str, required=False,
+        help=(
+            "Save results into this parent directory ID instead of -pid. "
+            "Use this to run from a source model (-pid) while saving output to a new location (--aspid). "
+            "When set, -pid is still used to resolve the algorithm config (via -alg), "
+            "but all report output is written under --aspid."
+        )
+    )
+
+    parser.add_argument(
         "-srp", "--setreportspath", type=str, required=False,
         help="Override base report directory path. Accepts absolute paths (e.g., 'D:/test/newdir') or relative paths from current working directory (e.g., 'custom/reports'). Default: 'reports/skripsi'"
     )
@@ -943,7 +953,7 @@ if __name__ == "__main__":
                 overrides_list=merged_overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
-                parent_dir_id=args.parent_dir_id,
+                parent_dir_id=args.aspid or args.parent_dir_id,
                 custom_cfg=args.runcfg,
                 alg_override=args.algorithm,
                 report_base=args.setreportspath or REPORTS_BASE,
@@ -1004,7 +1014,7 @@ if __name__ == "__main__":
                 overrides_list=merged_overrides,
                 verify=args.verify,
                 do_continue=args.do_continue,
-                parent_dir_id=args.parent_dir_id,
+                parent_dir_id=args.aspid or args.parent_dir_id,
                 custom_cfg=args.runcfg,
                 alg_override=args.algorithm,
                 report_base=args.setreportspath or REPORTS_BASE,

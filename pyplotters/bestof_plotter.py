@@ -437,6 +437,7 @@ def plot_bestof_by_episode(
     out_file: str,
     suptitle: SuptitleFormat = None,
     legend_outside: bool = False,
+    legend_side: bool = False,
     cmap: str = None,
     annotate_diff: bool = False,
     diff_interval: int = ANNOTATION_INTERVAL,
@@ -468,26 +469,26 @@ def plot_bestof_by_episode(
     # Add difference annotations if enabled
     if annotate_diff:
         ax = plt.gca()
-        
+
         for idx, ((label, df), color) in enumerate(zip(series_by_label, palette)):
             # Calculate point-to-point differences
             df_sorted = df.sort_values(by="episodeNumber").reset_index(drop=True)
             y_values = pd.to_numeric(df_sorted[y_key], errors="coerce")
             episode_numbers = df_sorted["episodeNumber"]
-            
+
             # Iterate through data points, starting from index 1 (skip first point)
             for i in range(1, len(df_sorted)):
                 current_episode = episode_numbers.iloc[i]
-                
+
                 # Only annotate at interval boundaries
                 if current_episode % diff_interval == 0:
                     current_y = y_values.iloc[i]
                     previous_y = y_values.iloc[i - 1]
-                    
+
                     # Skip if either value is NaN
                     if pd.isna(current_y) or pd.isna(previous_y):
                         continue
-                    
+
                     # Calculate difference
                     if USE_PERCENTAGE:
                         if previous_y != 0:
@@ -498,7 +499,7 @@ def plot_bestof_by_episode(
                     else:
                         diff = current_y - previous_y
                         label_text = f"{diff:+.2f}"
-                    
+
                     # Annotate the point with line's color
                     ax.annotate(label_text,
                                xy=(current_episode, current_y),
@@ -545,9 +546,12 @@ def plot_bestof_by_episode(
     ax = plt.gca()
     handles, _labels = ax.get_legend_handles_labels()
     if handles:
-        if legend_outside:
-            # Place legend outside the plot, below it
-            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0, -0.15), ncol=2, prop={"family": "monospace"})
+        if legend_side:
+            # Place legend outside the plot, on the right side as a single column
+            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(1.02, 1), ncol=1, borderaxespad=0, prop={"family": "monospace"})
+        elif legend_outside:
+            # Place legend outside the plot, below it as a single column
+            ax.legend(handles=handles, loc="upper left", bbox_to_anchor=(0, -0.15), ncol=1, prop={"family": "monospace"})
         else:
             # Place legend inside the plot (default behavior)
             ax.legend(handles=handles, loc="best", prop={"family": "monospace"})
@@ -559,7 +563,7 @@ def plot_bestof_by_episode(
     plt.close()
 
 
-def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False) -> None:
+def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False, legend_side: bool = False) -> None:
     """Compare all available configurations (no grouping, no best-of selection).
 
     Plots all configs with legend labels showing cfg@N and parameter overrides.
@@ -678,12 +682,13 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
             out_file=out_file,
             suptitle=suptitle,
             legend_outside=legend_outside,
+            legend_side=legend_side,
             annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
 
 
-def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False) -> None:
+def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False, legend_side: bool = False) -> None:
     out_dir = os.path.join(PLOT_RESULTS_DIR, all_of)
     summary_path = os.path.join(out_dir, "summary.csv")
 
@@ -751,12 +756,13 @@ def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str]
             suptitle=suptitle,
             cmap=BESTOF_CMAP,
             legend_outside=legend_outside,
+            legend_side=legend_side,
             annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
 
 
-def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False) -> None:
+def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False, legend_side: bool = False) -> None:
     """Compare all runs matching a config-group key.
 
     Filters runs by cg@KEY, plots all matching runs sorted by reward (descending).
@@ -874,6 +880,7 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
             out_file=out_file,
             suptitle=suptitle,
             legend_outside=legend_outside,
+            legend_side=legend_side,
             annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
@@ -939,7 +946,13 @@ def main(argv: Union[list[str], None] = None) -> None:
         "--legend-outside",
         action="store_true",
         default=False,
-        help="Place the legend outside/below the plot (default: False = legend is placed inside the plot).",
+        help="Place the legend outside/below the plot as a single column (default: False = legend is placed inside the plot).",
+    )
+    parser.add_argument(
+        "--legend-side",
+        action="store_true",
+        default=False,
+        help="Place the legend on the right side of the plot as a single column.",
     )
     args = parser.parse_args(argv)
 
@@ -1001,14 +1014,15 @@ def main(argv: Union[list[str], None] = None) -> None:
         ftitle = SuptitleFormat(args.title, line_count)
 
     legend_outside: bool = args.legend_outside
+    legend_side: bool = args.legend_side
 
     # Route to appropriate function
     if args.compareall:
-        run_compareall(args.parent_id, ftitle, config_indices, args.annotatediff, legend_outside)
+        run_compareall(args.parent_id, ftitle, config_indices, args.annotatediff, legend_outside, legend_side)
     elif args.configgroup:
-        run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices, args.annotatediff, legend_outside)
+        run_configgroup(args.parent_id, args.configgroup, ftitle, config_indices, args.annotatediff, legend_outside, legend_side)
     else:
-        run_bestof(args.parent_id, args.comparekey, addparams, ftitle, config_indices, args.annotatediff, legend_outside)
+        run_bestof(args.parent_id, args.comparekey, addparams, ftitle, config_indices, args.annotatediff, legend_outside, legend_side)
 
 
 class SuptitleFormat:

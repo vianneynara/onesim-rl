@@ -33,11 +33,11 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# BASE_REPORTS_DIR = r"reports\\skripsi"
-# PLOT_RESULTS_DIR = r"pyplotters\\plots"
+BASE_REPORTS_DIR = r"reports\\skripsi"
+PLOT_RESULTS_DIR = r"pyplotters\\plots"
 
-BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
-PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+# BASE_REPORTS_DIR = r"D:\Developments+\Java\onesim-rl-data\reports"
+# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 LIST_OF_IGNORED_OVERRIDES = [
     "cfg",  # config index (e.g., cfg@01)
@@ -134,17 +134,6 @@ def parse_run_description(_run_id: str) -> str:
         return ""
 
     return f"({'; '.join(parsed_tokens)})"
-
-
-# def read_json_file(file_path):
-#     json_data = None
-#     try:
-#         with open(file_path, "r") as file:
-#             json_data = json.load(file)
-#     except FileNotFoundError:
-#         log.error(f"The file {file_path} does not exist.")
-#         raise FileNotFoundError(f"The json file {file_path} does not exist.")
-#     return json_data
 
 FAILED_JSON_FILES = []
 
