@@ -51,8 +51,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-PLOT_RESULTS_DIR = "pyplotters\\plots"
-# PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
+# PLOT_RESULTS_DIR = "pyplotters\\plots"
+PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
 
 def _exit_with_warning(msg: str, code: int = 2) -> None:
     log.warning(msg)
@@ -112,6 +112,12 @@ def _copy_plot_directories(
         try:
             shutil.copytree(src_dir, dst_dir)
             log.info(f"Copied: {config_dir}")
+            
+            # Verify and log if aggregated_trajectory_frequencies.json exists in copied directory
+            freq_file = os.path.join(dst_dir, "aggregated_trajectory_frequencies.json")
+            if os.path.exists(freq_file):
+                log.info(f"  → aggregated_trajectory_frequencies.json included")
+            
         except Exception as e:
             _exit_with_warning(
                 f"ERROR: Failed to copy directory {src_dir} to {dst_dir}: {e}"
