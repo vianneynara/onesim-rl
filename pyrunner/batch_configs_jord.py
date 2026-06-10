@@ -625,45 +625,45 @@ LIST_OF_CONFIGS = [
     },
 
 
-    # [ Episodic Lévy Flight ] (indices 36-43)
-    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
-         "overrides": {
-             "lfe_la": 0.25,
-         }
-     },
-    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
-         "overrides": {
-             "lfe_la": 0.5,
-         }
-     },
-    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
-         "overrides": {
-             "lfe_la": 0.75,
-         }
-     },
-    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
-         "overrides": {
-             "lfe_la": 1.0,
-         }
-     },
-    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
-         "overrides": {
-             "lfe_la": 1.25,
-         }
-     },
-    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
-         "overrides": {
-             "lfe_la": 1.5,
-         }
-     },
-    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
-         "overrides": {
-             "lfe_la": 1.75,
-         }
-     },
-    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
-         "overrides": {
-             "lfe_la": 2,
-         }
-     },
+#     # [ Episodic Lévy Flight ] (indices 36-43)
+#     {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+#          "overrides": {
+#              "lfe_la": 0.25,
+#          }
+#      },
+#     {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+#          "overrides": {
+#              "lfe_la": 0.5,
+#          }
+#      },
+#     {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+#          "overrides": {
+#              "lfe_la": 0.75,
+#          }
+#      },
+#     {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+#          "overrides": {
+#              "lfe_la": 1.0,
+#          }
+#      },
+#     {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+#          "overrides": {
+#              "lfe_la": 1.25,
+#          }
+#      },
+#     {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+#          "overrides": {
+#              "lfe_la": 1.5,
+#          }
+#      },
+#     {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+#          "overrides": {
+#              "lfe_la": 1.75,
+#          }
+#      },
+#     {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+#          "overrides": {
+#              "lfe_la": 2,
+#          }
+#      },
 ]
