@@ -53,8 +53,8 @@ S_REPORT_DIR = f"Report.reportDir={REPORTS_BASE}/{ALG_LABEL}/run-id/{ID_LABEL}"
 PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcnm_bp"]
 
 # Import the configs
-# from pyrunner.batch_configs import LIST_OF_CONFIGS
-from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
+from pyrunner.batch_configs import LIST_OF_CONFIGS
+# from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
 
 HIGHLIGHTED_SETTINGS = [
     "MovementModel.rngSeed",
@@ -323,7 +323,10 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1, custom_cfg
 
     # Add overrides only if provided
     if overrides_string:
-        script.extend(["-d", overrides_string])
+        script.extend(["-d", overrides_string]) # Default simulation settings
+        # script.extend(["-d", overrides_string + "@@Scenario.endTime=86400"]) # Using one day simulation
+        # script.extend(["-d", overrides_string + "@@Scenario.endTime=172800"]) # Using 2 day simulation
+        # script.extend(["-d", overrides_string + "@@Scenario.endTime=259200"]) # Using 3 day simulation
 
     # Add config file path (custom config, algorithm override, or default)
     script.append(expand_algorithm(algo, custom_cfg, alg_override))
