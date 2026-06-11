@@ -314,7 +314,7 @@ def build_result_id_dir(
     return f"{prefix}-{suffix}" if suffix else prefix
 
 
-def run_script(algo: str, overrides_string: str = None, ep: int = -1, custom_cfg: Optional[str] = None, alg_override: Optional[str] = None) -> bool:
+def run_script(algo: str, overrides_string: str = None, ep: int = -1, custom_cfg: Optional[str] = None, alg_override: Optional[str] = None, phantom_override: Optional[str] = None) -> bool:
     script = [
         r".\one.bat",
         "-b",
@@ -322,11 +322,16 @@ def run_script(algo: str, overrides_string: str = None, ep: int = -1, custom_cfg
     ]
 
     # Add overrides only if provided
-    if overrides_string:
+    if overrides_string and not phantom_override:
         script.extend(["-d", overrides_string]) # Default simulation settings
-        # script.extend(["-d", overrides_string + "@@Scenario.endTime=86400"]) # Using one day simulation
-        # script.extend(["-d", overrides_string + "@@Scenario.endTime=172800"]) # Using 2 day simulation
-        # script.extend(["-d", overrides_string + "@@Scenario.endTime=259200"]) # Using 3 day simulation
+    elif overrides_string and phantom_override:
+        script.extend(["-d", overrides_string + "@@" + phantom_override])
+    elif phantom_override:
+        script.extend(["-d", phantom_override])
+
+    # script.extend(["-d", overrides_string + "@@Scenario.endTime=86400"]) # Using one day simulation
+    # script.extend(["-d", overrides_string + "@@Scenario.endTime=172800"]) # Using 2 day simulation
+    # script.extend(["-d", overrides_string + "@@Scenario.endTime=259200"]) # Using 3 day simulation
 
     # Add config file path (custom config, algorithm override, or default)
     script.append(expand_algorithm(algo, custom_cfg, alg_override))
@@ -575,7 +580,8 @@ def run_simulation(
         custom_cfg: Optional[str] = None,
         alg_override: Optional[str] = None,
         report_base: str = REPORTS_BASE,
-        continue_on_error: bool = False
+        continue_on_error: bool = False,
+        phantom_overrides: Optional[str] = None
 ) -> bool:
     # Validate algorithm
     settings_file = expand_algorithm(alg, custom_cfg, alg_override)
@@ -736,7 +742,7 @@ def run_simulation(
         ep_overrides.append(f"Report.reportDir={full_report_dir}/ep/{str(ep)}")
         ep_overrides.append(f"EpisodicPersistenceManager.episodeNumber={str(ep)}")
         running_overrides_string = "@@".join(ep_overrides)
-        if run_script(alg, running_overrides_string, ep, custom_cfg, alg_override):
+        if run_script(alg, running_overrides_string, ep, custom_cfg, alg_override, phantom_overrides):
             succeeds += 1
         else:
             failed += 1
@@ -891,6 +897,11 @@ if __name__ == "__main__":
         help="Additional CLI overrides as comma-separated key=value pairs (e.g., 'qlm_pt=True,qlm_rth=False'). CLI overrides take precedence over config file overrides. Unregistered keys will cause exit with error."
     )
 
+    parser.add_argument(
+        "-po", "--phantomoverrides", type=str, required=False,
+        help="Additional overrides not logged as config overrides, used for advanced overrides."
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -950,7 +961,8 @@ if __name__ == "__main__":
                 custom_cfg=args.runcfg,
                 alg_override=args.algorithm,
                 report_base=args.setreportspath or REPORTS_BASE,
-                continue_on_error=args.continue_on_error
+                continue_on_error=args.continue_on_error,
+                phantom_overrides=args.phantomoverrides
             )
 
             _sim_end_time = datetime.now()
@@ -1011,7 +1023,8 @@ if __name__ == "__main__":
                 custom_cfg=args.runcfg,
                 alg_override=args.algorithm,
                 report_base=args.setreportspath or REPORTS_BASE,
-                continue_on_error=args.continue_on_error
+                continue_on_error=args.continue_on_error,
+                phantom_overrides=args.phantomoverrides
             )
 
 
