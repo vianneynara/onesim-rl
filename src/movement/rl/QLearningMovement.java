@@ -605,6 +605,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		/* Saving trajectory recorder */
 		epd.trajectoryFrequencies = new HashMap<>();
+		if (this.trajectoryFrequencies.isEmpty()) {
+			System.out.printf("[%s] trajectoryFrequencies is empty! Adding outlier(?): %d",
+				QLearningMovement.class.getCanonicalName(),
+				currentTrajectorySteps);
+			recordFinishedTrajectory(currentTrajectorySteps);
+		}
 		for (var entry : trajectoryFrequencies.entrySet()) {
 			epd.trajectoryFrequencies.put(String.valueOf(entry.getKey()), entry.getValue());
 		}
