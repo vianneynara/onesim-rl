@@ -389,10 +389,31 @@ def plot_by_episode(_df: pd.DataFrame, _key: str, _title: str, _xlabel: str, _yl
     plt.close()
 
 
+# def retrieve_trajectoryFrequencies(_json_data):
+#     traj_freq_list = []
+#     for trajectory_length, frequency in _json_data["trajectoryFrequencies"].items():
+#         traj_freq_list.append({"trajectory": trajectory_length, "frequency": frequency})
+#
+#     traj_freq_df = pd.DataFrame(sorted(traj_freq_list, key=lambda x: int(x["trajectory"])))
+#
+#     # Calculate probabilities
+#     traj_freq_df["probability"] = traj_freq_df["frequency"] / traj_freq_df["frequency"].sum()
+#
+#     # Calculate PDF (Probability Mass Function) using Kernel Density Estimation
+#     trajectory_values = traj_freq_df["trajectory"].astype(int).values
+#
+#     return
+
 def retrieve_trajectoryFrequencies(_json_data):
     traj_freq_list = []
     for trajectory_length, frequency in _json_data["trajectoryFrequencies"].items():
         traj_freq_list.append({"trajectory": trajectory_length, "frequency": frequency})
+
+    if not traj_freq_list:
+        log.warning(
+            "trajectoryFrequencies is empty in provided JSON data; returning empty DataFrame."
+        )
+        return pd.DataFrame(columns=["trajectory", "frequency", "probability"])
 
     traj_freq_df = pd.DataFrame(sorted(traj_freq_list, key=lambda x: int(x["trajectory"])))
 
@@ -403,7 +424,6 @@ def retrieve_trajectoryFrequencies(_json_data):
     trajectory_values = traj_freq_df["trajectory"].astype(int).values
 
     return traj_freq_df
-
 
 def plot_trajectoryDistribution(
         _df: pd.DataFrame,
@@ -644,9 +664,20 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _run_summary["max_cumulative_true_detections"] = max(_run_summary["max_cumulative_true_detections"],
                                                              json_data["currentCumulativeTrueDetections"])
 
+#         # Get highest "trajectoryFrequencies" by grabbing and selecting the highest int-casted
+#         _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"],
+#                                                     max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))
+
         # Get highest "trajectoryFrequencies" by grabbing and selecting the highest int-casted
-        _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"],
-                                                    max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))
+        traj_freq_keys = [int(k) for k in json_data["trajectoryFrequencies"].keys()]
+
+        if traj_freq_keys:
+            _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"],
+                                                        max(traj_freq_keys))
+        else:
+            log.warning(
+                f"Empty trajectoryFrequencies for run_id={run_id}, file={episode_json_dir}. Skipping."
+            )
 
     # SORT common_df by episodeNumber, this wsa critical bruh.
     common_df = common_df.sort_values(by=["episodeNumber"], ascending=True)

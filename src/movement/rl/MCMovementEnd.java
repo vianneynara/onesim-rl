@@ -456,8 +456,14 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 	// REPORTING METHODS
 	// =========================================================================
 
+//	private void recordFinishedTrajectory(int length) {
+//		if (length <= 0) return;
+//		trajectoryFrequencies.merge(length, 1, Integer::sum);
+//	}
+
 	private void recordFinishedTrajectory(int length) {
-		if (length <= 0) return;
+		if (length < 0) return;
+		else if (length == 0) length = 1;
 		trajectoryFrequencies.merge(length, 1, Integer::sum);
 	}
 
