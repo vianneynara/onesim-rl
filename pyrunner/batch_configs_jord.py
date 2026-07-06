@@ -6,7 +6,7 @@ LIST_OF_CONFIGS = [
     # --- Epsilon-Greedy | fv=True ---
 
     # 1
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.99,
@@ -16,7 +16,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 2
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.991,
@@ -26,7 +26,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 3
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.992,
@@ -36,7 +36,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 4
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.993,
@@ -46,7 +46,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 5
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.994,
@@ -56,7 +56,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 6
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.9954,
@@ -66,7 +66,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 7
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.996,
@@ -76,7 +76,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 8
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.997,
@@ -86,7 +86,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 9
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.998,
@@ -96,7 +96,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 10
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_fv_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.999,
@@ -108,7 +108,7 @@ LIST_OF_CONFIGS = [
     # --- UCB | fv=True ---
 
     # 11
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 0.5,
             "mcnm_fv": True,
@@ -116,7 +116,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 12
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 0.75,
             "mcnm_fv": True,
@@ -124,7 +124,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 13
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 1.0,
             "mcnm_fv": True,
@@ -132,7 +132,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 14
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 1.25,
             "mcnm_fv": True,
@@ -140,7 +140,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 15
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 1.5,
             "mcnm_fv": True,
@@ -148,7 +148,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 16
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 1.75,
             "mcnm_fv": True,
@@ -156,7 +156,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 17
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 2.0,
             "mcnm_fv": True,
@@ -164,7 +164,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 18
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 2.25,
             "mcnm_fv": True,
@@ -172,7 +172,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 19
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 2.5,
             "mcnm_fv": True,
@@ -180,7 +180,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 20
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 2.75,
             "mcnm_fv": True,
@@ -188,7 +188,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 21
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 3.0,
             "mcnm_fv": True,
@@ -196,7 +196,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 22
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_fv_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 5.0,
             "mcnm_fv": True,
@@ -206,7 +206,7 @@ LIST_OF_CONFIGS = [
     # --- Posterior Sampling | fv=True ---
 
     # 23
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 0.5,
             "mcnm_fv": True,
@@ -214,7 +214,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 24
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 1.0,
             "mcnm_fv": True,
@@ -222,7 +222,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 25
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 2.0,
             "mcnm_fv": True,
@@ -230,7 +230,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 26
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 3.0,
             "mcnm_fv": True,
@@ -238,7 +238,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 27
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 4.0,
             "mcnm_fv": True,
@@ -246,7 +246,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 28
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 5.0,
             "mcnm_fv": True,
@@ -254,7 +254,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 29
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 6.0,
             "mcnm_fv": True,
@@ -262,7 +262,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 30
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 7.0,
             "mcnm_fv": True,
@@ -270,7 +270,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 31
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 8.0,
             "mcnm_fv": True,
@@ -278,7 +278,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 32
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 9.0,
             "mcnm_fv": True,
@@ -286,7 +286,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 33
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 10.0,
             "mcnm_fv": True,
@@ -294,7 +294,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 34
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_bbts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_betabinomial": True,
             "ps_reset": True,
@@ -303,7 +303,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 35
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_fv_ps_bbts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_betabinomial": True,
             "ps_reset": False,
@@ -319,7 +319,7 @@ LIST_OF_CONFIGS = [
     # --- Epsilon-Greedy | fv=False ---
 
     # 36
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.99,
@@ -329,7 +329,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 37
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.991,
@@ -339,7 +339,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 38
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.992,
@@ -349,7 +349,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 39
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.993,
@@ -359,7 +359,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 40
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.994,
@@ -369,7 +369,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 41
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.9954,
@@ -379,7 +379,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 42
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.996,
@@ -389,7 +389,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 43
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.997,
@@ -399,7 +399,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 44
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.998,
@@ -409,7 +409,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 45
-    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_epsilon", "id": "mcn1-bp=epsilon",
+    {"alg": "mcn", "runs": 750, "bp": "epsilon", "group": "mcn_ev_epsilon", "id": "mcn1-bp=epsilon",
         "overrides": {
             "eg_ip": 1.0,
             "eg_ed": 0.999,
@@ -421,7 +421,7 @@ LIST_OF_CONFIGS = [
     # --- UCB | fv=False ---
 
     # 46
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 0.5,
             "mcnm_fv": False,
@@ -429,7 +429,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 47
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 0.75,
             "mcnm_fv": False,
@@ -437,7 +437,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 48
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 1.0,
             "mcnm_fv": False,
@@ -445,7 +445,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 49
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 1.25,
             "mcnm_fv": False,
@@ -453,7 +453,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 50
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 1.5,
             "mcnm_fv": False,
@@ -461,7 +461,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 51
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 1.75,
             "mcnm_fv": False,
@@ -469,7 +469,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 52
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 2.0,
             "mcnm_fv": False,
@@ -477,7 +477,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 53
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 2.25,
             "mcnm_fv": False,
@@ -485,7 +485,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 54
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 2.5,
             "mcnm_fv": False,
@@ -493,7 +493,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 55
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 2.75,
             "mcnm_fv": False,
@@ -501,7 +501,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 56
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 3.0,
             "mcnm_fv": False,
@@ -509,7 +509,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 57
-    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ucb", "id": "mcn1-bp=ucb",
+    {"alg": "mcn", "runs": 750, "bp": "ucb", "group": "mcn_ev_ucb", "id": "mcn1-bp=ucb",
         "overrides": {
             "ucb_ec": 5.0,
             "mcnm_fv": False,
@@ -519,7 +519,7 @@ LIST_OF_CONFIGS = [
     # --- Posterior Sampling | fv=False ---
 
     # 58
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 0.5,
             "mcnm_fv": False,
@@ -527,7 +527,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 59
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 1.0,
             "mcnm_fv": False,
@@ -535,7 +535,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 60
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 2.0,
             "mcnm_fv": False,
@@ -543,7 +543,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 61
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 3.0,
             "mcnm_fv": False,
@@ -551,7 +551,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 62
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 4.0,
             "mcnm_fv": False,
@@ -559,7 +559,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 63
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 5.0,
             "mcnm_fv": False,
@@ -567,7 +567,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 64
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 6.0,
             "mcnm_fv": False,
@@ -575,7 +575,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 65
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 7.0,
             "mcnm_fv": False,
@@ -583,7 +583,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 66
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 8.0,
             "mcnm_fv": False,
@@ -591,7 +591,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 67
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 9.0,
             "mcnm_fv": False,
@@ -599,7 +599,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 68
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_gts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_iv": 10.0,
             "mcnm_fv": False,
@@ -607,7 +607,7 @@ LIST_OF_CONFIGS = [
     },
 
     # 69
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_bbts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_betabinomial": True,
             "ps_reset": True,
@@ -616,11 +616,54 @@ LIST_OF_CONFIGS = [
     },
 
     # 70
-    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ps", "id": "mcn1-bp=ps",
+    {"alg": "mcn", "runs": 750, "bp": "ps", "group": "mcn_ev_ps_bbts", "id": "mcn1-bp=ps",
         "overrides": {
             "ps_betabinomial": True,
             "ps_reset": False,
             "mcnm_fv": False,
         }
     },
+
+
+    # [ Episodic Lévy Flight ] (indices 36-43)
+    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+         "overrides": {
+             "lfe_la": 0.25,
+         }
+     },
+    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+         "overrides": {
+             "lfe_la": 0.5,
+         }
+     },
+    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+         "overrides": {
+             "lfe_la": 0.75,
+         }
+     },
+    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+         "overrides": {
+             "lfe_la": 1.0,
+         }
+     },
+    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+         "overrides": {
+             "lfe_la": 1.25,
+         }
+     },
+    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+         "overrides": {
+             "lfe_la": 1.5,
+         }
+     },
+    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+         "overrides": {
+             "lfe_la": 1.75,
+         }
+     },
+    {"alg": "lfe", "runs": 750, "group": "lf", "id": "lfe",
+         "overrides": {
+             "lfe_la": 2,
+         }
+     },
 ]
