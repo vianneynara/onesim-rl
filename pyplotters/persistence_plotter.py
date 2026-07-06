@@ -664,6 +664,7 @@ def process_reports(_run_id_dir, _parent_dir: str = None, _title: str = None, _d
         _run_summary["max_cumulative_true_detections"] = max(_run_summary["max_cumulative_true_detections"],
                                                              json_data["currentCumulativeTrueDetections"])
 
+        # print("EP: " + str(json_data["episodeNumber"]) + ", KEYS: " + str(json_data["trajectoryFrequencies"].keys()))
 #         # Get highest "trajectoryFrequencies" by grabbing and selecting the highest int-casted
 #         _run_summary["max_trajectory_length"] = max(_run_summary["max_trajectory_length"],
 #                                                     max([int(k) for k in json_data["trajectoryFrequencies"].keys()]))

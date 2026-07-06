@@ -496,7 +496,8 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 * Records a length value to {@link QLearningMovement#trajectoryFrequencies}.
 	 */
 	private void recordFinishedTrajectory(int length) {
-		if (length <= 0) return;
+		if (length < 0) return;
+		else if (length == 0) length = 1;
 		trajectoryFrequencies.merge(length, 1, Integer::sum);
 	}
 
@@ -605,6 +606,12 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		/* Saving trajectory recorder */
 		epd.trajectoryFrequencies = new HashMap<>();
+//		if (this.trajectoryFrequencies.isEmpty()) {
+//			System.out.printf("[%s] trajectoryFrequencies is empty! Adding outlier(?): %d%n",
+//				QLearningMovement.class.getCanonicalName(),
+//				currentTrajectorySteps);
+//			recordFinishedTrajectory(currentTrajectorySteps);
+//		}
 		for (var entry : trajectoryFrequencies.entrySet()) {
 			epd.trajectoryFrequencies.put(String.valueOf(entry.getKey()), entry.getValue());
 		}
