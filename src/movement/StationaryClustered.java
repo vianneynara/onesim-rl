@@ -130,6 +130,7 @@ public class StationaryClustered extends StationaryNodes {
 			POICoords.add(randomCoord());
 		}
 
+		System.out.println("Number of POI: " + POICoords.size());
 	}
 
 	protected Coord randomCoord() {
