@@ -53,6 +53,7 @@ EVAL_KEYS = [
     "avg_episodic_reward",
     "std_episodic_reward",
     "ci95_episodic_reward",
+    "relative_error_pct",
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -239,14 +240,30 @@ def evaluate_run(run_id_dir: str) -> dict | None:
         else 0.0
     )
 
+    avg_reward = float(rewards.mean())
+
+    # Relative Error (RE): CI95 expressed as a percentage of |avg|.
+    # This gives a scale-independent way to judge whether the CI95/std
+    # is "large" or "small" relative to the group's own performance level.
+    # NOTE: when |avg| is near zero (reward straddles zero), RE becomes
+    # numerically unstable/misleading — flagged as NaN rather than a
+    # deceptively large or small percentage.
+    NEAR_ZERO_AVG_THRESHOLD = 1e-6
+    relative_error_pct = (
+        (ci95_reward / abs(avg_reward)) * 100.0
+        if abs(avg_reward) > NEAR_ZERO_AVG_THRESHOLD
+        else float("nan")
+    )
+
     return {
         "configuration": run_id,
         "group": extract_group_from_run_id(run_id),
         "min_episodic_reward": float(rewards.min()),
         "max_episodic_reward": float(rewards.max()),
-        "avg_episodic_reward": float(rewards.mean()),
+        "avg_episodic_reward": avg_reward,
         "std_episodic_reward": std_reward,
         "ci95_episodic_reward": ci95_reward,
+        "relative_error_pct": relative_error_pct,
     }
 
 
