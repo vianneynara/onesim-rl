@@ -67,10 +67,36 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	public Integer selectAction(int stateId, Map<Integer, Double> qValues, @NonNull Set<Integer> availableActions) {
 		if (random.nextDouble() < epsilon) {
 			/* Explore a random action */
-			return selectRandomAction(availableActions);
+			Integer[] actionIndexes;
+
+			if (!availableActions.isEmpty()) {
+//				System.out.println("[EpsilonGreedyBehavior] No actions available, using default actions of 0 and 1");
+				actionIndexes = availableActions.toArray(new Integer[0]);
+			} else {
+				actionIndexes = new Integer[]{0, 1};
+			}
+
+			return actionIndexes[random.nextInt(actionIndexes.length)];
 		} else {
 			/* Exploit the best action given the state */
-			return selectBestAction(qValues, availableActions);
+			List<Integer> bestActions = new ArrayList<>(availableActions.size());
+			double maxQ = Double.NEGATIVE_INFINITY;
+
+			for (Integer action : availableActions) {
+				Double qValue = qValues.getOrDefault(action, 0.0);
+
+				if (qValue > maxQ) {
+					/* Clear all previous similar qValues */
+					bestActions.clear();
+					bestActions.add(action);
+					maxQ = qValue;
+				} else if (qValue == maxQ) {
+					/* Add equally high q-value action */
+					bestActions.add(action);
+				}
+			}
+
+			return bestActions.get(random.nextInt(bestActions.size()));
 		}
 	}
 
@@ -95,6 +121,7 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	 *
 	 * @param availableActions set of valid action indices to pick from
 	 */
+	@Deprecated
 	private Integer selectRandomAction(@NonNull Set<Integer> availableActions) {
 		Integer[] actionIndexes;
 
@@ -114,6 +141,7 @@ public class EpsilonGreedyBehavior implements BehaviorPolicy {
 	 * @param availableActions permissible actions
 	 * @return Integer index of action
 	 */
+	@Deprecated
 	private Integer selectBestAction(Map<Integer, Double> qValues, @NonNull Set<Integer> availableActions) {
 		List<Integer> bestActions = new ArrayList<>(availableActions.size());
 		double maxQ = Double.NEGATIVE_INFINITY;
