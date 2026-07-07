@@ -54,14 +54,14 @@ VENV_ACTIVATE = WORK_DIR / ".venv" / "Scripts" / "activate.bat"
 # # ]
 #
 # # commands = [
-#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-c-ms@0 -ule --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-c-ms@1 -ule --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-p-ms@0 -ule --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-p-ms@1 -ule --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -ule -pid ql-c-ms@0 -ule --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -ule -pid ql-c-ms@1 -ule --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -ule -pid ql-p-ms@0 -ule --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -ule -pid ql-p-ms@1 -ule --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-p-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid ql-c-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid ql-c-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid ql-p-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid ql-p-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
 ### AFTER ABOVE, MERGE.

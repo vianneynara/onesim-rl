@@ -138,7 +138,7 @@ public class PosteriorSamplingBehavior implements BehaviorPolicy {
 		Integer[] actionArray;
 
 		if (availableActions.isEmpty()) {
-			System.out.println("[PosteriorSamplingBehavior] No actions available, using default actions of 0 and 1");
+//			System.out.println("[PosteriorSamplingBehavior] No actions available, using default actions of 0 and 1");
 			actionArray = new Integer[]{0, 1}; // default actions
 		} else {
 			actionArray = availableActions.toArray(new Integer[0]);
