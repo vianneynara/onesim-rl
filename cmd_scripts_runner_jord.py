@@ -190,21 +190,21 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 #     r'python pyplotters/persistence_plotter.py -pid lfe-c-ms@1 --title "Lévy Flight on Fixed Stationary Clustered Distributed Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid lfe-p-ms@0 --title "Lévy Flight on Stochastic Stationary Poisson Distributed Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid lfe-p-ms@1 --title "Lévy Flight on Fixed Stationary Poisson Distributed Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid ql-c-ms@0 --title "Q-Learning on Stochastic Stationary Clustered Distributed Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid ql-c-ms@1 --title "Q-Learning on Fixed Stationary Clustered Distributed Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid ql-p-ms@0 --title "Q-Learning on Stochastic Stationary Poisson Distributed Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid ql-p-ms@1 --title "Q-Learning on Fixed Stationary Poisson Distributed Targets" --describe',
+# #     r'python pyplotters/persistence_plotter.py -pid ql-c-ms@0 --title "Q-Learning on Stochastic Stationary Clustered Distributed Targets" --describe',
+# #     r'python pyplotters/persistence_plotter.py -pid ql-c-ms@1 --title "Q-Learning on Fixed Stationary Clustered Distributed Targets" --describe',
+# #     r'python pyplotters/persistence_plotter.py -pid ql-p-ms@0 --title "Q-Learning on Stochastic Stationary Poisson Distributed Targets" --describe',
+# #     r'python pyplotters/persistence_plotter.py -pid ql-p-ms@1 --title "Q-Learning on Fixed Stationary Poisson Distributed Targets" --describe',
 # ]
 
 # # Commands to run, all base plotting
 # commands = [
 #     r'python pyplotters/persistence_plotter.py -pid mcn-c-ms@0 --title "Monte Carlo Reinforcement Learning on Stochastic Stationary Object Clustered Distributed Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid mcn-c-ms@1 --title "Monte Carlo Reinforcement Learning on Fixed Stationary Object Clustered Distributed Targets" --describe',
-# #     r'python pyplotters/persistence_plotter.py -pid mcn-p-ms@0 --title "Monte Carlo Reinforcement Learning on Stochastic Stationary Object Poisson Distributed Targets" --describe',
-# #     r'python pyplotters/persistence_plotter.py -pid mcn-p-ms@1 --title "Monte Carlo Reinforcement Learning on Fixed Stationary Object Poisson Distributed Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid mcn-p-ms@0 --title "Monte Carlo Reinforcement Learning on Stochastic Stationary Object Poisson Distributed Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid mcn-p-ms@1 --title "Monte Carlo Reinforcement Learning on Fixed Stationary Object Poisson Distributed Targets" --describe',
 # ]
 
-# Commands to run, all base plotting
+# # Commands to run, all base plotting
 # commands = [
 #     r'python pyplotters/summary_merger.py -mf lfe-c-ms@0 -mt mcn-c-ms@0 --mvplots',
 #     r'python pyplotters/summary_merger.py -mf lfe-c-ms@1 -mt mcn-c-ms@1 --mvplots',
@@ -367,17 +367,28 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 # commands = [
 # #     r'python pyplotters/persistence_plotter.py -pid cont-lfe-c-ms@0 --title "Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
 # #     r'python pyplotters/persistence_plotter.py -pid cont-lfe-c-ms@1 --title "Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
+#
 # # #     r'python pyplotters/persistence_plotter.py -pid 3d-cont-lfe-p-ms@0 --title "Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #
 # # #     r'python pyplotters/persistence_plotter.py -pid 3d-cont-lfe-p-ms@1 --title "Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
 #
-#     r'python pyplotters/persistence_plotter.py -pid 2d-cont-mcn-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 2d-cont-mcn-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
+# #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
+# #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
+# #
+# #     r'python pyplotters/persistence_plotter.py -pid 2d-cont-mcn-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
+# #     r'python pyplotters/persistence_plotter.py -pid 2d-cont-mcn-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
+# #
+# #     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
+# #     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
 #
-#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
+#
+#     r'python pyplotters/persistence_plotter.py -pid 2d-cont-lfe-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 2d-cont-lfe-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
+#
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-lfe-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-lfe-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
 #
 # #     r'python pyplotters/persistence_plotter.py -pid cont-mcn-c-ms@0 --title "Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
 # #     r'python pyplotters/persistence_plotter.py -pid cont-mcn-c-ms@1 --title "Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
@@ -387,18 +398,48 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 
 # # Commands to run, all base plotting
 # commands = [
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-c-ms@0 -mt cont-mcn-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-c-ms@1 -mt cont-mcn-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-p-ms@0 -mt cont-mcn-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-p-ms@1 -mt cont-mcn-p-ms@1 --mvplots',
+#
 #     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-c-ms@0 -mt 1d-cont-mcn-c-ms@0 --mvplots',
 #     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-c-ms@1 -mt 1d-cont-mcn-c-ms@1 --mvplots',
 #     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-p-ms@0 -mt 1d-cont-mcn-p-ms@0 --mvplots',
 #     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-p-ms@1 -mt 1d-cont-mcn-p-ms@1 --mvplots',
+#
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-c-ms@0 -mt 2d-cont-mcn-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-c-ms@1 -mt 2d-cont-mcn-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-p-ms@0 -mt 2d-cont-mcn-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-p-ms@1 -mt 2d-cont-mcn-p-ms@1 --mvplots',
+#
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-c-ms@0 -mt 3d-cont-mcn-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-c-ms@1 -mt 3d-cont-mcn-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-p-ms@0 -mt 3d-cont-mcn-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-p-ms@1 -mt 3d-cont-mcn-p-ms@1 --mvplots',
 # ]
 
 # # Commands to run, all base plotting
 # commands = [
+#     r'python pyplotters/bestof_plotter.py -pid cont-mcn-c-ms@0 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-mcn-c-ms@1 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-mcn-p-ms@0 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-mcn-p-ms@1 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+#
 #     r'python pyplotters/bestof_plotter.py -pid 1d-cont-mcn-c-ms@0 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
 #     r'python pyplotters/bestof_plotter.py -pid 1d-cont-mcn-c-ms@1 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
 #     r'python pyplotters/bestof_plotter.py -pid 1d-cont-mcn-p-ms@0 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
 #     r'python pyplotters/bestof_plotter.py -pid 1d-cont-mcn-p-ms@1 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+#
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-mcn-c-ms@0 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-mcn-c-ms@1 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-mcn-p-ms@0 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-mcn-p-ms@1 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+#
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-mcn-c-ms@0 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-mcn-c-ms@1 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-mcn-p-ms@0 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-mcn-p-ms@1 --comparekey cg --addparams cg@other --legend-outside --title "Best Performance Comparison of Lévy Flight vs Monte Carlo RL\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
 # ]
 
 # # Commands to run, all base plotting
@@ -407,18 +448,68 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 # #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
 # #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
 # #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-lfe-p-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets" --describe',
+# #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
+# #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
+# #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets" --describe',
+# #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid lfe-p-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -ule -pid mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
-# # Commands to run, all base plotting
-# commands = [
+# Commands to run, all base plotting
+commands = [
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-c-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets (100 eps)" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-c-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets (100 eps)" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-p-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-p-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+#
+#     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-mcn-c-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-mcn-c-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-mcn-p-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-mcn-p-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+#
+#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-c-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-c-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-p-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-p-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+#
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+
+    r'python pyplotters/trajectory_aggregator.py -pid mcn-c-ms@0 --compareall -c 70,65,56,29,45,9,35,11,71 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets (100 eps)" --describe',
+    r'python pyplotters/trajectory_aggregator.py -pid mcn-c-ms@1 --compareall -c 70,57,60,31,15,44,10,34,71 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets (100 eps)" --describe',
+    r'python pyplotters/trajectory_aggregator.py -pid mcn-p-ms@0 --compareall -c 70,56,67,71,29,20,44,9,34 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+    r'python pyplotters/trajectory_aggregator.py -pid mcn-p-ms@1 --compareall -c 70,51,65,71,24,21,44,8,35 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+]
+
+
+# # Eval
+# commands = [
+#     r'python pyplotters/reward_eval.py -pid cont-lfe-c-ms@0',
+#     r'python pyplotters/reward_eval.py -pid cont-lfe-c-ms@1',
+#     r'python pyplotters/reward_eval.py -pid cont-lfe-p-ms@0',
+#     r'python pyplotters/reward_eval.py -pid cont-lfe-p-ms@1',
+#     r'python pyplotters/reward_eval.py -pid cont-mcn-c-ms@0',
+#     r'python pyplotters/reward_eval.py -pid cont-mcn-c-ms@1',
+#     r'python pyplotters/reward_eval.py -pid cont-mcn-p-ms@0',
+#     r'python pyplotters/reward_eval.py -pid cont-mcn-p-ms@1',
+# ]
+
+# # Eval
+# commands = [
+#     r'python pyplotters/eval_merger.py -mf cont-lfe-c-ms@0 -mt cont-mcn-c-ms@0',
+#     r'python pyplotters/eval_merger.py -mf cont-lfe-c-ms@1 -mt cont-mcn-c-ms@1',
+#     r'python pyplotters/eval_merger.py -mf cont-lfe-p-ms@0 -mt cont-mcn-p-ms@0',
+#     r'python pyplotters/eval_merger.py -mf cont-lfe-p-ms@1 -mt cont-mcn-p-ms@1',
 # ]
 
 # Open each command in a new Command Prompt window
