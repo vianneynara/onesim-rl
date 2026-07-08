@@ -53,6 +53,7 @@ EVAL_KEYS = [
     "avg_episodic_reward",
     "std_episodic_reward",
     "ci95_episodic_reward",
+    "coef_variance_pct",
     "relative_error_pct",
 ]
 
@@ -243,12 +244,20 @@ def evaluate_run(run_id_dir: str) -> dict | None:
     avg_reward = float(rewards.mean())
 
     # Relative Error (RE): CI95 expressed as a percentage of |avg|.
+    # Coefficient of Variance (CV): Std expressed as a percentage of |avg|.
     # This gives a scale-independent way to judge whether the CI95/std
     # is "large" or "small" relative to the group's own performance level.
     # NOTE: when |avg| is near zero (reward straddles zero), RE becomes
     # numerically unstable/misleading — flagged as NaN rather than a
     # deceptively large or small percentage.
     NEAR_ZERO_AVG_THRESHOLD = 1e-6
+
+    coef_variance_pct = (
+        (std_reward / abs(avg_reward)) * 100.0
+        if abs(avg_reward) > NEAR_ZERO_AVG_THRESHOLD
+        else float("nan")
+    )
+
     relative_error_pct = (
         (ci95_reward / abs(avg_reward)) * 100.0
         if abs(avg_reward) > NEAR_ZERO_AVG_THRESHOLD
@@ -263,6 +272,7 @@ def evaluate_run(run_id_dir: str) -> dict | None:
         "avg_episodic_reward": avg_reward,
         "std_episodic_reward": std_reward,
         "ci95_episodic_reward": ci95_reward,
+        "coef_variance_pct": coef_variance_pct,
         "relative_error_pct": relative_error_pct,
     }
 
