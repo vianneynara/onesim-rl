@@ -57,6 +57,7 @@ EVAL_KEYS = [
     "avg_episodic_reward",
     "std_episodic_reward",
     "ci95_episodic_reward",
+    "coef_variance_pct",
     "relative_error_pct",
 ]
 
