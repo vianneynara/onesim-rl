@@ -463,8 +463,8 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 #     r'python pyplotters/trajectory_aggregator.py -ule -pid mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
-# Commands to run, all base plotting
-commands = [
+# # Commands to run, all base plotting
+# commands = [
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-c-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets (100 eps)" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-c-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets (100 eps)" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-p-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
@@ -485,11 +485,11 @@ commands = [
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets (100 eps)" --describe',
 
-    r'python pyplotters/trajectory_aggregator.py -pid mcn-c-ms@0 --compareall -c 70,65,56,29,45,9,35,11,71 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets (100 eps)" --describe',
-    r'python pyplotters/trajectory_aggregator.py -pid mcn-c-ms@1 --compareall -c 70,57,60,31,15,44,10,34,71 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets (100 eps)" --describe',
-    r'python pyplotters/trajectory_aggregator.py -pid mcn-p-ms@0 --compareall -c 70,56,67,71,29,20,44,9,34 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
-    r'python pyplotters/trajectory_aggregator.py -pid mcn-p-ms@1 --compareall -c 70,51,65,71,24,21,44,8,35 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets (100 eps)" --describe',
-]
+#     r'python pyplotters/trajectory_aggregator.py -pid mcn-c-ms@0 --compareall -c 70,65,56,29,45,9,35,11,71 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Thomas Clustered Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid mcn-c-ms@1 --compareall -c 70,57,60,31,15,44,10,34,71 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Thomas Clustered Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid mcn-p-ms@0 --compareall -c 70,56,67,71,29,20,44,9,34 --title "Aggregated Trajectory on Best Monte Carlo RL on Randomized Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid mcn-p-ms@1 --compareall -c 70,51,65,71,24,21,44,8,35 --title "Aggregated Trajectory on Best Monte Carlo RL on Fixed Immobile Homogenous-Poisson Targets (100 eps)" --describe',
+# ]
 
 
 # # Eval
