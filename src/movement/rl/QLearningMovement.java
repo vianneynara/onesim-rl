@@ -496,8 +496,10 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 	 * Records a length value to {@link QLearningMovement#trajectoryFrequencies}.
 	 */
 	private void recordFinishedTrajectory(int length) {
-		if (length < 0) return;
-		else if (length == 0) length = 1;
+		if (length <= 0) {
+			System.out.printf("[%s] Warning: Attempted to record a zero/negative trajectory length: %d. Ignoring.%n",
+				QLearningMovement.class.getCanonicalName(), length);
+		}
 		trajectoryFrequencies.merge(length, 1, Integer::sum);
 	}
 
