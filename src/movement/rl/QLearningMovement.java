@@ -177,10 +177,10 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 		this.objectiveFound = new HashMap<>();
 		this.qTable = new HashMap<>();
 		this.prevAction = -1;
-		this.prevState = 0;
+		this.prevState = 1;
 		this.currentAction = -1;
-		this.currentState = 0;
-		this.currentTrajectorySteps = 0;
+		this.currentState = 1;
+		this.currentTrajectorySteps = 1;
 
 		// Initialize direction randomly
 		this.direction = rng.nextDouble() * 2 * Math.PI;
@@ -393,15 +393,15 @@ public class QLearningMovement extends MovementModel implements TrajectoryFreque
 
 		/* Determining the next state s = (n = n + d), based on the previous action */
 		if (currentAction == -1) {
-			/* Start counting from 0 */
-			currentTrajectorySteps = 0;
+			/* Start counting from 1 */
+			currentTrajectorySteps = 1;
 		} else if (currentAction == 0) {
 			/* Continuing straight, increment the step counter */
 			currentTrajectorySteps++;
 		} else if (currentAction == 1) {
-			/* Agent turned, reset n to 0 */
+			/* Agent turned, reset n to 1 */
 			recordFinishedTrajectory(currentTrajectorySteps);
-			currentTrajectorySteps = 0;
+			currentTrajectorySteps = 1;
 		}
 
 		currentState = currentTrajectorySteps;
