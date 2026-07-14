@@ -304,7 +304,7 @@ LIST_OF_CONFIGS = [
 		},
 	},
 
-	# [ Q-Learning with Upper Confidence Bound ] (indices 33-44: 10)
+	# [ Q-Learning with Upper Confidence Bound ] (indices 33-42: 10)
 	# 33
 	{
 		"alg": "ql", "runs": 300, "bp": "ucb", "group": "ql_ucb", "id": "ql5-bp=ucb",
