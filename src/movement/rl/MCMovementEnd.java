@@ -153,10 +153,10 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 		this.objectiveFound         = new HashMap<>();
 		this.qTable                 = new HashMap<>();
 		this.prevAction             = -1;
-		this.prevState              = 0;
+		this.prevState              = 1;
 		this.currentAction          = -1;
-		this.currentState           = 0;
-		this.currentTrajectorySteps = 0;
+		this.currentState           = 1;
+		this.currentTrajectorySteps = 1;
 
 		this.direction       = rng.nextDouble() * 2 * Math.PI;
 		this.currentPosition = null;
@@ -374,12 +374,12 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 		}
 
 		if (currentAction == -1) {
-			currentTrajectorySteps = 0;
+			currentTrajectorySteps = 1;
 		} else if (currentAction == 0) {
 			currentTrajectorySteps++;
 		} else if (currentAction == 1) {
 			recordFinishedTrajectory(currentTrajectorySteps);
-			currentTrajectorySteps = 0;
+			currentTrajectorySteps = 1;
 		}
 		currentState = currentTrajectorySteps;
 
@@ -462,8 +462,10 @@ public class MCMovementEnd extends MovementModel implements TrajectoryFrequencyR
 //	}
 
 	private void recordFinishedTrajectory(int length) {
-		if (length < 0) return;
-		else if (length == 0) length = 1;
+		if (length <= 0) {
+			System.out.printf("[%s] Warning: Attempted to record a zero/negative trajectory length: %d. Ignoring.%n",
+					MCMovementEnd.class.getCanonicalName(), length);
+		}
 		trajectoryFrequencies.merge(length, 1, Integer::sum);
 	}
 
