@@ -21,10 +21,14 @@ CONFIG_GROUP_TERMS: dict[str, str] = {
     "ql_ucb": "Upper Confidence Bound",
     "ql_ps_gts": "Gaussian Thompson Sampling",
     "ql_ps_bbts": "Beta-Binomial Thompson Sampling",
-    "mcnm_epsilon": "Epsilon Greedy",
-    "mcnm_ucb": "Upper Confidence Bound",
-    "mcnm_ps_gts": "Gaussian Thompson Sampling",
-    "mcnm_ps_bbts": "Beta-Binomial Thompson Sampling",
+    "mcn_fv_epsilon":   "Epsilon Greedy (FV)",
+    "mcn_ev_epsilon":  "Epsilon Greedy",
+    "mcn_fv_ucb":       "UCB (FV)",
+    "mcn_ev_ucb":      "UCB",
+    "mcn_fv_ps_gts":    "Gaussian Thompson Sampling (FV)",
+    "mcn_ev_ps_gts":   "Gaussian Thompson Sampling",
+    "mcn_fv_ps_bbts":   "Beta-Binomial Thompson Sampling (FV)",
+    "mcn_ev_ps_bbts":  "Beta-Binomial Thompson Sampling",
     "lf": "Lévy Flight"
 }
 
