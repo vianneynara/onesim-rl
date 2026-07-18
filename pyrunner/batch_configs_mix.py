@@ -8,7 +8,7 @@ This consists of:
 In detail, exploration strategies specific configurations used:
  a. Epsilon-Greedy (EG): [indices 1-5, 28-32]
  	5 configurations with different exploration decay rates (0.9, 0.95, 0.99, 0.995, 0.999)
- b. Upper Confidence Bound (UCB): [indices 6-15, 33-44]
+ b. Upper Confidence Bound (UCB): [indices 6-15, 33-42]
  	10 configurations with different exploration coefficients (0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5)
  c. Posterior Sampling (PS): [indices 16-27, 43-54]
  	12 configurations with different initial variances (0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0) 
@@ -304,7 +304,7 @@ LIST_OF_CONFIGS = [
 		},
 	},
 
-	# [ Q-Learning with Upper Confidence Bound ] (indices 33-44: 10)
+	# [ Q-Learning with Upper Confidence Bound ] (indices 33-42: 10)
 	# 33
 	{
 		"alg": "ql", "runs": 300, "bp": "ucb", "group": "ql_ucb", "id": "ql5-bp=ucb",

@@ -43,7 +43,8 @@ log = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------------------------------------------- #
 
 # Default base directory for all report outputs
-REPORTS_BASE = "reports/skripsi"
+REPORTS_BASE = r"reports/skripsi"
+# REPORTS_BASE = r"D:/Developments+/Java/onesim-rl-data/reports"
 
 ID_LABEL = "ID_LABEL"
 ALG_LABEL = "ALG_LABEL"
