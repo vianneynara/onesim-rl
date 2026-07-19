@@ -20,7 +20,7 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 #     r'python pyrunner/batch_shifter.py -pid lfe-p-ms@1',
 # ]
 
-# # Commands to run (group_key_upgrader)
+# Commands to run (group_key_upgrader)
 # commands = [
 #     r'python pyrunner/group_key_upgrader.py -pid mcn-c-ms@0',
 #     r'python pyrunner/group_key_upgrader.py -pid mcn-c-ms@1',
@@ -34,10 +34,10 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 #     r'python pyrunner/group_key_upgrader.py -pid mcn-c-ms@1 --replacegroup',
 #     r'python pyrunner/group_key_upgrader.py -pid mcn-p-ms@0 --replacegroup',
 #     r'python pyrunner/group_key_upgrader.py -pid mcn-p-ms@1 --replacegroup',
-#     r'python pyrunner/group_key_upgrader.py -pid cont-mcn-c-ms@0 --replacegroup',
-#     r'python pyrunner/group_key_upgrader.py -pid cont-mcn-c-ms@1 --replacegroup',
-#     r'python pyrunner/group_key_upgrader.py -pid cont-mcn-p-ms@0 --replacegroup',
-#     r'python pyrunner/group_key_upgrader.py -pid cont-mcn-p-ms@1 --replacegroup',
+# #     r'python pyrunner/group_key_upgrader.py -pid cont-mcn-c-ms@0 --replacegroup',
+# #     r'python pyrunner/group_key_upgrader.py -pid cont-mcn-c-ms@1 --replacegroup',
+# #     r'python pyrunner/group_key_upgrader.py -pid cont-mcn-p-ms@0 --replacegroup',
+# #     r'python pyrunner/group_key_upgrader.py -pid cont-mcn-p-ms@1 --replacegroup',
 # ]
 
 # # Commands to run (batch running)
@@ -53,17 +53,17 @@ WORK_DIR = r"C:\Users\ZeroKampus\IdeaProjects\onesim-rl"
 #     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 19-35',
 # ]
 
-commands = [
-    r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 1-14 -vc',
-    r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 1-14 -vc',
-    r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 1-14 -vc',
-    r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 1-14 -vc',
-
-    r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 15-27 -vc',
-    r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 15-27 -vc',
-    r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 15-27 -vc',
-    r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 15-27 -vc',
-]
+# commands = [
+#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 1-14 -vc',
+#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 1-14 -vc',
+#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 1-14 -vc',
+#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 1-14 -vc',
+#
+#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@0 -alg mcn-c-ms@0 -c 15-27 -vc',
+#     r'python pyrunner/batch_runner.py -pid mcn-c-ms@1 -alg mcn-c-ms@1 -c 15-27 -vc',
+#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@0 -alg mcn-p-ms@0 -c 15-27 -vc',
+#     r'python pyrunner/batch_runner.py -pid mcn-p-ms@1 -alg mcn-p-ms@1 -c 15-27 -vc',
+# ]
 
 
 # # Commands to run (batch running)
