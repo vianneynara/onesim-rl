@@ -288,6 +288,57 @@ commands = [
     f'python pyrunner/batch_runner.py -pid cont-mcn-p-ms@1 -alg mcn-p-ms@1 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_HPP_1))}',
 ]
 
+# commands = [
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-lfe-c-ms@0 -alg lfe-c-ms@0 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-lfe-c-ms@1 -alg lfe-c-ms@1 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-lfe-p-ms@0 -alg lfe-p-ms@0 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-lfe-p-ms@1 -alg lfe-p-ms@1 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, LFE))}',
+#
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-ql-c-ms@0 -alg ql-c-ms@0 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, QL_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-ql-c-ms@1 -alg ql-c-ms@1 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, QL_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-ql-p-ms@0 -alg ql-p-ms@0 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, QL_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-ql-p-ms@1 -alg ql-p-ms@1 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, QL_HPP_1))}',
+#
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-mcn-c-ms@0 -alg mcn-c-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, MCN_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-mcn-c-ms@1 -alg mcn-c-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, MCN_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-mcn-p-ms@0 -alg mcn-p-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, MCN_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 3d-cont-mcn-p-ms@1 -alg mcn-p-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, MCN_HPP_1))}',
+# ]
+
+# commands = [
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-lfe-c-ms@0 -alg lfe-c-ms@0 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-lfe-c-ms@1 -alg lfe-c-ms@1 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-lfe-p-ms@0 -alg lfe-p-ms@0 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-lfe-p-ms@1 -alg lfe-p-ms@1 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, LFE))}',
+#
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-ql-c-ms@0 -alg ql-c-ms@0 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, QL_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-ql-c-ms@1 -alg ql-c-ms@1 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, QL_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-ql-p-ms@0 -alg ql-p-ms@0 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, QL_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-ql-p-ms@1 -alg ql-p-ms@1 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, QL_HPP_1))}',
+#
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-mcn-c-ms@0 -alg mcn-c-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, MCN_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-mcn-c-ms@1 -alg mcn-c-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, MCN_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-mcn-p-ms@0 -alg mcn-p-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, MCN_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 2d-cont-mcn-p-ms@1 -alg mcn-p-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=172800" -vc -c {",".join(map(str, MCN_HPP_1))}',
+# ]
+
+# commands = [
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-lfe-c-ms@0 -alg lfe-c-ms@0 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-lfe-c-ms@1 -alg lfe-c-ms@1 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-lfe-p-ms@0 -alg lfe-p-ms@0 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-lfe-p-ms@1 -alg lfe-p-ms@1 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, LFE))}',
+#
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-ql-c-ms@0 -alg ql-c-ms@0 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, QL_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-ql-c-ms@1 -alg ql-c-ms@1 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, QL_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-ql-p-ms@0 -alg ql-p-ms@0 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, QL_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-ql-p-ms@1 -alg ql-p-ms@1 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, QL_HPP_1))}',
+#
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-c-ms@0 -alg mcn-c-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=864000" -vc -c {",".join(map(str, MCN_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-c-ms@1 -alg mcn-c-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=864000" -vc -c {",".join(map(str, MCN_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-p-ms@0 -alg mcn-p-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=864000" -vc -c {",".join(map(str, MCN_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-p-ms@1 -alg mcn-p-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=864000" -vc -c {",".join(map(str, MCN_HPP_1))}',
+# ]
+
 
 
 ## TCP, Randomized Seed.
