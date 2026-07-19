@@ -61,7 +61,8 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Default config import (fallback)
-from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
+# from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
+from pyrunner.batch_configs_mix import LIST_OF_CONFIGS
 
 from pyrunner.utils.path import normalize_report_base
 
@@ -364,7 +365,13 @@ def get_active_configs_mapping(list_of_configs) -> Dict[int, dict]:
 def scan_run_id_folders(
         parent_dir_id: str,
         reports_base: str = REPORTS_BASE
-) -> Dict[int, str]:
+) -> Dict[int, List[str]]:
+    """
+    Returns cfg_idx -> list of folder names sharing that cfg_idx.
+    Normally each list has exactly one entry. A list with more than
+    one entry means duplicate folders exist on disk for that index,
+    which callers must surface rather than silently pick one.
+    """
 
     run_id_path = os.path.join(
         reports_base,
@@ -376,7 +383,7 @@ def scan_run_id_folders(
         log.warning("Run-id directory not found: %s", run_id_path)
         return {}
 
-    cfg_folders = {}
+    cfg_folders: Dict[int, List[str]] = {}
 
     for folder_name in os.listdir(run_id_path):
 
@@ -388,7 +395,16 @@ def scan_run_id_folders(
         cfg_idx = extract_cfg_index(folder_name)
 
         if cfg_idx is not None:
-            cfg_folders[cfg_idx] = folder_name
+            cfg_folders.setdefault(cfg_idx, []).append(folder_name)
+
+    for cfg_idx, names in cfg_folders.items():
+        if len(names) > 1:
+            log.warning(
+                "cfg@%02d: %d duplicate folders found on disk: %s",
+                cfg_idx,
+                len(names),
+                names
+            )
 
     return cfg_folders
 
@@ -398,7 +414,7 @@ def scan_run_id_folders(
 # ============================================================================
 
 def build_upgrade_mapping(
-        existing_folders: Dict[int, str],
+        existing_folders: Dict[int, List[str]],
         active_configs: Dict[int, dict],
         replace_mode: bool = False
 ) -> Tuple[Dict[str, str], List[str]]:
@@ -406,10 +422,14 @@ def build_upgrade_mapping(
     rename_mapping = {}
     messages = []
 
-    # Map signature to list of possible groups (handles multiple groups per sig)
-    sig_to_groups: Dict[str, List[str]] = {}
-    # Also keep mapping of config index to group for specific assignments
+    # Mapping of config index -> its correct group (the only thing that
+    # matters for deciding whether a specific folder is correctly named;
+    # we deliberately do NOT treat "used by some other index with the same
+    # alg+runs+bp signature" as acceptable, since that previously caused
+    # entire blocks of indices to be skipped as "already valid" when they
+    # actually held a stale group name borrowed from a sibling index).
     idx_to_group: Dict[int, str] = {}
+    idx_to_sig: Dict[int, str] = {}
 
     for idx, config in active_configs.items():
 
@@ -418,21 +438,26 @@ def build_upgrade_mapping(
         bp = config.get("bp")
         group = config.get("group")
 
-        sig = build_config_signature(alg, runs, bp)
+        idx_to_sig[idx] = build_config_signature(alg, runs, bp)
 
-        # Store mapping for specific config index
         if group:
             idx_to_group[idx] = group
 
-        # Store all possible groups for this signature
-        if sig not in sig_to_groups:
-            sig_to_groups[sig] = []
-
-        if group and group not in sig_to_groups[sig]:
-            sig_to_groups[sig].append(group)
-
     # Process folders
-    for cfg_idx, old_folder_name in sorted(existing_folders.items()):
+    for cfg_idx, folder_names in sorted(existing_folders.items()):
+
+        # Duplicate folders on disk for the same cfg index: never guess
+        # which one is "the" folder. Flag it and require manual resolution
+        # before any rename happens for this index.
+        if len(folder_names) > 1:
+            messages.append(
+                f"cfg@{cfg_idx:02d}: [CONFLICT] {len(folder_names)} folders "
+                f"share this index, skipping until resolved manually: "
+                f"{folder_names}"
+            )
+            continue
+
+        old_folder_name = folder_names[0]
 
         alg_runs = extract_alg_and_runs(old_folder_name)
 
@@ -448,91 +473,67 @@ def build_upgrade_mapping(
 
         sig = build_config_signature(alg, runs, bp)
 
-        if sig not in sig_to_groups:
+        expected_sig = idx_to_sig.get(cfg_idx)
+
+        if expected_sig is None:
             messages.append(
-                f"cfg@{cfg_idx:02d}: No matching config for sig={sig}"
+                f"cfg@{cfg_idx:02d}: No config exists at this index"
             )
             continue
 
-        possible_groups = sig_to_groups[sig]
+        if sig != expected_sig:
+            messages.append(
+                f"cfg@{cfg_idx:02d}: Folder signature '{sig}' does not match "
+                f"config signature '{expected_sig}', skipping"
+            )
+            continue
 
-        if not possible_groups:
+        # The one and only correct group for this specific config index
+        correct_group = idx_to_group.get(cfg_idx)
+
+        if not correct_group:
             messages.append(
                 f"cfg@{cfg_idx:02d}: Matching config has no group"
             )
             continue
-
-        # Get the correct group for this specific config index
-        correct_group = idx_to_group.get(cfg_idx)
 
         # Handle folders that already have a group token
         if has_group_token(old_folder_name):
 
             existing_group = extract_existing_group(old_folder_name)
 
-            # Check if existing group is valid for this signature
-            if existing_group in possible_groups:
-                # If it's the correct one for this config, skip it
-                if correct_group and existing_group == correct_group:
-                    messages.append(
-                        f"cfg@{cfg_idx:02d}: [SKIP] Already has correct group "
-                        f"(cg@{existing_group})"
-                    )
-                    continue
-
-                # If it's valid but different from what config specifies, optionally replace
-                if replace_mode and correct_group and existing_group != correct_group:
-                    new_group = correct_group
-
-                    new_folder_name = replace_group_token(old_folder_name, new_group)
-
-                    rename_mapping[old_folder_name] = new_folder_name
-
-                    messages.append(
-                        f"cfg@{cfg_idx:02d}: [REPLACE] "
-                        f"'{old_folder_name}' -> '{new_folder_name}' "
-                        f"(cg@{existing_group} -> cg@{new_group})"
-                    )
-
-                    continue
-
-                # Valid group but no replace mode or no correct_group
+            if existing_group == correct_group:
                 messages.append(
-                    f"cfg@{cfg_idx:02d}: [SKIP] Already has valid group "
+                    f"cfg@{cfg_idx:02d}: [SKIP] Already has correct group "
                     f"(cg@{existing_group})"
                 )
                 continue
 
-            # Existing group is not in the valid list
+            # Group token present but wrong for this specific index
             if not replace_mode:
                 messages.append(
-                    f"cfg@{cfg_idx:02d}: Has invalid group (cg@{existing_group}), "
-                    f"skipping (use --replacegroup to update)"
+                    f"cfg@{cfg_idx:02d}: Has incorrect group (cg@{existing_group}, "
+                    f"should be cg@{correct_group}), skipping "
+                    f"(use --replacegroup to update)"
                 )
                 continue
 
-            # Replace with the correct group for this config index
-            new_group = correct_group if correct_group else possible_groups[0]
-
-            new_folder_name = replace_group_token(old_folder_name, new_group)
+            new_folder_name = replace_group_token(old_folder_name, correct_group)
 
             rename_mapping[old_folder_name] = new_folder_name
 
             messages.append(
                 f"cfg@{cfg_idx:02d}: [REPLACE] "
                 f"'{old_folder_name}' -> '{new_folder_name}' "
-                f"(cg@{existing_group} -> cg@{new_group})"
+                f"(cg@{existing_group} -> cg@{correct_group})"
             )
 
             continue
 
         # Insert cg@ for folders without group token
-        # Use the correct group for this specific config index
-        new_group = correct_group if correct_group else possible_groups[0]
-
         new_folder_name = re.sub(
             r"^(cfg@\d+)-",
-            f"\\1-cg@{new_group}-",
+            f"\\1-cg@{correct_group}-",
             old_folder_name
         )
 
