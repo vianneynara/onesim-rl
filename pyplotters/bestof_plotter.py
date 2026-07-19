@@ -428,6 +428,42 @@ def _sanitize_filename(name: str) -> str:
     return name.strip().rstrip(".")
 
 
+def print_final_summary(
+    entries: list[tuple[str, Optional[int], str, float]],
+    heading: str,
+) -> list[int]:
+    """Print a clean final summary block: one line per entry (name + cfg@N +
+    reward), followed by a single flat list of the cfg@ numbers involved.
+
+    Args:
+        entries: list of (label, cfg_idx, run_id, reward)
+        heading: title line printed above the table
+
+    Returns:
+        Sorted, de-duplicated list of cfg indices printed at the bottom.
+    """
+    print()
+    print("=" * LINE_LENGTH)
+    print(heading)
+    print("=" * LINE_LENGTH)
+
+    config_numbers: list[int] = []
+    for label, cfg_idx, run_id, reward in entries:
+        cfg_str = f"cfg@{cfg_idx}" if cfg_idx is not None else "cfg@?"
+        reward_str = f"{reward:.2f}" if reward is not None and not pd.isna(reward) else "N/A"
+        print(f"  {label:<45s} {cfg_str:<10s} reward={reward_str}  ({run_id})")
+        if cfg_idx is not None:
+            config_numbers.append(cfg_idx)
+
+    config_numbers = sorted(set(config_numbers))
+
+    print("-" * LINE_LENGTH)
+    print(f"Config numbers: {config_numbers}")
+    print("=" * LINE_LENGTH)
+
+    return config_numbers
+
+
 def plot_bestof_by_episode(
     series_by_label: list[tuple[str, pd.DataFrame]],
     y_key: str,
@@ -616,6 +652,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
     log.info(f"Compare-All mode: plotting {len(summary_df)} configurations")
 
     tmp: list[tuple[str, pd.DataFrame]] = []
+    summary_entries: list[tuple[str, Optional[int], str, float]] = []
     for _, row in summary_df.iterrows():
         run_id = str(row["configuration_directory"])
         reward = row['last_episode_cumulative_reward']
@@ -644,6 +681,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
             legend_label = cfg_str
 
         log.info(f"  {cfg_str}: {run_id} | reward={reward:.2f}")
+        summary_entries.append((legend_label, cfg_idx, run_id, reward))
 
         common_path = os.path.join(out_dir, run_id, "common_data.csv")
         if not os.path.exists(common_path):
@@ -686,6 +724,11 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
             annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
+
+    print_final_summary(
+        summary_entries,
+        heading=f"COMPARE-ALL SUMMARY (sorted by reward, highest first) {all_of}",
+    )
 
 
 def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str], None] = None, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False, legend_side: bool = False) -> None:
@@ -761,6 +804,21 @@ def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str]
         )
         log.info(f"Saved: {out_file}")
 
+    summary_entries: list[tuple[str, Optional[int], str, float]] = []
+    for _, row in winners.iterrows():
+        gv = str(row["group_value"])
+        formal = GROUP_VALUE_TERMS.get(gv, "")
+        name = f"{gv} ({formal})" if formal else gv
+        run_id = str(row["configuration_directory"])
+        summary_entries.append(
+            (name, extract_cfg_index(run_id), run_id, row["last_episode_cumulative_reward"])
+        )
+
+    print_final_summary(
+        summary_entries,
+        heading=f"BEST-OF SUMMARY (grouped by '{comparison_key}') {all_of}",
+    )
+
 
 def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, config_indices: Union[list[int], None] = None, annotate_diff: bool = False, legend_outside: bool = False, legend_side: bool = False) -> None:
     """Compare all runs matching a config-group key.
@@ -819,6 +877,7 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
     log.info(f"Config-Group mode: cg@{cg_key}, plotting {len(summary_df)} runs")
 
     tmp: list[tuple[str, pd.DataFrame]] = []
+    summary_entries: list[tuple[str, Optional[int], str, float]] = []
     for _, row in summary_df.iterrows():
         run_id = str(row["configuration_directory"])
         reward = row['last_episode_cumulative_reward']
@@ -842,6 +901,7 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
             legend_label = run_id
 
         log.info(f"  {run_id} | reward={reward:.2f} | label={legend_label}")
+        summary_entries.append((legend_label, extract_cfg_index(run_id), run_id, reward))
 
         common_path = os.path.join(out_dir, run_id, "common_data.csv")
         if not os.path.exists(common_path):
@@ -884,6 +944,11 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
             annotate_diff=annotate_diff,
         )
         log.info(f"Saved: {out_file}")
+
+    print_final_summary(
+        summary_entries,
+        heading=f"CONFIG-GROUP SUMMARY (cg@{cg_key}, sorted by reward, highest first) {all_of}",
+    )
 
 
 def main(argv: Union[list[str], None] = None) -> None:
