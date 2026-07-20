@@ -270,23 +270,23 @@ LFE = [55]
 # RUNNING BEST OF EACH GROUP, of 7 days, 3 days, 2 days, 1 day.
 ################################################################################
 
-# ALL
-commands = [
-    f'python pyrunner/batch_runner.py -pid cont-lfe-c-ms@0 -alg lfe-c-ms@0 -r 100 -mo "lfe_rth=True" -vc -c {",".join(map(str, LFE))}',
-    f'python pyrunner/batch_runner.py -pid cont-lfe-c-ms@1 -alg lfe-c-ms@1 -r 100 -mo "lfe_rth=True" -vc -c {",".join(map(str, LFE))}',
-    f'python pyrunner/batch_runner.py -pid cont-lfe-p-ms@0 -alg lfe-p-ms@0 -r 100 -mo "lfe_rth=True" -vc -c {",".join(map(str, LFE))}',
-    f'python pyrunner/batch_runner.py -pid cont-lfe-p-ms@1 -alg lfe-p-ms@1 -r 100 -mo "lfe_rth=True" -vc -c {",".join(map(str, LFE))}',
-
-    f'python pyrunner/batch_runner.py -pid cont-ql-c-ms@0 -alg ql-c-ms@0 -r 100 -mo "qlm_rth=True" -vc -c {",".join(map(str, QL_TCP_0))}',
-    f'python pyrunner/batch_runner.py -pid cont-ql-c-ms@1 -alg ql-c-ms@1 -r 100 -mo "qlm_rth=True" -vc -c {",".join(map(str, QL_TCP_1))}',
-    f'python pyrunner/batch_runner.py -pid cont-ql-p-ms@0 -alg ql-p-ms@0 -r 100 -mo "qlm_rth=True" -vc -c {",".join(map(str, QL_HPP_0))}',
-    f'python pyrunner/batch_runner.py -pid cont-ql-p-ms@1 -alg ql-p-ms@1 -r 100 -mo "qlm_rth=True" -vc -c {",".join(map(str, QL_HPP_1))}',
-
-    f'python pyrunner/batch_runner.py -pid cont-mcn-c-ms@0 -alg mcn-c-ms@0 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_TCP_0))}',
-    f'python pyrunner/batch_runner.py -pid cont-mcn-c-ms@1 -alg mcn-c-ms@1 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_TCP_1))}',
-    f'python pyrunner/batch_runner.py -pid cont-mcn-p-ms@0 -alg mcn-p-ms@0 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_HPP_0))}',
-    f'python pyrunner/batch_runner.py -pid cont-mcn-p-ms@1 -alg mcn-p-ms@1 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_HPP_1))}',
-]
+# # ALL
+# commands = [
+#     f'python pyrunner/batch_runner.py -pid cont-lfe-c-ms@0 -alg lfe-c-ms@0 -r 100 -mo "lfe_rth=True" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid cont-lfe-c-ms@1 -alg lfe-c-ms@1 -r 100 -mo "lfe_rth=True" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid cont-lfe-p-ms@0 -alg lfe-p-ms@0 -r 100 -mo "lfe_rth=True" -vc -c {",".join(map(str, LFE))}',
+#     f'python pyrunner/batch_runner.py -pid cont-lfe-p-ms@1 -alg lfe-p-ms@1 -r 100 -mo "lfe_rth=True" -vc -c {",".join(map(str, LFE))}',
+#
+#     f'python pyrunner/batch_runner.py -pid cont-ql-c-ms@0 -alg ql-c-ms@0 -r 100 -mo "qlm_rth=True" -vc -c {",".join(map(str, QL_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid cont-ql-c-ms@1 -alg ql-c-ms@1 -r 100 -mo "qlm_rth=True" -vc -c {",".join(map(str, QL_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid cont-ql-p-ms@0 -alg ql-p-ms@0 -r 100 -mo "qlm_rth=True" -vc -c {",".join(map(str, QL_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid cont-ql-p-ms@1 -alg ql-p-ms@1 -r 100 -mo "qlm_rth=True" -vc -c {",".join(map(str, QL_HPP_1))}',
+#
+#     f'python pyrunner/batch_runner.py -pid cont-mcn-c-ms@0 -alg mcn-c-ms@0 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid cont-mcn-c-ms@1 -alg mcn-c-ms@1 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid cont-mcn-p-ms@0 -alg mcn-p-ms@0 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid cont-mcn-p-ms@1 -alg mcn-p-ms@1 -r 100 -mo "mcnm_rth=True" -vc -c {",".join(map(str, MCN_HPP_1))}',
+# ]
 
 # commands = [
 #     f'python pyrunner/batch_runner.py -pid 3d-cont-lfe-c-ms@0 -alg lfe-c-ms@0 -r 100 -mo "lfe_rth=True" -po "Scenario.endTime=259200" -vc -c {",".join(map(str, LFE))}',
@@ -333,10 +333,10 @@ commands = [
 #     f'python pyrunner/batch_runner.py -pid 1d-cont-ql-p-ms@0 -alg ql-p-ms@0 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, QL_HPP_0))}',
 #     f'python pyrunner/batch_runner.py -pid 1d-cont-ql-p-ms@1 -alg ql-p-ms@1 -r 100 -mo "qlm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, QL_HPP_1))}',
 #
-#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-c-ms@0 -alg mcn-c-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=864000" -vc -c {",".join(map(str, MCN_TCP_0))}',
-#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-c-ms@1 -alg mcn-c-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=864000" -vc -c {",".join(map(str, MCN_TCP_1))}',
-#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-p-ms@0 -alg mcn-p-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=864000" -vc -c {",".join(map(str, MCN_HPP_0))}',
-#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-p-ms@1 -alg mcn-p-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=864000" -vc -c {",".join(map(str, MCN_HPP_1))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-c-ms@0 -alg mcn-c-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, MCN_TCP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-c-ms@1 -alg mcn-c-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, MCN_TCP_1))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-p-ms@0 -alg mcn-p-ms@0 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, MCN_HPP_0))}',
+#     f'python pyrunner/batch_runner.py -pid 1d-cont-mcn-p-ms@1 -alg mcn-p-ms@1 -r 100 -mo "mcnm_rth=True" -po "Scenario.endTime=86400" -vc -c {",".join(map(str, MCN_HPP_1))}',
 # ]
 
 
@@ -482,21 +482,34 @@ Simulations should be done now.
 #     r'python pyplotters/persistence_plotter.py -pid cont-lfe-c-ms@1 --title "Best Performing Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid cont-lfe-p-ms@0 --title "Best Performing Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid cont-lfe-p-ms@1 --title "Best Performing Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#
 #     r'python pyplotters/persistence_plotter.py -pid cont-ql-c-ms@0 --title "Best Performing Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid cont-ql-c-ms@1 --title "Best Performing Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid cont-ql-p-ms@0 --title "Best Performing Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid cont-ql-p-ms@1 --title "Best Performing Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
-# # ]
+#
+#     r'python pyplotters/persistence_plotter.py -pid cont-mcn-c-ms@0 --title "Best Performing Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-mcn-c-ms@1 --title "Best Performing Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-mcn-p-ms@0 --title "Best Performing Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-mcn-p-ms@1 --title "Best Performing Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+# ]
 # #
-# # commands = [
+# commands = [
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-p-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-c-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-c-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-p-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-p-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#
+#
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
 ### AFTER ABOVE, MERGE.
@@ -509,6 +522,18 @@ Simulations should be done now.
 #
 # ```
 
+# commands = [
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-c-ms@0 -mt cont-ql-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-c-ms@1 -mt cont-ql-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-p-ms@0 -mt cont-ql-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-p-ms@1 -mt cont-ql-p-ms@1 --mvplots',
+#
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-c-ms@0 -mt cont-mcn-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-c-ms@1 -mt cont-mcn-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-p-ms@0 -mt cont-mcn-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf cont-lfe-p-ms@1 -mt cont-mcn-p-ms@1 --mvplots',
+# ]
+
 ### THEN ANALYZE BEST PERFORMANCE PER GROUP.
 
 # ```sh
@@ -518,6 +543,18 @@ Simulations should be done now.
 # python pyplotters/bestof_plotter.py -pid cont-ql-p-ms@1 --comparekey cg --addparams cg@other --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$'
 #
 # ```
+
+# commands = [
+#     r'python pyplotters/bestof_plotter.py -pid cont-ql-c-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-ql-c-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-ql-p-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-ql-p-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+#
+#     r'python pyplotters/bestof_plotter.py -pid cont-mcn-c-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-mcn-c-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-mcn-p-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid cont-mcn-p-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+# ]
 
 ################################################################################
 # CONT SIMULATIONS (NEXT 100 EPISODES @ 1 DAY), INITIAL PLOTTING AND INITIAL TRAJECTORY AGGREGATOR
@@ -529,21 +566,33 @@ Simulations should be done now.
 #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-c-ms@1 --title "Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-p-ms@0 --title "Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-p-ms@1 --title "Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#
 #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-ql-c-ms@0 --title "Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-ql-c-ms@1 --title "Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-ql-p-ms@0 --title "Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 1d-cont-ql-p-ms@1 --title "Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
-# # ]
+#
+#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-c-ms@0 --title "Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-c-ms@1 --title "Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-p-ms@0 --title "Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-p-ms@1 --title "Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+# ]
 # #
-# # commands = [
+# commands = [
 #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-lfe-p-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#
 #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-ql-c-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-ql-c-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-ql-p-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-ql-p-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#
+#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 1d-cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
 ### AFTER ABOVE, MERGE
@@ -556,6 +605,18 @@ Simulations should be done now.
 #
 # ```
 
+# commands = [
+#     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-c-ms@0 -mt 1d-cont-ql-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-c-ms@1 -mt 1d-cont-ql-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-p-ms@0 -mt 1d-cont-ql-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-p-ms@1 -mt 1d-cont-ql-p-ms@1 --mvplots',
+#
+#     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-c-ms@0 -mt 1d-cont-mcn-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-c-ms@1 -mt 1d-cont-mcn-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-p-ms@0 -mt 1d-cont-mcn-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 1d-cont-lfe-p-ms@1 -mt 1d-cont-mcn-p-ms@1 --mvplots',
+# ]
+
 ### THEN ANALYZE BEST PERFORMANCE PER GROUP.
 
 # ```sh
@@ -565,6 +626,18 @@ Simulations should be done now.
 # python pyplotters/bestof_plotter.py -pid 1d-cont-ql-p-ms@1 --comparekey cg --addparams cg@other --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$'
 #
 # ```
+
+# commands = [
+#     r'python pyplotters/bestof_plotter.py -pid 1d-cont-ql-c-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 1d-cont-ql-c-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 1d-cont-ql-p-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 1d-cont-ql-p-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+#
+#     r'python pyplotters/bestof_plotter.py -pid 1d-cont-mcn-c-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 1d-cont-mcn-c-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 1d-cont-mcn-p-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 1d-cont-mcn-p-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+# ]
 
 ################################################################################
 # CONT SIMULATIONS (NEXT 100 EPISODES @ 2 DAY), INITIAL PLOTTING AND INITIAL TRAJECTORY AGGREGATOR
@@ -580,9 +653,13 @@ Simulations should be done now.
 #     r'python pyplotters/persistence_plotter.py -pid 2d-cont-ql-c-ms@1 --title "Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 2d-cont-ql-p-ms@0 --title "Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 2d-cont-ql-p-ms@1 --title "Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
-# # ]
+#     r'python pyplotters/persistence_plotter.py -pid 2d-cont-mcn-c-ms@0 --title "Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 2d-cont-mcn-c-ms@1 --title "Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 2d-cont-mcn-p-ms@0 --title "Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 2d-cont-mcn-p-ms@1 --title "Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+# ]
 # #
-# # commands = [
+# commands = [
 #     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
@@ -591,6 +668,10 @@ Simulations should be done now.
 #     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-ql-c-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-ql-p-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-ql-p-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 2d-cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
 ### AFTER ABOVE, MERGE
@@ -603,6 +684,18 @@ Simulations should be done now.
 #
 # ```
 
+# commands = [
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-c-ms@0 -mt 2d-cont-ql-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-c-ms@1 -mt 2d-cont-ql-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-p-ms@0 -mt 2d-cont-ql-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-p-ms@1 -mt 2d-cont-ql-p-ms@1 --mvplots',
+#
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-c-ms@0 -mt 2d-cont-mcn-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-c-ms@1 -mt 2d-cont-mcn-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-p-ms@0 -mt 2d-cont-mcn-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 2d-cont-lfe-p-ms@1 -mt 2d-cont-mcn-p-ms@1 --mvplots',
+# ]
+
 ### THEN ANALYZE BEST PERFORMANCE PER GROUP.
 
 # ```sh
@@ -612,6 +705,18 @@ Simulations should be done now.
 # python pyplotters/bestof_plotter.py -pid 2d-cont-ql-p-ms@1 --comparekey cg --addparams cg@other --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$'
 #
 # ```
+
+# commands = [
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-ql-c-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-ql-c-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-ql-p-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-ql-p-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+#
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-mcn-c-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-mcn-c-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-mcn-p-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 2d-cont-mcn-p-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+# ]
 
 ################################################################################
 # CONT SIMULATIONS (NEXT 100 EPISODES @ 3 DAY), INITIAL PLOTTING AND INITIAL TRAJECTORY AGGREGATOR
@@ -627,9 +732,13 @@ Simulations should be done now.
 #     r'python pyplotters/persistence_plotter.py -pid 3d-cont-ql-c-ms@1 --title "Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 3d-cont-ql-p-ms@0 --title "Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/persistence_plotter.py -pid 3d-cont-ql-p-ms@1 --title "Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
-# # ]
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-c-ms@0 --title "Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-c-ms@1 --title "Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-p-ms@0 --title "Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-p-ms@1 --title "Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+# ]
 # #
-# # commands = [
+# commands = [
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
@@ -638,6 +747,10 @@ Simulations should be done now.
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-ql-c-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-ql-p-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-ql-p-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
 ### AFTER ABOVE, MERGE
@@ -652,6 +765,18 @@ Simulations should be done now.
 #
 # ```
 
+# commands = [
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-c-ms@0 -mt 3d-cont-ql-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-c-ms@1 -mt 3d-cont-ql-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-p-ms@0 -mt 3d-cont-ql-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-p-ms@1 -mt 3d-cont-ql-p-ms@1 --mvplots',
+#
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-c-ms@0 -mt 3d-cont-mcn-c-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-c-ms@1 -mt 3d-cont-mcn-c-ms@1 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-p-ms@0 -mt 3d-cont-mcn-p-ms@0 --mvplots',
+#     r'python pyplotters/summary_merger.py -mf 3d-cont-lfe-p-ms@1 -mt 3d-cont-mcn-p-ms@1 --mvplots',
+# ]
+
 ### THEN ANALYZE BEST PERFORMANCE PER GROUP.
 
 # ```sh
@@ -661,6 +786,18 @@ Simulations should be done now.
 # python pyplotters/bestof_plotter.py -pid 3d-cont-ql-p-ms@1 --comparekey cg --addparams cg@other --title 'Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$'
 #
 # ```
+
+# commands = [
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-ql-c-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-ql-c-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-ql-p-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-ql-p-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Q-Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+#
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-mcn-c-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Thomas Clustered, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-mcn-c-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Thomas Clustered, Fixed Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-mcn-p-ms@0 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Homogenous-Poisson, Randomized Seed)}$"',
+#     r'python pyplotters/bestof_plotter.py -pid 3d-cont-mcn-p-ms@1 --comparekey cg --addparams cg@other --title "Best Performance Comparison of Lévy Flight vs Monte Carlo Reinforcement Learning\n$\\text{(Homogenous-Poisson, Fixed Seed)}$"',
+# ]
 
 ################################################################################
 
