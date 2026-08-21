@@ -495,21 +495,20 @@ Simulations should be done now.
 # ]
 # #
 # commands = [
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-p-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-c-ms@0 --compareall --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-c-ms@1 --compareall --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-p-ms@0 --compareall --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-lfe-p-ms@1 --compareall --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
 #
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-c-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-c-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-p-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-p-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-c-ms@0  --compareall--title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-c-ms@1  --compareall--title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-p-ms@0  --compareall--title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-ql-p-ms@1  --compareall--title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 #
-#
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@0 --compareall --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@1 --compareall --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
 ### AFTER ABOVE, MERGE.

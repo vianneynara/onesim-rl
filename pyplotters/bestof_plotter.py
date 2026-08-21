@@ -47,6 +47,7 @@ Outputs:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import logging
 import os
 import re
@@ -63,7 +64,7 @@ import seaborn as sns
 # using absolute package imports (pyrunner.*).
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    
+
 from pyplotters.term_dictionary import GROUP_VALUE_TERMS
 
 PLOT_RESULTS_DIR = r"pyplotters\\plots"
@@ -95,6 +96,16 @@ ANNOTATION_INTERVAL = 50
 USE_PERCENTAGE = True
 
 LINE_STYLES = ["-", "--", "-.", ":"]
+
+# Distinct line styles per algorithm family (mcn / ql / lfe), so their lines
+# are easy to tell apart even when colors are similar. Anything that doesn't
+# match one of these families falls back to DEFAULT_LINESTYLE.
+ALGO_FAMILY_LINESTYLES: dict[str, str] = {
+    "mcn": "--",   # MCN group -> dashed
+    "ql": "-",     # QL group -> solid
+    "lfe": ":",    # LFE group -> dotted
+}
+DEFAULT_LINESTYLE = "-."
 
 LINE_LENGTH = 100
 logging.basicConfig(
@@ -166,7 +177,7 @@ def parse_run_id_strict(run_id: str) -> ParsedRunId:
 
 def extract_cfg_index(folder_name: str) -> Optional[int]:
     """Extract cfg index from folder name like 'cfg@05-ql500-...'.
-    
+
     Returns the integer index (1-based) or None if not found.
     """
     match = re.match(r"cfg@(\d+)", folder_name)
@@ -183,28 +194,28 @@ def parse_config_indices(config_string: str) -> list[int]:
     - Single values: "1,2,9"
     - Ranges: "4-6" (expands to 4,5,6)
     - Mixed: "1,2,4-6,9,10-17"
-    
+
     Returns sorted list of unique integers.
     Raises ValueError if format is invalid.
     """
     configs = set()
-    
+
     # Split by comma
     parts = config_string.split(",")
-    
+
     for part in parts:
         part = part.strip()  # Remove whitespace
-        
+
         if "-" in part:
             # It's a range
             try:
                 start_str, end_str = part.split("-", 1)  # Use maxsplit=1 to handle negative numbers
                 start = int(start_str.strip())
                 end = int(end_str.strip())
-                
+
                 if start > end:
                     raise ValueError(f"Invalid range '{part}', start > end")
-                
+
                 # Add all values in range (inclusive)
                 for i in range(start, end + 1):
                     configs.add(i)
@@ -216,41 +227,41 @@ def parse_config_indices(config_string: str) -> list[int]:
                 configs.add(int(part))
             except ValueError:
                 raise ValueError(f"Invalid config number '{part}' (must be integer)")
-    
+
     return sorted(list(configs))
 
 
 def filter_summary_by_configs(summary_df: pd.DataFrame, config_indices: list[int]) -> pd.DataFrame:
     """Filter summary DataFrame to include only rows matching specified config indices.
-    
+
     Matches configuration_directory entries starting with 'cfg@N' where N is in config_indices.
-    
+
     Args:
         summary_df: DataFrame with 'configuration_directory' column
         config_indices: List of integer config indices to include (1-based)
-    
+
     Returns:
         Filtered DataFrame with only matching rows
     """
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
-    
+
     # Track which configs were requested but not found
     requested_indices = set(config_indices)
     found_indices = set()
-    
+
     # Filter rows by matching cfg@ index
     mask = pd.Series([False] * len(summary_df), index=summary_df.index)
     for idx, row in summary_df.iterrows():
         config_dir = str(row["configuration_directory"])
         cfg_idx = extract_cfg_index(config_dir)
-        
+
         if cfg_idx is not None and cfg_idx in config_indices:
             mask.iloc[idx] = True
             found_indices.add(cfg_idx)
-    
+
     filtered_df = summary_df[mask]
-    
+
     # Warn about missing configs
     missing_indices = requested_indices - found_indices
     if missing_indices:
@@ -258,35 +269,35 @@ def filter_summary_by_configs(summary_df: pd.DataFrame, config_indices: list[int
             log.warning(
                 f"Requested config cfg@{cfg_idx} not found in summary.csv. Skipping."
             )
-    
+
     if len(filtered_df) == 0:
         _exit_with_warning(
             f"No runs found matching requested configs: {sorted(config_indices)}"
         )
-    
+
     log.info(f"Filtered to {len(filtered_df)} runs from configs: {sorted(found_indices)}")
     return filtered_df
 
 
 def filter_summary_by_configgroup(summary_df: pd.DataFrame, cg_key: str) -> pd.DataFrame:
     """Filter summary DataFrame to include only rows matching a config-group key.
-    
+
     Matches configuration_directory entries containing 'cg@<cg_key>'.
-    
+
     Args:
         summary_df: DataFrame with 'configuration_directory' column
         cg_key: The config-group value to filter by (e.g., 'ql_epsilon')
-    
+
     Returns:
         Filtered DataFrame with only matching rows
     """
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
-    
+
     # Filter rows by matching cg@ value
     mask = pd.Series([False] * len(summary_df), index=summary_df.index)
     found_count = 0
-    
+
     for idx, row in summary_df.iterrows():
         config_dir = str(row["configuration_directory"])
         try:
@@ -297,16 +308,112 @@ def filter_summary_by_configgroup(summary_df: pd.DataFrame, cg_key: str) -> pd.D
         except SystemExit:
             # Skip runs that can't be parsed
             continue
-    
+
     filtered_df = summary_df[mask]
-    
+
     if len(filtered_df) == 0:
         _exit_with_warning(
             f"No runs found with config-group cg@{cg_key}. Available runs must contain 'cg@{cg_key}' token."
         )
-    
+
     log.info(f"Filtered to {len(filtered_df)} runs with config-group cg@{cg_key}")
     return filtered_df
+
+
+def detect_algo_family(run_id: str) -> str:
+    """Classify a run-id into an algorithm family ('mcn', 'ql', or 'lfe').
+
+    Looks at every dash-separated token in `run_id` (e.g. the prefix, or bare
+    tokens like 'ql500'/'mcn750'/'lfe10') and matches it against the known
+    family prefixes. Returns "" if no known family is found.
+    """
+    for part in run_id.split("-"):
+        m = re.match(r"^(mcn|ql|lfe)\d*$", part, flags=re.IGNORECASE)
+        if m:
+            return m.group(1).lower()
+    return ""
+
+
+def get_linestyle_for_run(run_id: str) -> str:
+    """Return the linestyle to use for a given run-id, based on its algorithm family."""
+    family = detect_algo_family(run_id)
+    return ALGO_FAMILY_LINESTYLES.get(family, DEFAULT_LINESTYLE)
+
+
+# A curated set of bold, maximally-distinct colors (a trimmed version of the
+# well-known "20 distinct colors" qualitative palette, with pale/pastel
+# entries removed since those wash out in line plots on a white background).
+# Deliberately includes true red, green, blue, orange, purple, etc. so
+# adjacent lines never end up looking like near-identical hues, which a raw
+# hash-to-hue-wheel approach can produce by chance.
+# A curated set of bold, maximally-distinct colors (a trimmed version of the
+# well-known "20 distinct colors" qualitative palette, with pale/pastel
+# entries removed since those wash out in line plots on a white background).
+# Used as a FALLBACK for color keys with no fixed assignment below.
+QUALITATIVE_PALETTE: list[str] = [
+    "#e6194B",  # red
+    "#4363d8",  # blue
+    "#3cb44b",  # green
+    "#f58231",  # orange
+    "#911eb4",  # purple
+    "#42d4f4",  # cyan
+    "#f032e6",  # magenta
+    "#9A6324",  # brown
+    "#469990",  # teal
+    "#d4ac0d",  # gold (deeper than pure yellow, which is hard to see on white)
+    "#800000",  # maroon
+    "#000075",  # navy
+    "#808000",  # olive
+    "#a9a9a9",  # grey
+]
+
+# Known exploration-strategy ("bp") categories get FIXED, obvious colors
+# instead of being left to hashing luck. Hashing guarantees the same key
+# always gets the same color, but not that two specific categories that both
+# show up on one plot (e.g. "epsilon" and "ps") land on colors that are easy
+# to tell apart -- they could both hash near each other (e.g. magenta and
+# purple). Hand-picking the handful of categories that actually occur avoids
+# that entirely: epsilon is always red, ucb is always blue, ps is always
+# green, no matter what else is on the plot.
+KNOWN_BP_COLORS: dict[str, str] = {
+    "epsilon": "#3cb44b",  # green
+    "ucb": "#e6194B",      # red
+    "ps": "#4363d8",       # blue
+}
+# Levy Flight has no "bp" override (its tunable parameter is "la"), so it
+# gets its own fixed color the same way.
+LEVY_FLIGHT_COLOR = "#f58231"  # orange
+
+# Colors already reserved above are excluded from the generic hashed
+# fallback, so they stay uniquely tied to epsilon/ucb/ps/Levy-Flight and never
+# get accidentally reused for an unrelated key.
+_RESERVED_COLORS = set(KNOWN_BP_COLORS.values()) | {LEVY_FLIGHT_COLOR}
+_FALLBACK_PALETTE = [c for c in QUALITATIVE_PALETTE if c not in _RESERVED_COLORS]
+
+
+def color_for_key(color_key: str) -> str:
+    """Map a color key (e.g. "bp=epsilon", "la", or an override string) to a color.
+
+    Known categories (see KNOWN_BP_COLORS / LEVY_FLIGHT_COLOR) get a fixed,
+    semantically obvious color every time. Anything else falls back to a
+    deterministic hash into the remaining palette -- the SAME key still always
+    produces the SAME color, in every plot, regardless of what else is being
+    plotted alongside it or which separate run of this script generated it.
+
+    Note: with more distinct fallback color keys on one plot than colors left
+    in the fallback palette, some keys will repeat colors (still
+    distinguishable by linestyle/legend).
+    """
+    if color_key.startswith("bp="):
+        bp_value = color_key[len("bp="):]
+        if bp_value in KNOWN_BP_COLORS:
+            return KNOWN_BP_COLORS[bp_value]
+    elif color_key == "la":
+        return LEVY_FLIGHT_COLOR
+
+    digest = hashlib.md5(color_key.encode("utf-8")).hexdigest()
+    idx = int(digest, 16) % len(_FALLBACK_PALETTE)
+    return _FALLBACK_PALETTE[idx]
 
 
 def key_to_abbr(key: str) -> str:
@@ -321,6 +428,45 @@ def key_to_abbr(key: str) -> str:
     return key
 
 
+def build_overrides_str(overrides: dict[str, str]) -> str:
+    """Build the 'abbr=value, abbr=value' string for a dict of overrides.
+
+    Sorted by abbreviation for a stable, deterministic string. Used for
+    legend labels, and as a color-key fallback (see `build_color_key`).
+    """
+    items: list[tuple[str, str]] = [(key_to_abbr(k), str(v)) for k, v in overrides.items()]
+    items.sort(key=lambda t: t[0])
+    return ", ".join([f"{abbr}={val}" for abbr, val in items])
+
+
+def build_color_key(overrides: dict[str, str]) -> str:
+    """Build the key used to determine a line's color.
+
+    If the overrides include a "bp" (behavior policy / exploration strategy)
+    parameter -- e.g. bp=epsilon, bp=ucb, bp=ps -- that value ALONE is used
+    as the color key. This is what makes e.g. mcn_epsilon and ql_epsilon get
+    the same color: they share bp=epsilon even though every other tuned
+    hyperparameter differs between the two families' best runs. Linestyle
+    (per algorithm family) still distinguishes them.
+
+    If there's no "bp" but there IS an "la" (Levy Flight's alpha parameter),
+    the category key is just "la" -- so all Levy Flight lines get the same
+    fixed color regardless of the specific alpha value tuned.
+
+    Falls back to the full overrides string (same as `build_overrides_str`)
+    when neither is present -- e.g. plain parameter sweeps where matching an
+    exact value (like a specific epsilon coefficient) across plots is the
+    goal instead.
+    """
+    for k, v in overrides.items():
+        if key_to_abbr(k) == "bp":
+            return f"bp={v}"
+    for k in overrides:
+        if key_to_abbr(k) == "la":
+            return "la"
+    return build_overrides_str(overrides)
+
+
 def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
     """Build legend label in the form: '<group> (abbr=value, abbr=value)'.
 
@@ -329,18 +475,13 @@ def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
     # Expand group value with formal wording when available.
     group_display = GROUP_VALUE_TERMS.get(group_value, group_value)
 
-    items: list[tuple[str, str]] = []
-    for k, v in overrides.items():
-        items.append((key_to_abbr(k), str(v)))
-    items.sort(key=lambda t: t[0])
-
-    overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
+    overrides_str = build_overrides_str(overrides)
     return f'{group_display} {"("+overrides_str+")" if overrides_str else ""}'
 
 
 def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: Union[dict[str, str], None] = None) -> pd.DataFrame:
     """Return DF with the single best run per group value.
-    
+
     Args:
         summary_df: DataFrame with summary data
         group_key: The key to group runs by (e.g., 'qlm_bp')
@@ -359,11 +500,11 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: Union[
     records: list[dict[str, str]] = []
     injections_made = []
     skipped_injections = []
-    
+
     for run_id in summary_df["configuration_directory"].astype(str).tolist():
         pr = parse_run_id_strict(run_id)
         group_value = None  # Will be set in if/else block or exit
-        
+
         # Check if group_key exists in tokens
         if group_key not in pr.tokens:
             # Try to inject from addparams
@@ -378,7 +519,7 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: Union[
                 )
         else:
             group_value = pr.tokens[group_key]
-        
+
         # Check for conflicts: if user tried to add a param that already exists, warn and skip
         for add_key, add_value in addparams.items():
             if add_key in pr.tokens and add_key != group_key:
@@ -388,17 +529,18 @@ def best_of_by_group(summary_df: pd.DataFrame, group_key: str, addparams: Union[
                     f"Run-id '{run_id}' already contains key '{add_key}@{existing_value}'; "
                     f"skipping requested injection '{add_key}@{add_value}'."
                 )
-        
-        overrides = {k: v for k, v in pr.tokens.items() 
+
+        overrides = {k: v for k, v in pr.tokens.items()
                     if k != group_key and k not in LIST_OF_IGNORED_OVERRIDES}
         records.append(
             {
                 "configuration_directory": run_id,
                 "group_value": group_value,
                 "legend_label": build_legend_label(group_value, overrides),
+                "overrides_key": build_color_key(overrides),
             }
         )
-    
+
     # Log summary of injections
     if injections_made:
         log.info(f"Phantom parameter injections: {len(injections_made)} run(s) modified")
@@ -465,7 +607,7 @@ def print_final_summary(
 
 
 def plot_bestof_by_episode(
-    series_by_label: list[tuple[str, pd.DataFrame]],
+    series_by_label: list[tuple[str, pd.DataFrame, str, str]],
     y_key: str,
     title: str,
     xlabel: str,
@@ -474,7 +616,7 @@ def plot_bestof_by_episode(
     suptitle: SuptitleFormat = None,
     legend_outside: bool = False,
     legend_side: bool = False,
-    cmap: str = None,
+    cmap: str = None,  # unused now that color is deterministic/hash-based (kept for call-site compatibility)
     annotate_diff: bool = False,
     diff_interval: int = ANNOTATION_INTERVAL,
 ):
@@ -485,28 +627,35 @@ def plot_bestof_by_episode(
 
     max_ep = None
     min_ep = None
-    for _, df in series_by_label:
+    for _, df, _, _ in series_by_label:
         if "episodeNumber" not in df.columns:
             _exit_with_warning("common_data.csv missing required column 'episodeNumber'.")
         max_ep = int(df["episodeNumber"].max()) if max_ep is None else max(max_ep, int(df["episodeNumber"].max()))
         min_ep = int(df["episodeNumber"].min()) if min_ep is None else min(min_ep, int(df["episodeNumber"].min()))
 
-    if not cmap:
-        cmap = 'gist_rainbow'
-    palette = sns.color_palette(cmap, n_colors=len(series_by_label))
-    for idx, ((label, df), color) in enumerate(zip(series_by_label, palette)):
+    # Color is keyed by `color_key` (the parameter-override string, e.g.
+    # "ec=0.1") and derived via a hash, NOT by position in this plot's list of
+    # lines. This is what makes colors match across separate plots/invocations
+    # -- e.g. mc epsilon=0.1 and ql epsilon=0.1 get the SAME color even when
+    # plotted in different calls to this script with different value sets --
+    # while linestyle (set per algorithm family) still tells the lines apart.
+    unique_color_keys = sorted({color_key for _, _, _, color_key in series_by_label})
+    color_map = {k: color_for_key(k) for k in unique_color_keys}
+
+    for idx, (label, df, run_id, color_key) in enumerate(series_by_label):
         if y_key not in df.columns:
             _exit_with_warning(f"common_data.csv missing required column '{y_key}'.")
 
-        # final_line_style = LINE_STYLES[idx % len(LINE_STYLES)] # may be cutting the data points, ending up confusing the plot
-        final_line_style = 'solid'
+        color = color_map[color_key]
+        final_line_style = get_linestyle_for_run(run_id)
         sns.lineplot(data=df, x="episodeNumber", y=y_key, label=label, color=color, linestyle=final_line_style)
 
     # Add difference annotations if enabled
     if annotate_diff:
         ax = plt.gca()
 
-        for idx, ((label, df), color) in enumerate(zip(series_by_label, palette)):
+        for idx, (label, df, run_id, color_key) in enumerate(series_by_label):
+            color = color_map[color_key]
             # Calculate point-to-point differences
             df_sorted = df.sort_values(by="episodeNumber").reset_index(drop=True)
             y_values = pd.to_numeric(df_sorted[y_key], errors="coerce")
@@ -651,7 +800,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
     log.info(LINE_LENGTH * "-")
     log.info(f"Compare-All mode: plotting {len(summary_df)} configurations")
 
-    tmp: list[tuple[str, pd.DataFrame]] = []
+    tmp: list[tuple[str, pd.DataFrame, str, str]] = []
     summary_entries: list[tuple[str, Optional[int], str, float]] = []
     for _, row in summary_df.iterrows():
         run_id = str(row["configuration_directory"])
@@ -662,17 +811,16 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
         cfg_str = f"cfg@{cfg_idx}" if cfg_idx is not None else run_id
 
         # Parse all tokens from run_id and build legend label
+        overrides_str = ""
+        color_key = ""
         try:
             pr = parse_run_id_strict(run_id)
             # Build legend label: cfg@N (abbr=value, abbr=value, ...)
             # Filter out ignored keys (cfg, cg, alg+runs)
             if pr.tokens:
-                items: list[tuple[str, str]] = []
-                for k, v in pr.tokens.items():
-                    if k not in LIST_OF_IGNORED_OVERRIDES:
-                        items.append((key_to_abbr(k), str(v)))
-                items.sort(key=lambda t: t[0])
-                overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
+                overrides = {k: v for k, v in pr.tokens.items() if k not in LIST_OF_IGNORED_OVERRIDES}
+                overrides_str = build_overrides_str(overrides)
+                color_key = build_color_key(overrides)
                 legend_label = f'{cfg_str} ({overrides_str})' if overrides_str else cfg_str
             else:
                 legend_label = cfg_str
@@ -690,7 +838,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
 
         try:
             df = pd.read_csv(common_path, sep=";")
-            tmp.append((legend_label, df))
+            tmp.append((legend_label, df, run_id, overrides_str))
         except Exception as e:
             log.warning(f"Error reading {common_path}: {e}. Skipping this run.")
             continue
@@ -700,7 +848,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
     if not tmp:
         _exit_with_warning("No valid runs found to plot.")
 
-    series_by_label: list[tuple[str, pd.DataFrame]] = tmp
+    series_by_label: list[tuple[str, pd.DataFrame, str, str]] = tmp
 
     comparisons = [
         ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
@@ -764,21 +912,24 @@ def run_bestof(all_of: str, comparison_key: str, addparams: Union[dict[str, str]
         )
     log.info(LINE_LENGTH * "-")
 
-    tmp: list[tuple[str, str, pd.DataFrame]] = []
+    tmp: list[tuple[str, str, pd.DataFrame, str, str]] = []
     for _, row in winners.iterrows():
         run_id = str(row["configuration_directory"])
         group_value = str(row["group_value"])
         label = str(row["legend_label"])
+        color_key = str(row["overrides_key"])
         common_path = os.path.join(out_dir, run_id, "common_data.csv")
         if not os.path.exists(common_path):
             _exit_with_warning(
                 f"Missing {common_path}. Generate it with persistence_plotter.py first."
             )
         df = pd.read_csv(common_path, sep=";")
-        tmp.append((group_value, label, df))
+        tmp.append((group_value, label, df, run_id, color_key))
 
     tmp.sort(key=lambda t: t[0])
-    series_by_label: list[tuple[str, pd.DataFrame]] = [(label, df) for _, label, df in tmp]
+    series_by_label: list[tuple[str, pd.DataFrame, str, str]] = [
+        (label, df, run_id, color_key) for _, label, df, run_id, color_key in tmp
+    ]
 
     comparisons = [
         ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),
@@ -876,23 +1027,22 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
     log.info(LINE_LENGTH * "-")
     log.info(f"Config-Group mode: cg@{cg_key}, plotting {len(summary_df)} runs")
 
-    tmp: list[tuple[str, pd.DataFrame]] = []
+    tmp: list[tuple[str, pd.DataFrame, str, str]] = []
     summary_entries: list[tuple[str, Optional[int], str, float]] = []
     for _, row in summary_df.iterrows():
         run_id = str(row["configuration_directory"])
         reward = row['last_episode_cumulative_reward']
 
         # Build legend label showing only parameter overrides (no cfg@, no cg@)
+        overrides_str = ""
+        color_key = ""
         try:
             pr = parse_run_id_strict(run_id)
             # Extract parameter overrides, excluding cfg, cg, and algorithm identifiers
             if pr.tokens:
-                items: list[tuple[str, str]] = []
-                for k, v in pr.tokens.items():
-                    if k not in LIST_OF_IGNORED_OVERRIDES:
-                        items.append((key_to_abbr(k), str(v)))
-                items.sort(key=lambda t: t[0])
-                overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
+                overrides = {k: v for k, v in pr.tokens.items() if k not in LIST_OF_IGNORED_OVERRIDES}
+                overrides_str = build_overrides_str(overrides)
+                color_key = build_color_key(overrides)
                 legend_label = overrides_str if overrides_str else run_id
             else:
                 legend_label = run_id
@@ -910,7 +1060,7 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
 
         try:
             df = pd.read_csv(common_path, sep=";")
-            tmp.append((legend_label, df))
+            tmp.append((legend_label, df, run_id, color_key))
         except Exception as e:
             log.warning(f"Error reading {common_path}: {e}. Skipping this run.")
             continue
@@ -920,7 +1070,7 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
     if not tmp:
         _exit_with_warning("No valid runs found to plot.")
 
-    series_by_label: list[tuple[str, pd.DataFrame]] = tmp
+    series_by_label: list[tuple[str, pd.DataFrame, str, str]] = tmp
 
     comparisons = [
         ("currentEpisodeReward", "Current Episode Reward", "Episode", "Reward"),

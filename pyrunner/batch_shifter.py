@@ -37,7 +37,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # from pyrunner.batch_configs import LIST_OF_CONFIGS
-from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
+from pyrunner.batch_configs_mix_2 import LIST_OF_CONFIGS
 
 from pyrunner.utils.path import normalize_report_base
 
@@ -247,6 +247,33 @@ def config_to_override_params(config: dict) -> Dict[str, str]:
     return params
 
 
+def config_params_match(folder_params: Dict[str, str], config_params: Dict[str, str]) -> bool:
+    """
+    Check whether a config's declared overrides are consistent with a folder's
+    extracted params, WITHOUT requiring exact dict equality.
+
+    Folder names can carry extra key@value tokens that aren't tracked in any
+    config's "overrides" dict (e.g. a fixed/global param like mcnm_rth that
+    every run stamps into its name but that no sweep actually varies). Exact
+    equality would make every folder fail to match as soon as one such
+    untracked key shows up. Instead: every key the CONFIG declares must be
+    present and equal in the folder's params. Extra folder-only keys are
+    ignored.
+
+    Returns: True if config_params is a subset of folder_params (by value).
+    """
+    if not config_params:
+        # A config with no overrides at all can't discriminate against
+        # anything by params -- treat as "no params to check", caller should
+        # rely on position/signature matching instead.
+        return not folder_params
+
+    return all(
+        folder_params.get(key) == value
+        for key, value in config_params.items()
+    )
+
+
 def build_rename_mapping(
         existing_folders_dict: Dict[int, List[Tuple[str, float]]],
         active_configs: Dict[int, dict],
@@ -394,7 +421,7 @@ def build_rename_mapping(
                 for new_idx in unmatched_active:
                     if new_idx in matched_active:
                         continue
-                    if fp == config_to_override_params(active_configs[new_idx]):
+                    if config_params_match(fp, config_to_override_params(active_configs[new_idx])):
                         matching_new_idx = new_idx
                         break
 
@@ -428,7 +455,7 @@ def build_rename_mapping(
 
             if folder_params:
                 param_exists = any(
-                    folder_params == config_to_override_params(active_configs[aidx])
+                    config_params_match(folder_params, config_to_override_params(active_configs[aidx]))
                     for aidx in active_idx_list
                 )
                 if not param_exists:
@@ -467,11 +494,53 @@ def build_rename_mapping(
     return rename_mapping, problems
 
 
+def directories_are_identical(path_a: str, path_b: str) -> bool:
+    """
+    Recursively compare two directory trees for identical content.
+
+    Uses filecmp.dircmp at every level: checks that there are no files/dirs
+    only on one side, and no files that differ in content (shallow=False
+    forces an actual byte comparison, not just size/mtime).
+
+    Returns: True only if both trees match exactly, all the way down.
+    """
+    import filecmp
+
+    comparison = filecmp.dircmp(path_a, path_b)
+
+    if comparison.left_only or comparison.right_only or comparison.funny_files:
+        return False
+
+    _, mismatch, errors = filecmp.cmpfiles(
+        path_a, path_b, comparison.common_files, shallow=False
+    )
+    if mismatch or errors:
+        return False
+
+    for subdir in comparison.common_dirs:
+        if not directories_are_identical(
+            os.path.join(path_a, subdir),
+            os.path.join(path_b, subdir)
+        ):
+            return False
+
+    return True
+
+
 def move_to_archive(src_path: str, archive_base: str, parent_dir_id: str, folder_name: str) -> Tuple[bool, str]:
     """
     Copy a folder into the archive directory (backup semantics — original stays).
 
     Preserves the folder name as-is (does not rename).
+
+    If the destination already exists (e.g. a prior run already archived this
+    exact folder, but something -- like a locked file -- kept the original
+    from being cleaned up afterward), this is NOT treated as an automatic
+    failure. Instead the two trees are compared byte-for-byte:
+      - identical  → treat as already-archived; caller is safe to remove the
+                      stale duplicate from its original location.
+      - different  → refuse, and say so clearly. This is a real conflict that
+                      needs a human, not something to silently resolve.
 
     Args:
         src_path:      Full path to the source folder
@@ -490,7 +559,16 @@ def move_to_archive(src_path: str, archive_base: str, parent_dir_id: str, folder
     dst_path = os.path.join(archive_path, folder_name)
 
     if os.path.exists(dst_path):
-        return False, f"Archive destination already exists: {dst_path}"
+        if directories_are_identical(src_path, dst_path):
+            return True, (
+                f"Already archived identically at {dst_path} "
+                f"(from a prior run) — treating as already-backed-up"
+            )
+        return False, (
+            f"Archive destination already exists AND DIFFERS from source: {dst_path} "
+            f"-- refusing to overwrite. Resolve manually (compare the two folders "
+            f"and delete/rename whichever is stale)."
+        )
 
     try:
         shutil.copytree(src_path, dst_path)

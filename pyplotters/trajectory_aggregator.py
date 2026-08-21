@@ -54,6 +54,7 @@ Examples:
 
 import argparse
 import glob
+import hashlib
 import json
 import logging
 import os
@@ -114,6 +115,126 @@ BESTOF_CMAP = "bright"
 LINE_STYLES = ["-", "--", "-.", ":"]
 
 # ===========================================================================================
+# COLOR & LINESTYLE SYSTEM (ported from bestof_plotter.py, kept in sync so both scripts'
+# plots read the same way: same category = same color, same algorithm family = same
+# linestyle, in every plot, regardless of which script or invocation produced it)
+# ===========================================================================================
+
+# Distinct line styles per algorithm family (mcn / ql / lfe), so their lines are easy to
+# tell apart even when colors are similar. Anything that doesn't match one of these
+# families falls back to DEFAULT_LINESTYLE.
+ALGO_FAMILY_LINESTYLES: dict[str, str] = {
+    "mcn": "--",   # MCN group -> dashed
+    "ql": "-",     # QL group -> solid
+    "lfe": ":",    # LFE group -> dotted
+}
+DEFAULT_LINESTYLE = "-."
+
+
+def detect_algo_family(run_id: str) -> str:
+    """Classify a run-id into an algorithm family ('mcn', 'ql', or 'lfe').
+
+    Looks at every dash-separated token in `run_id` (e.g. the prefix, or bare
+    tokens like 'ql500'/'mcn750'/'lfe10') and matches it against the known
+    family prefixes. Returns "" if no known family is found.
+    """
+    for part in run_id.split("-"):
+        m = re.match(r"^(mcn|ql|lfe)\d*$", part, flags=re.IGNORECASE)
+        if m:
+            return m.group(1).lower()
+    return ""
+
+
+def get_linestyle_for_run(run_id: str) -> str:
+    """Return the linestyle to use for a given run-id, based on its algorithm family."""
+    family = detect_algo_family(run_id)
+    return ALGO_FAMILY_LINESTYLES.get(family, DEFAULT_LINESTYLE)
+
+
+# A curated set of bold, maximally-distinct colors. Used as a FALLBACK for color keys
+# with no fixed assignment below.
+QUALITATIVE_PALETTE: list[str] = [
+    "#e6194B",  # red
+    "#4363d8",  # blue
+    "#3cb44b",  # green
+    "#f58231",  # orange
+    "#911eb4",  # purple
+    "#42d4f4",  # cyan
+    "#f032e6",  # magenta
+    "#9A6324",  # brown
+    "#469990",  # teal
+    "#d4ac0d",  # gold (deeper than pure yellow, which is hard to see on white)
+    "#800000",  # maroon
+    "#000075",  # navy
+    "#808000",  # olive
+    "#a9a9a9",  # grey
+]
+
+# Known exploration-strategy ("bp") categories get FIXED, obvious colors instead of being
+# left to hashing luck, and stay in sync with bestof_plotter.py.
+KNOWN_BP_COLORS: dict[str, str] = {
+    "epsilon": "#3cb44b",  # green
+    "ucb": "#e6194B",      # red
+    "ps": "#4363d8",       # blue
+}
+# Levy Flight has no "bp" override (its tunable parameter is "la"), so it gets its own
+# fixed color the same way.
+LEVY_FLIGHT_COLOR = "#f58231"  # orange
+
+# Colors already reserved above are excluded from the generic hashed fallback, so they
+# stay uniquely tied to epsilon/ucb/ps/Levy-Flight and never get accidentally reused.
+_RESERVED_COLORS = set(KNOWN_BP_COLORS.values()) | {LEVY_FLIGHT_COLOR}
+_FALLBACK_PALETTE = [c for c in QUALITATIVE_PALETTE if c not in _RESERVED_COLORS]
+
+
+def color_for_key(color_key: str) -> str:
+    """Map a color key (e.g. "bp=epsilon", "la", or an override string) to a color.
+
+    Known categories (see KNOWN_BP_COLORS / LEVY_FLIGHT_COLOR) get a fixed, semantically
+    obvious color every time. Anything else falls back to a deterministic hash into the
+    remaining palette -- the SAME key always produces the SAME color, in every plot,
+    regardless of what else is being plotted alongside it or which separate script/run
+    generated it.
+    """
+    if color_key.startswith("bp="):
+        bp_value = color_key[len("bp="):]
+        if bp_value in KNOWN_BP_COLORS:
+            return KNOWN_BP_COLORS[bp_value]
+    elif color_key == "la":
+        return LEVY_FLIGHT_COLOR
+
+    digest = hashlib.md5(color_key.encode("utf-8")).hexdigest()
+    idx = int(digest, 16) % len(_FALLBACK_PALETTE)
+    return _FALLBACK_PALETTE[idx]
+
+
+def build_color_key(overrides: dict[str, str]) -> str:
+    """Build the key used to determine a line's color.
+
+    If the overrides include a "bp" (behavior policy / exploration strategy) parameter --
+    e.g. bp=epsilon, bp=ucb, bp=ps -- that value ALONE is used as the color key. This is
+    what makes e.g. mcn_epsilon and ql_epsilon get the same color: they share bp=epsilon
+    even though every other tuned hyperparameter differs. Linestyle (per algorithm family)
+    still distinguishes them.
+
+    If there's no "bp" but there IS an "la" (Levy Flight's alpha parameter), the category
+    key is just "la" -- so all Levy Flight lines get the same fixed color regardless of the
+    specific alpha value tuned.
+
+    Falls back to the full overrides string when neither is present.
+    """
+    for k, v in overrides.items():
+        if key_to_abbr(k) == "bp":
+            return f"bp={v}"
+    for k in overrides:
+        if key_to_abbr(k) == "la":
+            return "la"
+    items: list[tuple[str, str]] = [(key_to_abbr(k), str(v)) for k, v in overrides.items()]
+    items.sort(key=lambda t: t[0])
+    return ", ".join([f"{abbr}={val}" for abbr, val in items])
+
+
+# ===========================================================================================
 # UTILITY FUNCTIONS
 # ===========================================================================================
 
@@ -168,7 +289,7 @@ def parse_run_id_strict(run_id: str) -> ParsedRunId:
 
 def extract_cfg_index(folder_name: str) -> Optional[int]:
     """Extract cfg index from folder name like 'cfg@05-ql500-...'.
-    
+
     Returns the integer index (1-based) or None if not found.
     """
     match = re.match(r"cfg@(\d+)", folder_name)
@@ -197,28 +318,28 @@ def parse_config_indices(config_string: str) -> list[int]:
     - Single values: "1,2,9"
     - Ranges: "4-6" (expands to 4,5,6)
     - Mixed: "1,2,4-6,9,10-17"
-    
+
     Returns sorted list of unique integers.
     Raises ValueError if format is invalid.
     """
     configs = set()
-    
+
     # Split by comma
     parts = config_string.split(",")
-    
+
     for part in parts:
         part = part.strip()  # Remove whitespace
-        
+
         if "-" in part:
             # It's a range
             try:
                 start_str, end_str = part.split("-", 1)  # Use maxsplit=1 to handle negative numbers
                 start = int(start_str.strip())
                 end = int(end_str.strip())
-                
+
                 if start > end:
                     raise ValueError(f"Invalid range '{part}', start > end")
-                
+
                 # Add all values in range (inclusive)
                 for i in range(start, end + 1):
                     configs.add(i)
@@ -230,41 +351,41 @@ def parse_config_indices(config_string: str) -> list[int]:
                 configs.add(int(part))
             except ValueError:
                 raise ValueError(f"Invalid config number '{part}' (must be integer)")
-    
+
     return sorted(list(configs))
 
 
 def filter_summary_by_configs(summary_df: pd.DataFrame, config_indices: list[int]) -> pd.DataFrame:
     """Filter summary DataFrame to include only rows matching specified config indices.
-    
+
     Matches configuration_directory entries starting with 'cfg@N' where N is in config_indices.
-    
+
     Args:
         summary_df: DataFrame with 'configuration_directory' column
         config_indices: List of integer config indices to include (1-based)
-    
+
     Returns:
         Filtered DataFrame with only matching rows
     """
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
-    
+
     # Track which configs were requested but not found
     requested_indices = set(config_indices)
     found_indices = set()
-    
+
     # Filter rows by matching cfg@ index
     mask = pd.Series([False] * len(summary_df), index=summary_df.index)
     for idx, row in summary_df.iterrows():
         config_dir = str(row["configuration_directory"])
         cfg_idx = extract_cfg_index(config_dir)
-        
+
         if cfg_idx is not None and cfg_idx in config_indices:
             mask.iloc[idx] = True
             found_indices.add(cfg_idx)
-    
+
     filtered_df = summary_df[mask]
-    
+
     # Warn about missing configs
     missing_indices = requested_indices - found_indices
     if missing_indices:
@@ -272,12 +393,12 @@ def filter_summary_by_configs(summary_df: pd.DataFrame, config_indices: list[int
             log.warning(
                 f"Requested config cfg@{cfg_idx} not found in summary.csv. Skipping."
             )
-    
+
     if len(filtered_df) == 0:
         _exit_with_warning(
             f"No runs found matching requested configs: {sorted(config_indices)}"
         )
-    
+
     log.info(f"Filtered to {len(filtered_df)} runs from configs: {sorted(found_indices)}")
     return filtered_df
 
@@ -314,14 +435,14 @@ def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
 def parse_run_description(_run_id: str) -> str:
     """
     Parse run_id into key-value pairs formatted as a description string.
-    
+
     Example: "ql-movseed@0-learnseed@1" -> "(ql; movseed=0; learnseed=1)"
     If no @ delimiters found, returns empty string.
     Filters out keys in LIST_OF_IGNORED_OVERRIDES.
-    
+
     Args:
         _run_id: The run identifier string
-        
+
     Returns:
         Formatted string like "(key1=val1; key2=val2; ...)" or empty string
     """
@@ -350,26 +471,26 @@ def parse_run_description(_run_id: str) -> str:
 def parse_episode_range(episode_spec: str) -> List[int]:
     """
     Parse episode specification into a list of episode numbers.
-    
+
     Supports:
     - Single values: "5" -> [5]
     - Ranges: "1-5" -> [1, 2, 3, 4, 5]
     - Mixed: "1-3,5,7-9" -> [1, 2, 3, 5, 7, 8, 9]
-    
+
     Args:
         episode_spec: Comma-separated episode specification
-        
+
     Returns:
         Sorted list of unique episode numbers
-        
+
     Raises:
         ValueError: If specification is invalid
     """
     episodes = set()
-    
+
     if not episode_spec or episode_spec.strip() == "":
         return []
-    
+
     try:
         parts = episode_spec.split(",")
         for part in parts:
@@ -388,34 +509,34 @@ def parse_episode_range(episode_spec: str) -> List[int]:
                 episodes.add(int(part))
     except ValueError as e:
         raise ValueError(f"Failed to parse episode specification '{episode_spec}': {e}")
-    
+
     return sorted(list(episodes))
 
 
 def auto_detect_episodes(run_dir: str) -> List[int]:
     """
     Auto-detect available episodes from ep/* subdirectory structure.
-    
+
     Note: Episode 0 is excluded as it represents the baseline model, not actual training episodes.
     Only episodes >= 1 are returned.
-    
+
     Args:
         run_dir: The run directory path
-        
+
     Returns:
         Sorted list of available episode numbers (starting from 1)
-        
+
     Raises:
         FileNotFoundError: If ep/ directory doesn't exist
     """
     ep_root = os.path.join(run_dir, "ep")
-    
+
     if not os.path.exists(ep_root):
         raise FileNotFoundError(f"Episode directory not found: {ep_root}")
-    
+
     episode_dirs = glob.glob(os.path.join(ep_root, "*"))
     episodes = []
-    
+
     for ep_dir in episode_dirs:
         if os.path.isdir(ep_dir):
             try:
@@ -425,47 +546,47 @@ def auto_detect_episodes(run_dir: str) -> List[int]:
             except ValueError:
                 # Skip non-integer directory names
                 pass
-    
+
     return sorted(episodes)
 
 
 def validate_episodes(available: List[int], requested: List[int]) -> Tuple[bool, List[str]]:
     """
     Validate that all requested episodes are available and contiguous.
-    
+
     Args:
         available: List of available episode numbers
         requested: List of requested episode numbers
-        
+
     Returns:
         Tuple of (is_valid, error_messages)
     """
     errors = []
-    
+
     if not available:
         errors.append("No episodes found in ep/ directory")
         return False, errors
-    
+
     if not requested:
         # No specific request; will use all available
         return True, []
-    
+
     # Check for missing episodes
     available_set = set(available)
     for ep in requested:
         if ep not in available_set:
             errors.append(f"Episode {ep} not found (available: {min(available)}-{max(available)})")
-    
+
     return len(errors) == 0, errors
 
 
 def read_persistence_json(file_path: str) -> Optional[Dict]:
     """
     Read and parse a Persistence JSON file.
-    
+
     Args:
         file_path: Path to the JSON file
-        
+
     Returns:
         Parsed JSON dict or None if read failed
     """
@@ -473,7 +594,7 @@ def read_persistence_json(file_path: str) -> Optional[Dict]:
         if os.path.getsize(file_path) == 0:
             log.warning(f"[EMPTY JSON] {file_path}")
             return None
-        
+
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             return data
@@ -488,25 +609,25 @@ def read_persistence_json(file_path: str) -> Optional[Dict]:
 def extract_trajectory_frequencies(json_data: Dict) -> Optional[Dict[str, int]]:
     """
     Extract trajectoryFrequencies from persistence JSON data.
-    
+
     Args:
         json_data: Parsed persistence JSON
-        
+
     Returns:
         Dict mapping trajectory_length (str) to frequency (int), or None if not found
     """
     if json_data is None:
         return None
-    
+
     if "trajectoryFrequencies" not in json_data:
         log.warning("trajectoryFrequencies key not found in persistence data")
         return None
-    
+
     traj_freq = json_data.get("trajectoryFrequencies", {})
     if not traj_freq:
         log.warning("trajectoryFrequencies is empty")
         return None
-    
+
     return traj_freq
 
 
@@ -516,20 +637,20 @@ def aggregate_trajectory_frequencies(
 ) -> Tuple[bool, Dict[str, Dict], str]:
     """
     Aggregate trajectoryFrequencies from multiple episodes using simple division.
-    
+
     For scientific empirical plotting, each trajectory's average is computed by:
     average = sum_of_frequencies / total_episodes
-    
+
     Missing trajectories in some episodes are implicitly treated as 0,
     providing a consistent baseline for statistical comparison.
-    
+
     Args:
         run_dir: Run directory containing ep/ subdirectory
         episodes: List of episode numbers to aggregate
-        
+
     Returns:
         Tuple of (success, aggregated_dict, status_message)
-        
+
     Aggregated dict format:
         {
             "trajectory_length_str": {
@@ -543,27 +664,27 @@ def aggregate_trajectory_frequencies(
     loaded_episodes = 0
     failed_episodes = []
     total_episodes = len(episodes)
-    
+
     for episode_num in episodes:
         persistence_path = os.path.join(
             run_dir, "ep", str(episode_num),
             f"Persistence-Episode@{episode_num}.json"
         )
-        
+
         if not os.path.exists(persistence_path):
             failed_episodes.append(episode_num)
             continue
-        
+
         json_data = read_persistence_json(persistence_path)
         if json_data is None:
             failed_episodes.append(episode_num)
             continue
-        
+
         traj_freq = extract_trajectory_frequencies(json_data)
         if traj_freq is None:
             failed_episodes.append(episode_num)
             continue
-        
+
         # Accumulate frequencies
         for traj_len_str, frequency in traj_freq.items():
             try:
@@ -571,23 +692,23 @@ def aggregate_trajectory_frequencies(
             except (ValueError, TypeError):
                 log.warning(f"Invalid frequency value for trajectory {traj_len_str}: {frequency}")
                 continue
-            
+
             if traj_len_str not in aggregated:
                 aggregated[traj_len_str] = {"sum": 0, "average": 0}
-            
+
             aggregated[traj_len_str]["sum"] += freq_val
-        
+
         loaded_episodes += 1
-    
+
     # Compute averages: divide by total episodes (not by episodes-using-key)
     for traj_len_str in aggregated:
         aggregated[traj_len_str]["average"] = aggregated[traj_len_str]["sum"] / total_episodes
-    
+
     # Build status message
     status_msg = f"Loaded {loaded_episodes}/{len(episodes)} episodes"
     if failed_episodes:
         status_msg += f"; failed episodes: {failed_episodes}"
-    
+
     success = loaded_episodes > 0
     return success, aggregated, status_msg
 
@@ -598,18 +719,18 @@ def aggregate_trajectory_frequencies_last_episode(
 ) -> Tuple[bool, Dict[str, Dict], str]:
     """
     Aggregate trajectoryFrequencies using the last episode as cumulative probabilities.
-    
+
     The last episode's frequencies are treated as cumulative probability values.
     Each trajectory's probability is normalized by the total sum:
     probability = frequency_in_last_episode / sum_of_all_frequencies_in_last_episode
-    
+
     Args:
         run_dir: Run directory containing ep/ subdirectory
         episodes: List of episode numbers (only the last one is used)
-        
+
     Returns:
         Tuple of (success, aggregated_dict, status_message)
-        
+
     Aggregated dict format:
         {
             "trajectory_length_str": {
@@ -649,7 +770,7 @@ def aggregate_trajectory_frequencies_last_episode(
         error_msg = "No valid persistence JSON found in requested episodes"
         log.error(error_msg)
         return False, {}, error_msg
-    
+
     # Calculate total sum of all frequencies
     total_sum = 0
     for traj_len_str, frequency in traj_freq.items():
@@ -659,12 +780,12 @@ def aggregate_trajectory_frequencies_last_episode(
         except (ValueError, TypeError):
             log.warning(f"Invalid frequency value for trajectory {traj_len_str}: {frequency}")
             continue
-    
+
     if total_sum == 0:
         error_msg = f"Total frequency sum is zero in episode {last_episode}"
         log.error(error_msg)
         return False, {}, error_msg
-    
+
     # Build aggregated dict with normalized probabilities
     aggregated = {}
     for traj_len_str, frequency in traj_freq.items():
@@ -672,14 +793,14 @@ def aggregate_trajectory_frequencies_last_episode(
             freq_val = int(frequency)
         except (ValueError, TypeError):
             continue
-        
+
         # Probability is frequency divided by total
         probability = freq_val / total_sum
         aggregated[traj_len_str] = {
             "sum": freq_val,
             "average": probability
         }
-    
+
     status_msg = (
         f"Loaded episode {last_episode} (last episode mode); total_sum={total_sum}; "
         f"file={persistence_path}"
@@ -690,10 +811,10 @@ def aggregate_trajectory_frequencies_last_episode(
 def convert_aggregated_to_dataframe(aggregated: Dict) -> pd.DataFrame:
     """
     Convert aggregated trajectory frequencies to DataFrame for plotting.
-    
+
     Args:
         aggregated: Aggregated dict from aggregate_trajectory_frequencies()
-        
+
     Returns:
         DataFrame with columns: trajectory, sum_frequency, avg_frequency, probability
     """
@@ -703,13 +824,13 @@ def convert_aggregated_to_dataframe(aggregated: Dict) -> pd.DataFrame:
             traj_len = int(traj_len_str)
         except ValueError:
             continue
-        
+
         records.append({
             "trajectory": traj_len,
             "sum_frequency": data["sum"],
             "avg_frequency": data["average"]
         })
-    
+
     df = pd.DataFrame(records)
     if len(df) > 0:
         df = df.sort_values(by=["trajectory"], ascending=True).reset_index(drop=True)
@@ -719,7 +840,7 @@ def convert_aggregated_to_dataframe(aggregated: Dict) -> pd.DataFrame:
             df["probability"] = df["avg_frequency"] / total
         else:
             df["probability"] = 0
-    
+
     return df
 
 
@@ -727,23 +848,31 @@ def _create_trajectory_plot(
     ax,
     df: pd.DataFrame,
     use_log_scale: bool = False,
-    x_max: int = 500
+    x_max: int = 500,
+    color: str = 'purple',
+    linestyle: str = 'solid'
 ):
     """
     Core plotting logic for trajectory distribution.
-    
+
     Args:
         ax: Matplotlib axes object
         df: DataFrame with trajectory and probability columns
         use_log_scale: If True, use logarithmic X-axis (semilogx); otherwise use linear
         x_max: Maximum X-axis value
+        color: Line/fill color. Defaults to 'purple' for standalone calls with no
+            category context; pass the result of color_for_key(build_color_key(...))
+            for consistency with bestof_plotter.py and other trajectory plots.
+        linestyle: Line style. Defaults to 'solid'; pass get_linestyle_for_run(run_id)
+            to match the algorithm-family linestyle used elsewhere.
     """
     if use_log_scale:
         # Logarithmic X-axis plot using semilogx
-        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color='purple',
-                    label="Probability (PMF)", marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
-        ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color='skyblue')
-        
+        ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color=color,
+                    linestyle=linestyle, label="Probability (PMF)",
+                    marker='o' if len(df) < 5 else '', markersize=6, alpha=0.8)
+        ax.fill_between(df["trajectory"], df["probability"], alpha=0.2, color=color)
+
         # Configure log-scale X-axis
         ax.xaxis.set_major_locator(LogLocator(base=10, numticks=10))
         ax.xaxis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10) * 0.1))
@@ -751,27 +880,27 @@ def _create_trajectory_plot(
         ax.set_xlabel("Step Length $l$ (log scale)", fontsize=12, fontweight='bold')
     else:
         # Linear X-axis plot
-        sns.lineplot(ax=ax, data=df, x="trajectory", y="probability", color='purple',
-                    label="Probability (PMF)", linewidth=2)
-        
+        sns.lineplot(ax=ax, data=df, x="trajectory", y="probability", color=color,
+                    linestyle=linestyle, label="Probability (PMF)", linewidth=2)
+
         # Add scatter plot overlay to show data points only if dataframe has less than 5 rows
         if len(df) < 5:
-            sns.scatterplot(ax=ax, data=df, x="trajectory", y="probability", s=15, marker='o', 
-                           color='darkblue', alpha=0.7, edgecolor='navy', linewidth=1.5, 
+            sns.scatterplot(ax=ax, data=df, x="trajectory", y="probability", s=15, marker='o',
+                           color='darkblue', alpha=0.7, edgecolor='navy', linewidth=1.5,
                            zorder=5, legend=False)
-        
+
         # Add horizontal pointer lines from each point to the Y-axis
         for idx, row in df.iterrows():
             x_val = row["trajectory"]
             y_val = row["probability"]
             ax.plot([0, x_val], [y_val, y_val], 'gray', linewidth=0.8, color='gray', alpha=0.4,
                    linestyle='--', zorder=1)
-        
+
         # Configure linear X-axis
         ax.xaxis.set_major_locator(MultipleLocator(50))
         ax.xaxis.set_minor_locator(MultipleLocator(10))
         ax.set_xlabel("Trajectory Length", fontsize=12, fontweight='bold')
-    
+
     # Common Y-axis configuration
     ax.set_ylabel("Probability $P(l)$", fontsize=12, fontweight='bold')
     ax.set_xlim(1, x_max)
@@ -787,15 +916,17 @@ def plot_aggregated_trajectory_distribution(
     num_episodes: int = 0,
     x_max: int = 500,
     logarithmic_x: bool = False,
-    _description: str = None
+    _description: str = None,
+    color: str = 'purple',
+    linestyle: str = 'solid'
 ):
     """
     Plot aggregated trajectory distribution in both linear and logarithmic scales.
-    
+
     Generates two plots by default:
     1. Linear X-axis plot (standard distribution visualization)
     2. Logarithmic X-axis plot (power-law behavior visualization)
-    
+
     Args:
         df: DataFrame with trajectory and probability columns
         file_path: Output PNG file path (base name; will be modified for log variant)
@@ -804,35 +935,40 @@ def plot_aggregated_trajectory_distribution(
         x_max: Maximum X-axis value
         logarithmic_x: Whether to generate logarithmic plots (default True; generates both)
         _description: Description string to display under title (optional)
+        color: Line/fill color. Pass color_for_key(build_color_key(overrides)) so this
+            run's plot matches the color used for the same category elsewhere (including
+            in bestof_plotter.py's plots).
+        linestyle: Line style. Pass get_linestyle_for_run(run_id) so this run's plot
+            matches the algorithm-family linestyle used elsewhere.
     """
     if len(df) == 0:
         log.warning("Empty DataFrame; skipping plot")
         return
-    
+
     # Ensure numeric dtypes
     df = df.copy()
     df["trajectory"] = df["trajectory"].astype(int)
     df["probability"] = df["probability"].astype(float)
-    
+
     # Compute summary statistics
     max_len = int(df["trajectory"].max()) if len(df) > 0 else 0
     mean_len = float((df["trajectory"] * df["probability"]).sum()) if len(df) > 0 else 0
     max_p = float(df["probability"].max()) if len(df) > 0 else 0
     mode_len = int(df.loc[df["probability"] == max_p, "trajectory"].min()) if max_p > 0 else 0
-    
+
     # Construct title with subtitle
     title_parts = [title or "Average Trajectory Distribution"]
     if num_episodes > 0:
         title_parts.append(f"({num_episodes} episodes)")
-    
+
     final_title = "\n".join(title_parts)
-    
+
     suptitle_y = 0.98 if num_episodes > 0 else 0.95
-    
+
     # Build summary stats for legend with programmatic fixed-width formatting
     from matplotlib.lines import Line2D
     total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
-    
+
     stat_data = [
         ('Max trajectory', f'{max_len}'),
         ('Highest PMF', f'{max_p:.3f}'),
@@ -840,76 +976,76 @@ def plot_aggregated_trajectory_distribution(
         ('Most probable (mode)', f'{mode_len}'),
         ('Sum of all', f'{total_sum}'),
     ]
-    
+
     # Find max key length for alignment
     max_key_len = max(len(key) for key, _ in stat_data)
-    
+
     # Format entries with padding
     stat_lines = [f'{key.ljust(max_key_len)} : {value}' for key, value in stat_data]
-    
+
     # ===== PLOT 1: LINEAR X-AXIS =====
     fig = plt.figure(figsize=(12, 6))
     ax = fig.add_subplot(111)
-    
-    _create_trajectory_plot(ax, df, use_log_scale=False, x_max=x_max)
-    
+
+    _create_trajectory_plot(ax, df, use_log_scale=False, x_max=x_max, color=color, linestyle=linestyle)
+
     fig.suptitle(final_title, fontweight='bold', fontsize=12, y=suptitle_y)
-    
+
     if _description:
         fig.text(0.5, 0.91, _description, ha='center', va='top',
                 fontsize=9, fontweight='light', style='italic', color='gray')
         fig.subplots_adjust(top=0.88)
     else:
         fig.subplots_adjust(top=0.92)
-    
+
     # Add stats to legend
     handles, labels = ax.get_legend_handles_labels()
     handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
     ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
-    
+
     # Save linear plot
     out_dir = os.path.dirname(file_path)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    
+
     plt.tight_layout()
     plt.savefig(file_path, bbox_inches='tight', dpi=100)
     plt.close()
     log.info(f"Saved plot: {file_path}")
-    
+
     # ===== PLOT 2: LOGARITHMIC X-AXIS (if enabled) =====
     if logarithmic_x or True:  # Always generate logarithmic plot
         fig = plt.figure(figsize=(12, 6))
         ax = fig.add_subplot(111)
-        
-        _create_trajectory_plot(ax, df, use_log_scale=True, x_max=x_max)
-        
+
+        _create_trajectory_plot(ax, df, use_log_scale=True, x_max=x_max, color=color, linestyle=linestyle)
+
         # Modify title for logarithmic variant
         log_title_parts = [title or "Average Trajectory Distribution"]
         if num_episodes > 0:
             log_title_parts.insert(1, f"({num_episodes} episodes)")
-        
+
         log_final_title = "\n".join(log_title_parts)
         log_final_title += " (logarithmic X scale)"
         fig.suptitle(log_final_title, fontweight='bold', fontsize=12, y=suptitle_y)
-        
+
         if _description:
             fig.text(0.5, 0.91, _description, ha='center', va='top',
                     fontsize=9, fontweight='light', style='italic', color='gray')
             fig.subplots_adjust(top=0.88)
         else:
             fig.subplots_adjust(top=0.92)
-        
+
         # Add stats to legend
         handles, labels = ax.get_legend_handles_labels()
         handles.extend([Line2D([], [], linestyle='none', color='none', label=s) for s in stat_lines])
         ax.legend(handles=handles, loc="best", prop={'family': 'monospace'})
-        
+
         # Save logarithmic plot with modified filename
         base_path = os.path.splitext(file_path)[0]
         ext = os.path.splitext(file_path)[1]
         log_file_path = f"{base_path} (Log Scale X){ext}"
-        
+
         plt.tight_layout()
         plt.savefig(log_file_path, bbox_inches='tight', dpi=100)
         plt.close()
@@ -923,7 +1059,7 @@ def save_aggregated_data_json(
 ):
     """
     Save aggregated trajectory frequencies as JSON.
-    
+
     Args:
         aggregated: Aggregated dict from aggregate_trajectory_frequencies()
         file_path: Output JSON file path
@@ -931,7 +1067,7 @@ def save_aggregated_data_json(
     """
     # Calculate total sum across all trajectories
     total_sum = sum(data.get("sum", 0) for data in aggregated.values())
-    
+
     output = {
         "metadata": {
             "episodes_aggregated": episodes,
@@ -941,7 +1077,7 @@ def save_aggregated_data_json(
         },
         "aggregated_data": aggregated
     }
-    
+
     try:
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(output, f, indent=4, sort_keys=True)
@@ -992,7 +1128,7 @@ def process_run_aggregation(
 ) -> bool:
     """
     Process trajectory aggregation for a single run.
-    
+
     Args:
         run_dir: Full path to run directory
         run_id: Run identifier (for logging)
@@ -1001,7 +1137,7 @@ def process_run_aggregation(
         title: Custom plot title
         _describe: Whether to add run description to plot
         use_last_episode: If True, use last episode mode (treat final episode frequencies as probabilities)
-        
+
     Returns:
         True if successful, False otherwise
     """
@@ -1012,7 +1148,7 @@ def process_run_aggregation(
     else:
         log.info("Mode: STANDARD (frequency summing)")
     log.info("=" * LINE_LENGTH)
-    
+
     # Auto-detect episodes if not specified
     if not episodes:
         try:
@@ -1022,52 +1158,65 @@ def process_run_aggregation(
         except FileNotFoundError as e:
             log.error(f"Failed to auto-detect episodes: {e}")
             return False
-    
+
     # Validate episodes
     try:
         available = auto_detect_episodes(run_dir)
     except FileNotFoundError as e:
         log.error(f"Cannot access episode directory: {e}")
         return False
-    
+
     is_valid, errors = validate_episodes(available, episodes)
     if not is_valid:
         for error in errors:
             log.error(error)
         log.error("Exiting due to missing episodes")
         return False
-    
+
     if use_last_episode:
         log.info(f"Using last episode {episodes[-1]} for probability distribution")
     else:
         log.info(f"Aggregating {len(episodes)} episodes: {episodes}")
-    
+
     # Aggregate trajectoryFrequencies
     if use_last_episode:
         success, aggregated, status_msg = aggregate_trajectory_frequencies_last_episode(run_dir, episodes)
     else:
         success, aggregated, status_msg = aggregate_trajectory_frequencies(run_dir, episodes)
     log.info(status_msg)
-    
+
     if not success or not aggregated:
         log.error("Failed to aggregate trajectory frequencies")
         return False
-    
+
     # Convert to DataFrame and plot
     df = convert_aggregated_to_dataframe(aggregated)
-    
+
     if len(df) == 0:
         log.error("No valid trajectory data to plot")
         return False
-    
+
     # Output directory: pyplotters/plots[/<parent>]/<run_id>/
     parent_results_dir = os.path.join(PLOT_RESULTS_DIR, parent_id) if parent_id else PLOT_RESULTS_DIR
     run_out_dir = os.path.join(parent_results_dir, run_id)
     os.makedirs(run_out_dir, exist_ok=True)
-    
+
     # Generate description if --describe flag is set
     _description = parse_run_description(run_id) if _describe else None
-    
+
+    # Determine color (by exploration-strategy category) and linestyle (by algorithm
+    # family) so this single-run plot visually matches every other plot -- including
+    # bestof_plotter.py's -- that shares the same category/family.
+    line_color = 'purple'
+    line_style = 'solid'
+    try:
+        pr = parse_run_id_strict(run_id)
+        overrides = {k: v for k, v in pr.tokens.items() if k not in LIST_OF_IGNORED_OVERRIDES}
+        line_color = color_for_key(build_color_key(overrides))
+        line_style = get_linestyle_for_run(run_id)
+    except SystemExit:
+        log.warning(f"Could not parse run_id '{run_id}' for color/linestyle; using defaults.")
+
     # Save plot
     plot_file = os.path.join(run_out_dir, f"Average Trajectory Distribution (of {len(episodes)} episodes).png")
     plot_aggregated_trajectory_distribution(
@@ -1075,18 +1224,20 @@ def process_run_aggregation(
         plot_file,
         title=title,
         num_episodes=len(episodes),
-        _description=_description
+        _description=_description,
+        color=line_color,
+        linestyle=line_style
     )
-    
+
     # Save aggregated data as JSON
     json_file = os.path.join(run_out_dir, "aggregated_trajectory_frequencies.json")
     save_aggregated_data_json(aggregated, json_file, episodes)
-    
+
     # Optionally save as CSV
     if STORE_AS_CSV:
         csv_file = os.path.join(run_out_dir, "aggregated_trajectory_frequencies.csv")
         save_aggregated_data_csv(df, csv_file, episodes)
-    
+
     log.info(f"Successfully processed run: {run_id}")
     return True
 
@@ -1099,10 +1250,10 @@ def run_compareall(
     use_last_episode: bool = False
 ) -> None:
     """Compare aggregated trajectory distributions across all configs in a parent_id.
-    
+
     Loads summary.csv from parent results directory, filters by config indices if specified,
     and generates aggregated trajectory distribution plots for each matching config.
-    
+
     Args:
         parent_id: Parent results directory under pyplotters/plots (must have summary.csv)
         episodes: List of episode numbers to aggregate (auto-detect if empty)
@@ -1123,11 +1274,11 @@ def run_compareall(
         )
 
     summary_df = pd.read_csv(summary_path, sep=";")
-    
+
     # Apply config filtering if specified
     if config_indices is not None:
         summary_df = filter_summary_by_configs(summary_df, config_indices)
-    
+
     # Ensure required columns exist
     if "configuration_directory" not in summary_df.columns:
         _exit_with_warning("summary.csv missing required column 'configuration_directory'.")
@@ -1141,24 +1292,24 @@ def run_compareall(
     )
     if summary_df["last_episode_cumulative_reward"].isna().any():
         _exit_with_warning("summary.csv contains non-numeric last_episode_cumulative_reward values; aborting.")
-    
+
     summary_df = summary_df.sort_values(
         by="last_episode_cumulative_reward",
         ascending=False,
         kind="mergesort"
     )
-    
+
     log.info(LINE_LENGTH * "-")
     log.info(f"Compare-All mode: aggregating trajectory distributions for {len(summary_df)} configs")
-    
+
     # Process each run
-    aggregated_dataframes: list[tuple[int, str, dict, int, pd.DataFrame, Optional[str]]] = []
-    
+    aggregated_dataframes: list[tuple[int, str, dict, int, pd.DataFrame, Optional[str], str]] = []
+
     for rank, (_, row) in enumerate(summary_df.iterrows(), start=1):
         run_id = str(row["configuration_directory"])
         reward = row['last_episode_cumulative_reward']
         config_group = None
-        
+
         # Build label showing "Rank: #N, Profile <0N>: $(<overrides>)$"
         try:
             pr = parse_run_id_strict(run_id)
@@ -1168,11 +1319,11 @@ def run_compareall(
 
             # Grab the config group 'cg' key (cg@<config_group>) from pr.tokens
             config_group_str = CONFIG_GROUP_TERMS.get(config_group, "N/A") if config_group else "N/A"
-            
+
             # Extract parameter overrides (exclude cfg, cg, algorithm identifiers)
-            overrides = {k: v for k, v in pr.tokens.items() 
+            overrides = {k: v for k, v in pr.tokens.items()
                         if k not in LIST_OF_IGNORED_OVERRIDES}
-            
+
             # Build formatted label for subplot title with rank (2-line format)
             if cfg_num is not None:
                 if overrides:
@@ -1192,7 +1343,7 @@ def run_compareall(
             title_label = f"Rank: #{rank}, {run_id}"
             log_label = run_id
             config_group = None
-        
+
         log.info(f"  Rank #{rank}: {run_id} | reward={reward:.2f} | label={log_label}")
 
         plot_run_dir = os.path.join(PLOT_RESULTS_DIR, parent_id, run_id)
@@ -1217,16 +1368,16 @@ def run_compareall(
         if len(df) == 0:
             log.warning(f"No valid trajectory data for {run_id}. Skipping.")
             continue
-        
+
         # Store unique trajectory count (each row in df is a unique trajectory length)
         unique_lengths = len(df)
-        aggregated_dataframes.append((rank, title_label, overrides, unique_lengths, df, config_group))
-    
+        aggregated_dataframes.append((rank, title_label, overrides, unique_lengths, df, config_group, run_id))
+
     log.info(LINE_LENGTH * "-")
-    
+
     if not aggregated_dataframes:
         _exit_with_warning("No valid runs found to compare.")
-    
+
     # Generate comparison plot
     log.info(f"Generating comparison plot for {len(aggregated_dataframes)} configs")
     plot_compareall_trajectory_distribution(
@@ -1237,39 +1388,31 @@ def run_compareall(
 
 
 def plot_compareall_trajectory_distribution(
-    dataframes_with_labels: list[tuple[int, str, dict, int, pd.DataFrame, Optional[str]]],
+    dataframes_with_labels: list[tuple[int, str, dict, int, pd.DataFrame, Optional[str], str]],
     out_dir: str,
     title: Optional[str] = None
 ) -> None:
     """Plot aggregated trajectory distributions from multiple configs for comparison.
-    
-    Colors are assigned based on alphabetically sorted config_groups to match bestof_plotter's behavior.
-    Configs without a config_group are assigned colors after groups, in their original order.
-    
+
+    Color is keyed on the run's exploration-strategy category (build_color_key/
+    color_for_key -- e.g. bp=epsilon is always green, bp=ucb always red, bp=ps always
+    blue, Levy Flight always orange) and linestyle is keyed on algorithm family
+    (get_linestyle_for_run -- mcn dashed, ql solid, lfe dotted). This is the exact same
+    system bestof_plotter.py uses, so a given category/family reads identically whether
+    it's on a bestof_plotter chart or a trajectory_aggregator chart.
+
     Args:
-        dataframes_with_labels: List of (rank, title_label, overrides_dict, unique_lengths, dataframe, config_group) tuples
+        dataframes_with_labels: List of (rank, title_label, overrides_dict, unique_lengths,
+            dataframe, config_group, run_id) tuples
         out_dir: Output directory for comparison plot
         title: Optional custom title
     """
     if not dataframes_with_labels:
         log.warning("No dataframes to plot")
         return
-    
+
     os.makedirs(out_dir, exist_ok=True)
-    
-    # Build mapping from config_group to color index
-    # Sort config groups alphabetically, then assign remaining None values at the end
-    config_groups = sorted(set(cg for _, _, _, _, _, cg in dataframes_with_labels if cg is not None))
-    cg_to_color_idx = {cg: idx for idx, cg in enumerate(config_groups)}
-    
-    # For None values, assign indices after all config groups
-    none_count = sum(1 for _, _, _, _, _, cg in dataframes_with_labels if cg is None)
-    next_idx = len(config_groups)
-    
-    log.debug(f"Config groups (alphabetically sorted): {config_groups}")
-    log.debug(f"Color mapping: {cg_to_color_idx}")
-    log.debug(f"Number of runs without config_group: {none_count}")
-    
+
     def _plot_compareall_scale(use_log_scale: bool, file_name: str, title_suffix: str = None) -> None:
         # Create figure with multiple subplots (one per config)
         num_configs = len(dataframes_with_labels)
@@ -1294,22 +1437,9 @@ def plot_compareall_trajectory_distribution(
         # Adjust figure spacing to accommodate 2-line subplot titles
         fig.subplots_adjust(top=0.95, hspace=0.35)
 
-        # Generate color palette matching bestof_plotter for consistent colors across configs
-        # Need enough colors for all unique config_groups + configs without group
-        num_unique_colors = len(config_groups) + none_count
-        palette = sns.color_palette(BESTOF_CMAP, n_colors=num_unique_colors)
-
         # Plot each config
-        none_idx = 0  # Counter for None config_group indices
-        for plot_idx, (rank, title_label, overrides, unique_lengths, df, config_group) in enumerate(dataframes_with_labels):
+        for plot_idx, (rank, title_label, overrides, unique_lengths, df, config_group, run_id) in enumerate(dataframes_with_labels):
             ax = axes[plot_idx]
-
-            # Determine color index based on config_group
-            if config_group is not None:
-                color_idx = cg_to_color_idx[config_group]
-            else:
-                color_idx = len(config_groups) + none_idx
-                none_idx += 1
 
             if len(df) == 0:
                 ax.text(0.5, 0.5, f"No data for {title_label}", ha='center', va='center',
@@ -1326,8 +1456,8 @@ def plot_compareall_trajectory_distribution(
             total_sum = int(df["sum_frequency"].sum()) if "sum_frequency" in df.columns else 0
 
             # Plot trajectory distribution
-            color = palette[color_idx]
-            linestyle = 'solid'
+            color = color_for_key(build_color_key(overrides))
+            linestyle = get_linestyle_for_run(run_id)
             if use_log_scale:
                 ax.semilogx(df["trajectory"], df["probability"], linewidth=2.5, color=color,
                             linestyle=linestyle, label="Probability (PMF)",
@@ -1423,56 +1553,56 @@ def main():
     parser = argparse.ArgumentParser(
         description="Aggregate trajectory frequencies from multiple episodes and generate plots"
     )
-    
+
     parser.add_argument(
         "-pid", "--parent-id", type=str,
         help="Parent report source directory/directories, comma-separated (e.g., 'ql' or 'ql-p-ms@0,ql-p-ms@1')"
     )
-    
+
     parser.add_argument(
         "-rid", "--run_id", type=str,
         help="Run ID directory (e.g., 'ql-c-ms@0-ls@0')"
     )
-    
+
     parser.add_argument(
         "-t", "--title", type=str,
         help="Custom title for plots"
     )
-    
+
     parser.add_argument(
         "-d", "--describe", action="store_true",
         help="Parse run_id and add description to plots (reserved for future use)"
     )
-    
+
     parser.add_argument(
         "-eps", "--episodes", type=str, default=None,
         help="Episode range specification: single values, ranges, or mixed (e.g., '1-5,8,10-15'). "
              "Defaults to all available episodes if not specified."
     )
-    
+
     parser.add_argument(
         "-c", "--config", type=str, required=False,
         help="Config indices to filter by (e.g. '1', '1-5', '1,3,5-7'). If not provided, all configs are processed."
     )
-    
+
     parser.add_argument(
         "--compareall", action="store_true",
         help="Compare aggregated trajectory distributions across all configs in -pid. Requires -pid with summary.csv."
     )
-    
+
     parser.add_argument(
         "-ule", "--uselastepisode", action="store_true",
         help="Use last episode mode: treat the last episode's frequencies as cumulative probabilities. "
              "Normalizes frequencies by their total to compute a probability distribution. "
              "All other episodes are ignored."
     )
-    
+
     args = parser.parse_args()
-    
+
     if not args.parent_id and not args.run_id:
         parser.print_help()
         sys.exit()
-    
+
     # Parse and validate --config if provided
     config_indices: Union[list[int], None] = None
     if args.config:
@@ -1481,7 +1611,7 @@ def main():
             log.info(f"Config filtering enabled: {args.config} → indices {config_indices}")
         except ValueError as e:
             _exit_with_warning(f"Invalid config format: {e}")
-    
+
     # Parse episode specification
     requested_episodes = []
     if args.episodes:
@@ -1491,18 +1621,18 @@ def main():
         except ValueError as e:
             log.error(f"Invalid episode specification: {e}")
             sys.exit(1)
-    
+
     check_exists_source_dir(BASE_REPORTS_DIR)
-    
+
     # Route to compareall mode if flag is set
     if args.compareall:
         if not args.parent_id:
             _exit_with_warning("--compareall requires -pid/--parent_id to be specified")
-        
+
         log.info("=" * LINE_LENGTH)
         log.info("COMPARE-ALL MODE: Aggregating and comparing trajectory distributions across configs")
         log.info("=" * LINE_LENGTH)
-        
+
         run_compareall(
             parent_id=args.parent_id,
             episodes=requested_episodes if requested_episodes else None,
@@ -1510,31 +1640,31 @@ def main():
             config_indices=config_indices,
             use_last_episode=args.uselastepisode
         )
-        
+
         log.info("=" * LINE_LENGTH)
         log.info("Trajectory comparison complete")
         log.info("=" * LINE_LENGTH)
         return
-    
+
     # Process parent_id(s) in standard mode (with optional config filtering)
     if args.parent_id:
         parent_dir_ids = parse_parent_dir_ids(args.parent_id)
-        
+
         if not parent_dir_ids:
             log.error("No valid parent_dir_id(s) provided")
             sys.exit(1)
-        
+
         log.info(f"Processing {len(parent_dir_ids)} parent_dir_id(s): {parent_dir_ids}")
-        
+
         for parent_id in parent_dir_ids:
             parent_id_dir = os.path.join(BASE_REPORTS_DIR, parent_id)
             check_exists_source_dir(parent_id_dir)
-            
+
             run_dirs = glob.glob(os.path.join(parent_id_dir, "run-id", "*"))
             if not run_dirs:
                 log.info("No run-id directories found; checking for direct subdirectories")
                 run_dirs = glob.glob(os.path.join(parent_id_dir, "*"))
-            
+
             # Filter by config indices if specified
             if config_indices is not None:
                 run_dirs = [
@@ -1545,9 +1675,9 @@ def main():
                     log.warning(f"No runs found matching requested configs: {config_indices}")
                     continue
                 log.info(f"Filtered to {len(run_dirs)} runs matching configs: {config_indices}")
-            
+
             os.makedirs(os.path.join(PLOT_RESULTS_DIR, parent_id), exist_ok=True)
-            
+
             for run_dir in run_dirs:
                 if os.path.isdir(run_dir):
                     run_id = os.path.basename(run_dir)
@@ -1560,21 +1690,21 @@ def main():
                         args.describe,
                         use_last_episode=args.uselastepisode
                     )
-    
+
     elif args.run_id:
         # Find run_id in BASE_REPORTS_DIR
         run_dir = None
-        
+
         for root, dirs, files in os.walk(BASE_REPORTS_DIR):
             for dir_name in dirs:
                 if dir_name == args.run_id:
                     run_dir = os.path.join(root, dir_name)
                     break
-        
+
         if not run_dir:
             log.error(f"The run-id '{args.run_id}' not found")
             sys.exit(1)
-        
+
         check_exists_source_dir(run_dir)
         process_run_aggregation(
             run_dir,
@@ -1585,7 +1715,7 @@ def main():
             args.describe,
             use_last_episode=args.uselastepisode
         )
-    
+
     log.info("=" * LINE_LENGTH)
     log.info("Trajectory aggregation complete")
     log.info("=" * LINE_LENGTH)
@@ -1593,4 +1723,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

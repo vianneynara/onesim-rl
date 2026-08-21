@@ -62,7 +62,7 @@ if __package__ in (None, ""):
 
 # Default config import (fallback)
 # from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
-from pyrunner.batch_configs_mix import LIST_OF_CONFIGS
+from pyrunner.batch_configs_mix_2 import LIST_OF_CONFIGS
 
 from pyrunner.utils.path import normalize_report_base
 
@@ -90,7 +90,7 @@ def load_list_of_configs(config_module_path: Optional[str]):
     """
 
     if not config_module_path:
-        log.info("Using default LIST_OF_CONFIGS from pyrunner.batch_configs")
+        log.info("Using default LIST_OF_CONFIGS from pyrunner.batch_configs_mix_2")
         return LIST_OF_CONFIGS
 
     try:
@@ -200,6 +200,65 @@ def extract_behavior_policy(folder_name: str) -> Optional[str]:
     return None
 
 
+def extract_ps_variant(folder_name: str) -> str:
+    """
+    Disambiguate the two posterior-sampling flavors seen in folder names:
+
+      - Beta-Binomial Thompson Sampling: has ps_betabinomial@True
+            -> group suffix "ps"
+      - Gaussian/Thompson Sampling with a prior variance param: has ps_iv@
+            -> group suffix "ps_gts"
+
+    Defaults to "ps" if neither marker is found (still better than crashing).
+    """
+
+    if re.search(r"ps_betabinomial@True", folder_name):
+        return "ps"
+
+    if re.search(r"ps_iv@", folder_name):
+        return "ps_gts"
+
+    return "ps"
+
+
+def derive_correct_group(folder_name: str) -> Optional[str]:
+    """
+    Derive the correct cg@ group purely from what's already encoded in the
+    folder name (alg + bp, disambiguated where needed) -- no dependency on
+    LIST_OF_CONFIGS. This is index-independent and immune to config files
+    drifting out of sync with folders that were already generated.
+
+    Examples:
+        cfg@04-...-mcn100-mcnm_bp@epsilon-...          -> mcn_epsilon
+        cfg@10-...-mcn100-mcnm_bp@ucb-...              -> mcn_ucb
+        cfg@21-...-mcn100-...-ps_iv@5.0-...            -> mcn_ps_gts
+        cfg@27-...-mcn100-...-ps_betabinomial@True-... -> mcn_ps
+        cfg@xx-...-lfe8-...                            -> lf
+    """
+
+    alg_runs = extract_alg_and_runs(folder_name)
+
+    if not alg_runs:
+        return None
+
+    alg, _runs = alg_runs
+
+    if alg == "lfe":
+        return "lf"
+
+    bp = extract_behavior_policy(folder_name)
+
+    if not bp:
+        return None
+
+    if bp == "ps":
+        suffix = extract_ps_variant(folder_name)
+    else:
+        suffix = bp
+
+    return f"{alg}_{suffix}"
+
+
 def has_group_token(folder_name: str) -> bool:
     """
     Check if folder already contains cg@
@@ -211,7 +270,7 @@ def has_group_token(folder_name: str) -> bool:
 def extract_existing_group(folder_name: str) -> Optional[str]:
     """
     Extract the existing group from folder name.
-    
+
     Example: cfg@05-cg@ql_ps-ql500-... -> "ql_ps"
     """
 
@@ -229,7 +288,7 @@ def replace_group_token(
 ) -> str:
     """
     Replace existing cg@{old_group} with cg@{new_group}.
-    
+
     Example: cfg@05-cg@ql_ps-ql500-... -> cfg@05-cg@ql_ps_bbts-ql500-...
     """
 
@@ -251,7 +310,7 @@ def update_config_setting_json(
 ) -> Tuple[int, int]:
     """
     Update config_setting.json files in the folder.
-    
+
     Returns: (updated_count, failed_count)
     """
 
@@ -547,6 +606,90 @@ def build_upgrade_mapping(
     return rename_mapping, messages
 
 
+def build_self_derived_mapping(
+        existing_folders: Dict[int, List[str]],
+        replace_mode: bool = False
+) -> Tuple[Dict[str, str], List[str]]:
+    """
+    Same job as build_upgrade_mapping, but the "correct" group for each
+    folder is derived straight from that folder's own name (alg + bp) via
+    derive_correct_group(), instead of being looked up from LIST_OF_CONFIGS
+    at a matching cfg index. Use this when you don't have (or don't trust)
+    the config module that originally generated the folders -- e.g. it's
+    since been replaced by a different sweep, or the runs/index count no
+    longer lines up.
+    """
+
+    rename_mapping = {}
+    messages = []
+
+    for cfg_idx, folder_names in sorted(existing_folders.items()):
+
+        if len(folder_names) > 1:
+            messages.append(
+                f"cfg@{cfg_idx:02d}: [CONFLICT] {len(folder_names)} folders "
+                f"share this index, skipping until resolved manually: "
+                f"{folder_names}"
+            )
+            continue
+
+        old_folder_name = folder_names[0]
+
+        correct_group = derive_correct_group(old_folder_name)
+
+        if not correct_group:
+            messages.append(
+                f"cfg@{cfg_idx:02d}: Could not derive group from folder name"
+            )
+            continue
+
+        if has_group_token(old_folder_name):
+
+            existing_group = extract_existing_group(old_folder_name)
+
+            if existing_group == correct_group:
+                messages.append(
+                    f"cfg@{cfg_idx:02d}: [SKIP] Already has correct group "
+                    f"(cg@{existing_group})"
+                )
+                continue
+
+            if not replace_mode:
+                messages.append(
+                    f"cfg@{cfg_idx:02d}: Has incorrect group (cg@{existing_group}, "
+                    f"should be cg@{correct_group}), skipping "
+                    f"(use --replacegroup to update)"
+                )
+                continue
+
+            new_folder_name = replace_group_token(old_folder_name, correct_group)
+
+            rename_mapping[old_folder_name] = new_folder_name
+
+            messages.append(
+                f"cfg@{cfg_idx:02d}: [REPLACE] "
+                f"'{old_folder_name}' -> '{new_folder_name}' "
+                f"(cg@{existing_group} -> cg@{correct_group})"
+            )
+
+            continue
+
+        new_folder_name = re.sub(
+            r"^(cfg@\d+)-",
+            f"\\1-cg@{correct_group}-",
+            old_folder_name
+        )
+
+        rename_mapping[old_folder_name] = new_folder_name
+
+        messages.append(
+            f"cfg@{cfg_idx:02d}: [ADD] "
+            f"'{old_folder_name}' -> '{new_folder_name}'"
+        )
+
+    return rename_mapping, messages
+
+
 # ============================================================================
 # Rename Executor
 # ============================================================================
@@ -631,7 +774,8 @@ def process_parent_dir(
         list_of_configs,
         reports_base: str = REPORTS_BASE,
         dry_run: bool = True,
-        replace_mode: bool = False
+        replace_mode: bool = False,
+        self_derive: bool = False
 ) -> Tuple[int, int, int]:
 
     log.info("%s", "=" * LINE_LENGTH)
@@ -652,13 +796,23 @@ def process_parent_dir(
         len(existing_folders)
     )
 
-    active_configs = get_active_configs_mapping(list_of_configs)
+    if self_derive:
+        log.info("Self-derive mode: deriving groups from folder names, "
+                  "ignoring LIST_OF_CONFIGS")
 
-    rename_mapping, info_messages = build_upgrade_mapping(
-        existing_folders,
-        active_configs,
-        replace_mode
-    )
+        rename_mapping, info_messages = build_self_derived_mapping(
+            existing_folders,
+            replace_mode
+        )
+
+    else:
+        active_configs = get_active_configs_mapping(list_of_configs)
+
+        rename_mapping, info_messages = build_upgrade_mapping(
+            existing_folders,
+            active_configs,
+            replace_mode
+        )
 
     for msg in info_messages:
         log.info("  %s", msg)
@@ -723,6 +877,18 @@ def main():
         "-rg",
         action="store_true",
         help="Replace existing group tokens according to batch_configs"
+    )
+
+    parser.add_argument(
+        "--self-derive",
+        "-sd",
+        action="store_true",
+        help=(
+            "Derive the correct cg@ group directly from each folder's own "
+            "name (alg + bp) instead of matching against LIST_OF_CONFIGS. "
+            "Use this when the config module doesn't match what actually "
+            "generated the folders (e.g. it's since changed runs/order)."
+        )
     )
 
     parser.add_argument(
@@ -799,7 +965,8 @@ def main():
                 list_of_configs,
                 normalized_report_base,
                 args.dry_run,
-                args.replacegroup
+                args.replacegroup,
+                args.self_derive
             )
 
             total_renames += total
@@ -824,7 +991,8 @@ def main():
                 list_of_configs,
                 normalized_report_base,
                 args.dry_run,
-                args.replacegroup
+                args.replacegroup,
+                args.self_derive
             )
 
             total_renames += total
