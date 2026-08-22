@@ -14,13 +14,45 @@ python pyplotters/persistence_plotter.py -pid ql-p-ms@1 --title "Q-Learning on F
 
 ```
 
-## Merging LFE run ids to QL
+**Merging LFE run ids to QL**
 
 ```sh
 python pyplotters/summary_merger.py -mf lfe-c-ms@0 -mt ql-c-ms@0 --mvplots
 python pyplotters/summary_merger.py -mf lfe-c-ms@1 -mt ql-c-ms@1 --mvplots
 python pyplotters/summary_merger.py -mf lfe-p-ms@0 -mt ql-p-ms@0 --mvplots
 python pyplotters/summary_merger.py -mf lfe-p-ms@1 -mt ql-p-ms@1 --mvplots
+
+```
+
+```sh
+python pyplotters/summary_merger.py -mf cont-lfe-c-ms@0 -mt cont-ql-c-ms@0 --mvplots
+python pyplotters/summary_merger.py -mf cont-lfe-c-ms@1 -mt cont-ql-c-ms@1 --mvplots
+python pyplotters/summary_merger.py -mf cont-lfe-p-ms@0 -mt cont-ql-p-ms@0 --mvplots
+python pyplotters/summary_merger.py -mf cont-lfe-p-ms@1 -mt cont-ql-p-ms@1 --mvplots
+
+```
+
+## Reward (performance) Evaluator
+
+```sh
+python pyplotters/reward_eval.py -pid cont-lfe-c-ms@0
+python pyplotters/reward_eval.py -pid cont-lfe-c-ms@1
+python pyplotters/reward_eval.py -pid cont-lfe-p-ms@0
+python pyplotters/reward_eval.py -pid cont-lfe-p-ms@1
+python pyplotters/reward_eval.py -pid cont-ql-c-ms@0
+python pyplotters/reward_eval.py -pid cont-ql-c-ms@1
+python pyplotters/reward_eval.py -pid cont-ql-p-ms@0
+python pyplotters/reward_eval.py -pid cont-ql-p-ms@1
+
+```
+
+**Merging reward evaluations to QL**
+
+```sh
+python pyplotters/eval_merger.py -mf cont-lfe-c-ms@0 -mt cont-ql-c-ms@0
+python pyplotters/eval_merger.py -mf cont-lfe-c-ms@1 -mt cont-ql-c-ms@1
+python pyplotters/eval_merger.py -mf cont-lfe-p-ms@0 -mt cont-ql-p-ms@0
+python pyplotters/eval_merger.py -mf cont-lfe-p-ms@1 -mt cont-ql-p-ms@1
 
 ```
 
@@ -173,13 +205,13 @@ Useful to aggregate stable model's trajectory generation and visualize it as plo
 This script helps visualizing the trajectory distribution across episodes for a given run.
 
 ```shell
-python pyplotters/persistence_plotter.py -pid lfe-c-ms@0 --title "Aggregated Trajectory Distribution" --describe
+python pyplotters/persistence_plotter.py -pid lfe-c-ms@0 --title "Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe
 python pyplotters/persistence_plotter.py -pid lfe-c-ms@1 --title "Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe
-python pyplotters/persistence_plotter.py -pid lfe-p-ms@0 --title "Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe
-python pyplotters/persistence_plotter.py -pid lfe-p-ms@1 --title "Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/persistence_plotter.py -pid lfe-p-ms@0 --title "Lévy Flight on Randomized Immobile Homogenous Poisson Targets" --describe
+python pyplotters/persistence_plotter.py -pid lfe-p-ms@1 --title "Lévy Flight on Fixed Immobile Homogenous Poisson Targets" --describe
 python pyplotters/persistence_plotter.py -pid ql-c-ms@0 --title "Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe
 python pyplotters/persistence_plotter.py -pid ql-c-ms@1 --title "Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe
-python pyplotters/persistence_plotter.py -pid ql-p-ms@0 --title "Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe
-python pyplotters/persistence_plotter.py -pid ql-p-ms@1 --title "Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe
+python pyplotters/persistence_plotter.py -pid ql-p-ms@0 --title "Q-Learning on Randomized Immobile Homogenous Poisson Targets" --describe
+python pyplotters/persistence_plotter.py -pid ql-p-ms@1 --title "Q-Learning on Fixed Immobile Homogenous Poisson Targets" --describe
 
 ```
