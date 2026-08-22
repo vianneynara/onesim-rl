@@ -74,7 +74,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from pyrunner.batch_shifter import parse_parent_dir_ids
-from pyplotters.term_dictionary import GROUP_VALUE_TERMS, CONFIG_GROUP_TERMS
+from pyplotters.term_dictionary import GROUP_VALUE_TERMS, CONFIG_GROUP_TERMS, translate_display_tokens, describe_config_group
 
 # Configuration
 LINE_LENGTH = 100
@@ -122,7 +122,9 @@ LINE_STYLES = ["-", "--", "-.", ":"]
 
 # Distinct line styles per algorithm family (mcn / ql / lfe), so their lines are easy to
 # tell apart even when colors are similar. Anything that doesn't match one of these
-# families falls back to DEFAULT_LINESTYLE.
+# families falls back to DEFAULT_LINESTYLE. NOTE: these keys must match the raw "mcn"
+# token as it actually appears in run-id data on disk -- see term_dictionary.py's
+# translate_display_tokens() for the cosmetic "mcn" -> "mc" swap used in displayed text.
 ALGO_FAMILY_LINESTYLES: dict[str, str] = {
     "mcn": "--",   # MCN group -> dashed
     "ql": "-",     # QL group -> solid
@@ -420,12 +422,14 @@ def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
 
     Overrides are sorted by abbreviation for stable legends.
     """
-    # Expand group value with formal wording when available.
-    group_display = GROUP_VALUE_TERMS.get(group_value, group_value)
+    # Expand group value with formal wording when available; if the raw code isn't in the
+    # dictionary, still cosmetically relabel it (mcn -> mc, ps -> bbts) rather than showing
+    # the raw code as-is.
+    group_display = GROUP_VALUE_TERMS.get(group_value) or translate_display_tokens(group_value)
 
     items: list[tuple[str, str]] = []
     for k, v in overrides.items():
-        items.append((key_to_abbr(k), str(v)))
+        items.append((key_to_abbr(k), translate_display_tokens(str(v))))
     items.sort(key=lambda t: t[0])
 
     overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
@@ -1317,8 +1321,11 @@ def run_compareall(
             config_group = extract_cg_value(run_id)
             log.info(f"Processing run {rank}: {run_id} (Profile {cfg_num}, {config_group})")
 
-            # Grab the config group 'cg' key (cg@<config_group>) from pr.tokens
-            config_group_str = CONFIG_GROUP_TERMS.get(config_group, "N/A") if config_group else "N/A"
+            # Grab the config group 'cg' key (cg@<config_group>) from pr.tokens, and describe
+            # it as "<algorithm form> — <strategy abbreviation>" (e.g. "Monte Carlo — EG",
+            # "Q-Learning — BBTS") so it's clear which algorithm each subplot's config
+            # comes from at a glance.
+            config_group_str = describe_config_group(config_group) if config_group else "N/A"
 
             # Extract parameter overrides (exclude cfg, cg, algorithm identifiers)
             overrides = {k: v for k, v in pr.tokens.items()
@@ -1329,7 +1336,7 @@ def run_compareall(
                 if overrides:
                     items: list[tuple[str, str]] = []
                     for k, v in overrides.items():
-                        items.append((key_to_abbr(k), str(v)))
+                        items.append((key_to_abbr(k), translate_display_tokens(str(v))))
                     items.sort(key=lambda t: t[0])
                     overrides_str = ", ".join([f"{abbr}={val}" for abbr, val in items])
                     title_label = f"Rank #{rank}, Profile {cfg_num:02d}, {config_group_str}\n$({overrides_str})$"

@@ -65,7 +65,7 @@ import seaborn as sns
 if __package__ in (None, ""):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from pyplotters.term_dictionary import GROUP_VALUE_TERMS
+from pyplotters.term_dictionary import GROUP_VALUE_TERMS, translate_display_tokens
 
 PLOT_RESULTS_DIR = r"pyplotters\\plots"
 # PLOT_RESULTS_DIR = r"D:\Developments+\Java\onesim-rl-data\plots"
@@ -99,7 +99,10 @@ LINE_STYLES = ["-", "--", "-.", ":"]
 
 # Distinct line styles per algorithm family (mcn / ql / lfe), so their lines
 # are easy to tell apart even when colors are similar. Anything that doesn't
-# match one of these families falls back to DEFAULT_LINESTYLE.
+# match one of these families falls back to DEFAULT_LINESTYLE. NOTE: these
+# keys must match the raw "mcn" token as it actually appears in run-id data
+# on disk -- see term_dictionary.py's translate_display_tokens() for the
+# cosmetic "mcn" -> "mc" swap used in displayed text (legends/titles).
 ALGO_FAMILY_LINESTYLES: dict[str, str] = {
     "mcn": "--",   # MCN group -> dashed
     "ql": "-",     # QL group -> solid
@@ -121,10 +124,10 @@ LIST_OF_IGNORED_OVERRIDES = [
     "cg",   # config group (e.g., cg@ql_epsilon)
     "ql500",  # Q-Learning with 500 runs
     "mcn500",
-    "mcn750"
-    "lfe500"  # Lévy Flight with 500 runs
-    "ql10"
-    "lfe10"
+    "mcn750",
+    "lfe500",  # Lévy Flight with 500 runs
+    "ql10",
+    "lfe10",
 ]
 
 @dataclass(frozen=True)
@@ -431,10 +434,22 @@ def key_to_abbr(key: str) -> str:
 def build_overrides_str(overrides: dict[str, str]) -> str:
     """Build the 'abbr=value, abbr=value' string for a dict of overrides.
 
-    Sorted by abbreviation for a stable, deterministic string. Used for
-    legend labels, and as a color-key fallback (see `build_color_key`).
+    Sorted by abbreviation for a stable, deterministic string. Used as a
+    color-key fallback (see `build_color_key`) -- values stay RAW here since
+    this can feed into color hashing/matching. For text shown to a person,
+    use `build_overrides_str_display` instead.
     """
     items: list[tuple[str, str]] = [(key_to_abbr(k), str(v)) for k, v in overrides.items()]
+    items.sort(key=lambda t: t[0])
+    return ", ".join([f"{abbr}={val}" for abbr, val in items])
+
+
+def build_overrides_str_display(overrides: dict[str, str]) -> str:
+    """Same shape as `build_overrides_str`, but for legend/title TEXT: values are
+    cosmetically relabeled via `translate_display_tokens` (mcn -> mc, ps -> bbts) before
+    being shown. Never use this for color-key/matching purposes -- only for display.
+    """
+    items: list[tuple[str, str]] = [(key_to_abbr(k), translate_display_tokens(str(v))) for k, v in overrides.items()]
     items.sort(key=lambda t: t[0])
     return ", ".join([f"{abbr}={val}" for abbr, val in items])
 
@@ -472,10 +487,12 @@ def build_legend_label(group_value: str, overrides: dict[str, str]) -> str:
 
     Overrides are sorted by abbreviation for stable legends.
     """
-    # Expand group value with formal wording when available.
-    group_display = GROUP_VALUE_TERMS.get(group_value, group_value)
+    # Expand group value with formal wording when available; if the raw code (e.g.
+    # "mcn_epsilon", "mcn_ps") isn't an exact dictionary key, still cosmetically relabel it
+    # (mcn -> mc, ps -> bbts) rather than showing the raw code as-is.
+    group_display = GROUP_VALUE_TERMS.get(group_value) or translate_display_tokens(group_value)
 
-    overrides_str = build_overrides_str(overrides)
+    overrides_str = build_overrides_str_display(overrides)
     return f'{group_display} {"("+overrides_str+")" if overrides_str else ""}'
 
 
@@ -819,7 +836,7 @@ def run_compareall(all_of: str, suptitle: SuptitleFormat = None, config_indices:
             # Filter out ignored keys (cfg, cg, alg+runs)
             if pr.tokens:
                 overrides = {k: v for k, v in pr.tokens.items() if k not in LIST_OF_IGNORED_OVERRIDES}
-                overrides_str = build_overrides_str(overrides)
+                overrides_str = build_overrides_str_display(overrides)
                 color_key = build_color_key(overrides)
                 legend_label = f'{cfg_str} ({overrides_str})' if overrides_str else cfg_str
             else:
@@ -1041,7 +1058,7 @@ def run_configgroup(all_of: str, cg_key: str, suptitle: SuptitleFormat = None, c
             # Extract parameter overrides, excluding cfg, cg, and algorithm identifiers
             if pr.tokens:
                 overrides = {k: v for k, v in pr.tokens.items() if k not in LIST_OF_IGNORED_OVERRIDES}
-                overrides_str = build_overrides_str(overrides)
+                overrides_str = build_overrides_str_display(overrides)
                 color_key = build_color_key(overrides)
                 legend_label = overrides_str if overrides_str else run_id
             else:

@@ -221,18 +221,33 @@ ALL_HPP_1 = LFE + QL_HPP_1 + MCN_HPP_1
 # STAGE 8: cont- (7-DAY) PLOTTING
 # ==============================================================================
 # commands = [
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-c-ms@0 --title "Best Performing Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-c-ms@1 --title "Best Performing Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-p-ms@0 --title "Best Performing Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-lfe-p-ms@1 --title "Best Performing Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-ql-c-ms@0 --title "Best Performing Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-ql-c-ms@1 --title "Best Performing Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-ql-p-ms@0 --title "Best Performing Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-ql-p-ms@1 --title "Best Performing Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-c-ms@0 --title "Best Performing Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-c-ms@1 --title "Best Performing Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-p-ms@0 --title "Best Performing Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
-#     r'python pyplotters/persistence_plotter.py -pid 1d-cont-mcn-p-ms@1 --title "Best Performing Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-lfe-c-ms@0 --title "Best Performing Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-lfe-c-ms@1 --title "Best Performing Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-lfe-p-ms@0 --title "Best Performing Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-lfe-p-ms@1 --title "Best Performing Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-ql-c-ms@0 --title "Best Performing Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-ql-c-ms@1 --title "Best Performing Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-ql-p-ms@0 --title "Best Performing Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-ql-p-ms@1 --title "Best Performing Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-mcn-c-ms@0 --title "Best Performing Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-mcn-c-ms@1 --title "Best Performing Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-mcn-p-ms@0 --title "Best Performing Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid cont-mcn-p-ms@1 --title "Best Performing Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+# ]
+
+# commands = [
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-lfe-c-ms@0 --title "Best Performing Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-lfe-c-ms@1 --title "Best Performing Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-lfe-p-ms@0 --title "Best Performing Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-lfe-p-ms@1 --title "Best Performing Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-ql-c-ms@0 --title "Best Performing Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-ql-c-ms@1 --title "Best Performing Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-ql-p-ms@0 --title "Best Performing Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-ql-p-ms@1 --title "Best Performing Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-c-ms@0 --title "Best Performing Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-c-ms@1 --title "Best Performing Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-p-ms@0 --title "Best Performing Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/persistence_plotter.py -pid 3d-cont-mcn-p-ms@1 --title "Best Performing Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
 # ==============================================================================
@@ -251,6 +266,21 @@ ALL_HPP_1 = LFE + QL_HPP_1 + MCN_HPP_1
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
 #     r'python pyplotters/trajectory_aggregator.py -pid cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+# ]
+
+# commands = [
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-lfe-c-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-lfe-c-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-lfe-p-ms@0 --title "Aggregated Trajectory on Best Lévy Flight on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-lfe-p-ms@1 --title "Aggregated Trajectory on Best Lévy Flight on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-ql-c-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-ql-c-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-ql-p-ms@0 --title "Aggregated Trajectory on Best Q-Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-ql-p-ms@1 --title "Aggregated Trajectory on Best Q-Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-c-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-c-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Thomas Clustered Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-p-ms@0 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Randomized Immobile Homogenous-Poisson Targets" --describe',
+#     r'python pyplotters/trajectory_aggregator.py -pid 3d-cont-mcn-p-ms@1 --title "Aggregated Trajectory on Best Monte Carlo Reinforcement Learning on Fixed Immobile Homogenous-Poisson Targets" --describe',
 # ]
 
 # ==============================================================================
