@@ -54,8 +54,8 @@ S_REPORT_DIR = f"Report.reportDir={REPORTS_BASE}/{ALG_LABEL}/run-id/{ID_LABEL}"
 PRIORITY_OVERRIDE_KEYS = ["lfe_la", "qlm_bp", "mcnm_bp"]
 
 # Import the configs
-from pyrunner.batch_configs import LIST_OF_CONFIGS
-from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
+# from pyrunner.batch_configs import LIST_OF_CONFIGS
+# from pyrunner.batch_configs_jord import LIST_OF_CONFIGS
 from pyrunner.batch_configs_mix import LIST_OF_CONFIGS
 
 HIGHLIGHTED_SETTINGS = [
