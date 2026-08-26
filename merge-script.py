@@ -402,6 +402,16 @@ ALL_HPP_1 = LFE + QL_HPP_1 + MCN_HPP_1
 #     f'python pyplotters/trajectory_aggregator.py -pid cont-all-p-ms@1 --uselastepisode --compareall -c {",".join(map(str, ALL_HPP_1))} --title "Aggregated Trajectory Comparison: Lévy Flight vs Q-Learning vs Monte Carlo (Homogenous-Poisson, Fixed Seed)" --describe',
 # ]
 
+# commands = [
+#     r'python pyplotters/reward_eval.py -pid cont-lfe-c-ms@0',
+#     r'python pyplotters/reward_eval.py -pid cont-ql-c-ms@0',
+#     r'python pyplotters/reward_eval.py -pid cont-mcn-c-ms@0',
+# ]
+
+# commands = [
+#     r'python pyplotters/eval_merger.py -mf cont-mcn-c-ms@0 cont-ql-c-ms@0 cont-lfe-c-ms@0 -mt cont-all-c-ms@0',
+# ]
+
 ################################################################################
 # Placeholder - keep this active when not running any stage.
 ################################################################################
